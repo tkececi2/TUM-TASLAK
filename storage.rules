@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service firebase.storage {
@@ -21,12 +22,10 @@ service firebase.storage {
     }
 
     function hasUploadPermission() {
-      return isAuthenticated() && 
-        (isAdmin() || isTechnician());
+      return isAuthenticated();
     }
 
-    // Yedek kural: eğer token'da rol yoksa, varsayılan olarak doğrulanmış kullanıcılara izin ver
-    // Bu kural geçici olarak eklenmiştir, rol tabanlı kontroller çalışınca kaldırılabilir
+    // Tüm yollar için kimlik doğrulamalı kullanıcılara okuma ve yazma izni ver
     match /{allPaths=**} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
@@ -35,7 +34,7 @@ service firebase.storage {
     // Stoklar klasörü için kurallar
     match /stoklar/{document=**} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Geçici olarak tüm kimlik doğrulamalı kullanıcılara izin ver
+      allow write: if isAuthenticated();
     }
 
     // Diğer klasörler için kurallar
