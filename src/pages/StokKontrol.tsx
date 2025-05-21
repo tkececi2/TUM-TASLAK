@@ -76,9 +76,11 @@ export const StokKontrol: React.FC = () => {
     fotograflar: [] as File[]
   });
 
+  // Yetki kontrolleri - Rol bazlı erişim
   const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
   const canDelete = kullanici?.rol === 'yonetici';
   const canEdit = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
+  const canUploadPhotos = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
 
   useEffect(() => {
     const sahalariGetir = async () => {
@@ -188,7 +190,14 @@ export const StokKontrol: React.FC = () => {
 
       let fotografURLleri: string[] = [];
       
+      // Fotoğraf yükleme yetkisi kontrolü
       if (form.fotograflar.length > 0) {
+        if (!canUploadPhotos) {
+          toast.error('Fotoğraf yükleme yetkiniz bulunmuyor');
+          setYukleniyor(false);
+          return;
+        }
+        
         try {
           toast.loading('Fotoğraflar yükleniyor...', { id: 'photoUpload' });
           fotografURLleri = await uploadMultipleFiles(
@@ -207,8 +216,8 @@ export const StokKontrol: React.FC = () => {
         } catch (error: any) {
           console.error('Fotoğraf yükleme hatası:', error);
           toast.error(error.message, { id: 'photoUpload' });
-          setYukleniyor(false);
-          return;
+          // Fotoğraf yükleme hatası olsa bile devam et, fotoğrafsız kaydet
+          console.log('Fotoğraf yükleme hatası olsa bile devam ediliyor, fotoğrafsız kaydedilecek');
         }
       }
 
@@ -235,7 +244,7 @@ export const StokKontrol: React.FC = () => {
       } else {
         await addDoc(collection(db, 'stoklar'), {
           ...stokData,
-          fotograflar: fotografURLleri,
+          ...(fotografURLleri.length > 0 ? { fotograflar: fotografURLleri } : {}),
           olusturanKisi: {
             id: kullanici.id,
             ad: kullanici.ad
@@ -854,6 +863,12 @@ export const StokKontrol: React.FC = () => {
                     <label className="block text-xs font-medium text-gray-700 mb-1">
                       Fotoğraflar
                     </label>
+                    {!canUploadPhotos && (
+                      <div className="mb-2 p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700">
+                        <AlertCircle className="h-3 w-3 inline mr-1" />
+                        Fotoğraf yükleme için yönetici, tekniker veya mühendis yetkisi gereklidir.
+                      </div>
+                    )}
                     <FileUploadZone
                       onFileSelect={(files) => setForm(prev => ({ ...prev, fotograflar: files }))}
                       selectedFiles={form.fotograflar}
@@ -865,6 +880,7 @@ export const StokKontrol: React.FC = () => {
                       }}
                       maxFiles={5}
                       uploadProgress={uploadProgress}
+                      disabled={!canUploadPhotos}
                     />
                     {duzenlemeModu && secilenStok?.fotograflar && secilenStok.fotograflar.length > 0 && (
                       <div className="mt-1 text-xs text-gray-500">

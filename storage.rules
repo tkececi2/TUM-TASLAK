@@ -23,7 +23,11 @@ service firebase.storage {
     }
     
     function hasUploadPermission() {
-      return isAuthenticated() && (isAdmin() || isTechnician());
+      return isAuthenticated() && 
+        (request.auth.token.rol == 'yonetici' || 
+         request.auth.token.rol == 'superadmin' || 
+         request.auth.token.rol == 'tekniker' || 
+         request.auth.token.rol == 'muhendis');
     }
     
     // Default rule - deny all
