@@ -754,6 +754,7 @@ export const StokKontrol: React.FC = () => {
 
             <form onSubmit={handleSubmit} className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Temel Bilgiler */}
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700">
