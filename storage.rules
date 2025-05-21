@@ -28,7 +28,7 @@ service firebase.storage {
     
     function hasUploadPermission() {
       return isAuthenticated() && 
-        (isAdmin() || isTechnician() || isCustomer());
+        (isAdmin() || isTechnician());  // Removed isCustomer() as they shouldn't upload to stoklar
     }
     
     // Default rule - deny all
@@ -77,11 +77,11 @@ service firebase.storage {
       allow create, update, delete: if hasUploadPermission() && isValidImage();
     }
     
-    // Stoklar - Updated rules to explicitly allow all authorized roles
+    // Stoklar - Updated rules to only allow admin and technician roles
     match /stoklar/{imageId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if isAuthenticated() && 
-        (isAdmin() || isTechnician() || isCustomer()) && 
+        (isAdmin() || isTechnician()) &&  // Removed customer role access
         request.resource.contentType.matches('image/.*') && 
         request.resource.size < 10 * 1024 * 1024;
     }
