@@ -202,6 +202,9 @@ export const StokKontrol: React.FC = () => {
       if (form.fotograflar.length > 0) {
         const uploadToast = toast.loading('Fotoğraflar yükleniyor...');
         try {
+          // Force token refresh before uploading to ensure latest claims are used
+          await auth.currentUser?.getIdToken(true);
+          
           fotografURLleri = await uploadMultipleFiles(
             form.fotograflar,
             'stoklar', // Firebase Storage'da kaydedilecek klasör yolu

@@ -1,5 +1,5 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../lib/firebase'; // Firebase config dosyanızın yolu
+import { storage, auth } from '../lib/firebase'; // Firebase config dosyanızın yolu
 import toast from 'react-hot-toast';
 
 const compressImage = async (file: File): Promise<File> => {
@@ -113,6 +113,11 @@ export const uploadFile = async (file: File, path: string, maxSizeMB = 10): Prom
     const safeName = validateFileName(fileToUpload.name);
     const fullPath = `${path}/${timestamp}_${safeName}`;
     
+    // Force token refresh before uploading to ensure latest claims are used
+    if (auth.currentUser) {
+      await auth.currentUser.getIdToken(true);
+    }
+    
     const storageRef = ref(storage, fullPath);
 
     try {
@@ -147,6 +152,17 @@ export const uploadMultipleFiles = async (
 ): Promise<string[]> => {
   if (!files || files.length === 0) {
     return [];
+  }
+
+  // Force token refresh before uploading to ensure latest claims are used
+  if (auth.currentUser) {
+    try {
+      await auth.currentUser.getIdToken(true);
+      const idTokenResult = await auth.currentUser.getIdTokenResult();
+      console.log('Current user token claims before upload:', idTokenResult.claims);
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+    }
   }
 
   const urls: string[] = [];
