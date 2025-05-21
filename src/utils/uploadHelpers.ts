@@ -116,10 +116,6 @@ export const uploadFile = async (file: File, path: string, maxSizeMB = 10): Prom
     // Force token refresh before uploading to ensure latest claims are used
     if (auth.currentUser) {
       await auth.currentUser.getIdToken(true);
-      
-      // Log token claims for debugging
-      const idTokenResult = await auth.currentUser.getIdTokenResult();
-      console.log('Token claims before upload:', idTokenResult.claims);
     }
     
     const storageRef = ref(storage, fullPath);
@@ -162,11 +158,25 @@ export const uploadMultipleFiles = async (
   if (auth.currentUser) {
     try {
       await auth.currentUser.getIdToken(true);
+      
+      // Log token claims for debugging
       const idTokenResult = await auth.currentUser.getIdTokenResult();
-      console.log('Current user token claims before upload:', idTokenResult.claims);
+      console.log('Token claims before upload:', idTokenResult.claims);
+      
+      // Check if role claim exists
+      if (!idTokenResult.claims.rol) {
+        console.warn('No role claim found in token! This may cause storage permission issues.');
+        toast.warning('Yetki bilgisi eksik. Dosya yükleme işlemi başarısız olabilir.');
+      } else {
+        console.log('User role from token:', idTokenResult.claims.rol);
+      }
     } catch (error) {
       console.error('Error refreshing token:', error);
     }
+  } else {
+    console.warn('No authenticated user found when trying to upload files');
+    toast.error('Dosya yüklemek için giriş yapmalısınız');
+    throw new Error('Dosya yüklemek için giriş yapmalısınız');
   }
 
   const urls: string[] = [];

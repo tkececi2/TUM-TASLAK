@@ -85,10 +85,7 @@ service firebase.storage {
     // Stoklar - Updated rules to only allow admin and technician roles
     match /stoklar/{imageId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated() && 
-        (isAdmin() || isTechnician()) &&  // Removed customer role access
-        request.resource.contentType.matches('image/.*') && 
-        request.resource.size < 10 * 1024 * 1024;
+      allow create, update, delete: if hasUploadPermission() && isValidImage();
     }
     
     // Santraller

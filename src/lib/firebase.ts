@@ -128,8 +128,12 @@ export const signInUser = async (email: string, password: string) => {
     
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     
-    // Force token refresh to get the custom claims
+    // Force token refresh to get the latest custom claims
     await userCredential.user.getIdToken(true);
+    
+    // Log token details for debugging
+    const idTokenResult = await userCredential.user.getIdTokenResult();
+    console.log('Token claims after sign in:', idTokenResult.claims);
     
     return userCredential.user;
   } catch (error) {

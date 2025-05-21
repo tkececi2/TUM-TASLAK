@@ -99,6 +99,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Add the role from custom claims if it exists
             if (idTokenResult.claims.rol) {
               userData.rol = idTokenResult.claims.rol as any;
+              console.log('Role from custom claims:', userData.rol);
+            } else {
+              console.log('No role in custom claims, using role from Firestore:', userData.rol);
             }
             
             setKullanici(userData);
@@ -157,6 +160,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Add the role from custom claims if it exists
         if (idTokenResult.claims.rol) {
           userData.rol = idTokenResult.claims.rol as any;
+          console.log('Role from custom claims after login:', userData.rol);
+        } else {
+          console.log('No role in custom claims after login, using role from Firestore:', userData.rol);
         }
         
         setKullanici(userData);
