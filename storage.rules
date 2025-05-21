@@ -33,7 +33,7 @@ service firebase.storage {
     
     function hasUploadPermission() {
       return isAuthenticated() && 
-        (isAdmin() || isTechnician() || isCustomer());  // Allow customers to upload ariza images
+        (isAdmin() || isTechnician());  // Only allow admins and technicians to upload solution images
     }
     
     // Default rule - deny all
@@ -101,7 +101,7 @@ service firebase.storage {
       allow delete: if isAuthenticated() && request.auth.uid == userId;
     }
     
-    // Çözümler
+    // Çözümler - Updated to explicitly handle cozumler path
     match /cozumler/{imageId} {
       allow read: if isAuthenticated();
       allow create, update, delete: if hasUploadPermission() && isValidImage();
