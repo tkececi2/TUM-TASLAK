@@ -1,4 +1,33 @@
-// src/utils/uploadHelpers.ts dosyasını düzenleyin
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../lib/firebase';
+
+// Helper functions
+const validateFileType = (file: File) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error(`${file.name}: Desteklenmeyen dosya türü. Lütfen JPEG, PNG, GIF veya WEBP formatında bir resim yükleyin.`);
+  }
+};
+
+const validateFileSize = (file: File) => {
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    throw new Error(`${file.name}: Dosya boyutu çok büyük. Maksimum dosya boyutu 10MB olmalıdır.`);
+  }
+};
+
+const validateFileName = (fileName: string): string => {
+  // Remove special characters and spaces, convert to lowercase
+  return fileName.toLowerCase()
+    .replace(/[^a-z0-9.]/g, '_')
+    .replace(/_{2,}/g, '_');
+};
+
+const compressImage = async (file: File): Promise<File> => {
+  // For now, return the original file
+  // TODO: Implement image compression
+  return file;
+};
 
 export const uploadFile = async (file: File, path: string): Promise<string> => {
   try {
@@ -18,12 +47,7 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
     // Generate safe filename
     const timestamp = Date.now();
     const safeName = validateFileName(file.name);
-    
-    // GEÇİCİ ÇÖZÜM: Tüm kullanıcılar için erişilebilir bir klasöre yönlendir
-    // Firebase kurallarımızda 'ortak_stoklar' klasörüne herkes için izin vereceğiz
-    const orjinalPath = path;
-    const geciciPath = 'ortak_stoklar'; // Herkesin erişebileceği geçici bir klasör
-    const fullPath = `${geciciPath}/${timestamp}_${safeName}`;
+    const fullPath = `${path}/${timestamp}_${safeName}`;
 
     // Create storage reference
     const storageRef = ref(storage, fullPath);
@@ -34,8 +58,7 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
         contentType: compressedFile.type,
         customMetadata: {
           originalName: file.name,
-          timestamp: timestamp.toString(),
-          orjinalPath: orjinalPath // Gerçekte hangi klasöre gitmeliydi kaydedelim
+          timestamp: timestamp.toString()
         }
       });
 
@@ -45,15 +68,38 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
     } catch (uploadError: any) {
       console.error('Storage upload error:', uploadError);
       
-      // İzin hatası durumunda daha açıklayıcı bir hata mesajı
       if (uploadError.code === 'storage/unauthorized') {
-        console.log('Yetki hatası algılandı, geçici çözüm uygulandı fakat çalışmadı');
         throw new Error(`${file.name}: Fotoğraf yükleme için yetkiniz bulunmamaktadır. Lütfen yöneticinize başvurun.`);
       }
       throw new Error(`${file.name}: Fotoğraf yüklenirken bir hata oluştu. Lütfen tekrar deneyin.`);
     }
   } catch (error: any) {
     console.error('Dosya yükleme hatası:', error);
+    throw error;
+  }
+};
+
+export const uploadMultipleFiles = async (
+  files: File[],
+  path: string,
+  onProgress?: (progress: number) => void
+): Promise<string[]> => {
+  const urls: string[] = [];
+  let completedUploads = 0;
+
+  try {
+    for (const file of files) {
+      const url = await uploadFile(file, path);
+      urls.push(url);
+      completedUploads++;
+      
+      if (onProgress) {
+        onProgress((completedUploads / files.length) * 100);
+      }
+    }
+    return urls;
+  } catch (error) {
+    console.error('Multiple file upload error:', error);
     throw error;
   }
 };
