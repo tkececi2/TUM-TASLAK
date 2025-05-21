@@ -30,7 +30,9 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Use emulators in development environment
+// Comment out or remove the emulator connections
+// This will prevent the "Running in emulator mode" warning
+/*
 if (process.env.NODE_ENV === 'development') {
   try {
     connectAuthEmulator(auth, 'http://localhost:9099');
@@ -41,6 +43,7 @@ if (process.env.NODE_ENV === 'development') {
     console.warn('Failed to connect to Firebase emulators:', error);
   }
 }
+*/
 
 try {
   enableIndexedDbPersistence(db).catch((err) => {
