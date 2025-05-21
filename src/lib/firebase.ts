@@ -61,22 +61,36 @@ const checkConnection = async () => {
   }
 
   try {
-    // Try to reach Firebase Auth servers
-    const response = await fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        idToken: await auth.currentUser?.getIdToken(),
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Firebase sunucularına erişilemiyor');
+    // Instead of trying to reach Firebase Auth servers directly,
+    // we'll use a more reliable method to check connection
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    try {
+      // Try to reach a reliable endpoint
+      const response = await fetch('https://www.google.com/generate_204', {
+        method: 'HEAD',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error('İnternet bağlantısı zayıf veya kararsız');
+      }
+      
+      return true;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error('Connection check failed:', fetchError);
+      
+      // If it's an abort error, it means the request timed out
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Bağlantı zaman aşımına uğradı');
+      }
+      
+      throw new Error('İnternet bağlantısı yok');
     }
-
-    return true;
   } catch (error) {
     console.error('Connection check failed:', error);
     throw new Error('İnternet bağlantısı yok');
