@@ -166,7 +166,7 @@ export const uploadMultipleFiles = async (
       // Check if role claim exists
       if (!idTokenResult.claims.rol) {
         console.warn('No role claim found in token! This may cause storage permission issues.');
-        toast.warning('Yetki bilgisi eksik. Dosya yükleme işlemi başarısız olabilir.');
+        toast.error('Yetki bilgisi eksik. Dosya yükleme işlemi başarısız olabilir.');
       } else {
         console.log('User role from token:', idTokenResult.claims.rol);
       }
@@ -227,7 +227,7 @@ export const uploadMultipleFiles = async (
   }
   
   if (urls.length > 0 && urls.length < validFilesToUpload.length) { // Bazıları yüklendi, bazıları yüklenemedi
-    toast.warn(`${validFilesToUpload.length - urls.length} dosya yüklenemedi. Detaylar için konsolu kontrol edin.`);
+    toast.error(`${validFilesToUpload.length - urls.length} dosya yüklenemedi. Detaylar için konsolu kontrol edin.`);
   }
 
   return urls;

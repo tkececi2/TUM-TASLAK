@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, addDoc, Timestamp, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase'; // Added auth import here
-import { useAuth } from '../contexts/AuthContext';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { FileUploadZone } from '../components/FileUploadZone';
-import { uploadMultipleFiles } from '../utils/uploadHelpers';
+import { db, auth, storage } from '../lib/firebase'; // Added auth import here
+import { useAuth } from '../contexts/AuthContext'; // Auth context dosyanızın yolu
+import { LoadingSpinner } from '../components/LoadingSpinner'; // Bileşen yolu
+import { FileUploadZone } from '../components/FileUploadZone'; // Bileşen yolu
+import { uploadMultipleFiles } from '../utils/uploadHelpers'; // Yardımcı fonksiyon yolu
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
@@ -22,7 +22,7 @@ import {
   Check, 
   BarChart 
 } from 'lucide-react';
-import { SearchInput } from '../components/SearchInput';
+import { SearchInput } from '../components/SearchInput'; // Bileşen yolu
 import toast from 'react-hot-toast';
 
 interface StokItem {
@@ -79,6 +79,8 @@ export const StokKontrol: React.FC = () => {
   const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
   const canDelete = kullanici?.rol === 'yonetici';
   const canEdit = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
+  // canUploadPhotos artık doğrudan kullanılmıyor, uploadMultipleFiles içindeki kurallar ve Firebase kuralları belirleyici.
+  // const canUploadPhotos = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
 
   useEffect(() => {
     const sahalariGetir = async () => {
@@ -336,7 +338,8 @@ export const StokKontrol: React.FC = () => {
       kritikSeviye: stok.kritikSeviye,
       kategori: stok.kategori || '',
       aciklama: stok.aciklama || '',
-      fotograflar: []
+      fotograflar: [] // Düzenleme modunda mevcut fotoğrafları göstermiyoruz, yenilerini ekleyebilir.
+                     // Eğer mevcutları koruyup ekleme/çıkarma yapmak istersen burası değişmeli.
     });
     setDuzenlemeModu(true);
     setFormAcik(true);
@@ -367,6 +370,11 @@ export const StokKontrol: React.FC = () => {
       </div>
     );
   }
+
+  // Geri kalan JSX kodunuz aynı kalabilir...
+  // Sadece JSX içinde fotograflar için placeholder veya hata durumunu yöneten kısım:
+  // <img ... onError={(e) => { const target = e.target as HTMLImageElement; target.src = '/placeholder-image.png'; }} />
+  // kısmının doğru çalıştığından emin olun.
 
   return (
     <div className="space-y-6 p-4 md:p-6 bg-gray-50 min-h-screen">
@@ -581,7 +589,7 @@ export const StokKontrol: React.FC = () => {
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="saha" className="block text-sm font-medium text-gray-700">Saha</label>
+                <label htmlFor="sahaId" className="block text-sm font-medium text-gray-700">Saha</label>
                 <select
                   id="sahaId"
                   name="sahaId"
@@ -680,6 +688,7 @@ export const StokKontrol: React.FC = () => {
                     onFileRemove={(index) => setForm(prev => ({ ...prev, fotograflar: prev.fotograflar.filter((_, i) => i !== index) }))}
                     uploadProgress={uploadProgress}
                     maxFiles={5} // FileUploadZone'a da maxFiles bilgisini geç
+                    // disabled={!canUploadPhotos} // Bu kontrolü FileUploadZone kendi içinde veya uploadHelpers yapıyor
                 />
                 {uploadProgress > 0 && uploadProgress < 100 && (
                     <p className="text-sm text-yellow-600 mt-1">Yükleniyor: {Math.round(uploadProgress)}%</p>
