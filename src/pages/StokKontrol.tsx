@@ -7,20 +7,20 @@ import { FileUploadZone } from '../components/FileUploadZone';
 import { uploadMultipleFiles } from '../utils/uploadHelpers';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { 
-  Plus, 
-  Trash2, 
-  Search, 
-  Building, 
-  Package, 
-  X, 
-  Upload, 
-  Image as ImageIcon, 
-  Edit2, 
-  Filter, 
-  AlertCircle, 
-  Check, 
-  BarChart 
+import {
+  Plus,
+  Trash2,
+  Search,
+  Building,
+  Package,
+  X,
+  Upload,
+  Image as ImageIcon,
+  Edit2,
+  Filter,
+  AlertCircle,
+  Check,
+  BarChart
 } from 'lucide-react';
 import { SearchInput } from '../components/SearchInput';
 import toast from 'react-hot-toast';
@@ -76,16 +76,23 @@ export const StokKontrol: React.FC = () => {
     fotograflar: [] as File[]
   });
 
-  // Yetki kontrolleri - Rol bazlı erişim
-  const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
+  // Yetki kontrolleri - Rol bazlı erişim (Müşteri rolü eklendi)
+  const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'musteri'].includes(kullanici.rol);
   const canDelete = kullanici?.rol === 'yonetici';
-  const canEdit = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
-  const canUploadPhotos = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
+  const canEdit = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'musteri'].includes(kullanici.rol);
+  const canUploadPhotos = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'musteri'].includes(kullanici.rol);
+  
+  // Debug için: Kullanıcı rolünü konsola yazdır
+  useEffect(() => {
+    if (kullanici) {
+      console.log("Kullanıcı rolü:", kullanici.rol);
+      console.log("Yükleme izni var mı:", canUploadPhotos);
+    }
+  }, [kullanici, canUploadPhotos]);
 
   useEffect(() => {
     const sahalariGetir = async () => {
       if (!kullanici) return;
-
       try {
         let sahaQuery;
         if (kullanici.rol === 'musteri' && kullanici.sahalar) {
@@ -119,7 +126,6 @@ export const StokKontrol: React.FC = () => {
   useEffect(() => {
     const stoklariGetir = async () => {
       if (!kullanici) return;
-
       try {
         setYukleniyor(true);
         let stokQuery;
@@ -179,13 +185,12 @@ export const StokKontrol: React.FC = () => {
       toast.error('Bu işlem için yetkiniz yok');
       return;
     }
-
     if (!form.sahaId || !form.urunAdi || form.miktar < 0) {
       toast.error('Lütfen gerekli alanları doldurun');
       return;
     }
 
-    // Check photo upload permissions before attempting upload
+    // Fotoğraf yükleme yetkisini kontrol et
     if (form.fotograflar.length > 0 && !canUploadPhotos) {
       toast.error('Fotoğraf yükleme yetkiniz bulunmuyor');
       return;
@@ -197,6 +202,13 @@ export const StokKontrol: React.FC = () => {
       
       if (form.fotograflar.length > 0) {
         try {
+          // Kullanıcının yükleme izni olup olmadığını bir daha kontrol et
+          if (!canUploadPhotos) {
+            toast.error('Fotoğraf yükleme yetkiniz bulunmuyor');
+            setYukleniyor(false);
+            return; // Yetki yoksa işlemi sonlandır
+          }
+          
           const uploadToast = toast.loading('Fotoğraflar yükleniyor...');
           fotografURLleri = await uploadMultipleFiles(
             form.fotograflar,
@@ -208,14 +220,14 @@ export const StokKontrol: React.FC = () => {
           });
         } catch (error: any) {
           console.error('Fotoğraf yükleme hatası:', error);
-          // If the error is due to permissions, show a specific message
-          if (error.code === 'storage/unauthorized') {
+          // Eğer hata izinlerden kaynaklanıyorsa özel mesaj göster
+          if (error.code === 'storage/unauthorized' || error.message.includes('yetkiniz bulunmamaktadır')) {
             toast.error('Fotoğraf yükleme için yetkiniz bulunmamaktadır. Lütfen yöneticinize başvurun.');
             setYukleniyor(false);
-            return; // Exit early if permission error
+            return; // Hata durumunda işlemi sonlandır
           } else {
             toast.error(`Fotoğraf yükleme hatası: ${error.message}`);
-            // Continue without photos if other error
+            // Fotoğraf olmadan devam et
             console.log('Fotoğraf yükleme hatası oluştu, fotoğrafsız devam ediliyor');
           }
         }
@@ -262,7 +274,7 @@ export const StokKontrol: React.FC = () => {
         fotograflar: []
       });
       
-      // Refresh stock list
+      // Stok listesini yenile
       const stokQuery = query(
         collection(db, 'stoklar'),
         where('companyId', '==', kullanici.companyId)
@@ -288,7 +300,6 @@ export const StokKontrol: React.FC = () => {
       toast.error('Bu işlem için yetkiniz yok');
       return;
     }
-
     if (!window.confirm('Bu stok kaydını silmek istediğinizden emin misiniz?')) {
       return;
     }
@@ -311,7 +322,6 @@ export const StokKontrol: React.FC = () => {
       toast.error('Bu işlem için yetkiniz yok');
       return;
     }
-
     setSecilenStok(stok);
     setForm({
       sahaId: stok.sahaId,
@@ -328,12 +338,11 @@ export const StokKontrol: React.FC = () => {
   };
 
   const filtrelenmisStoklar = stoklar.filter(stok => {
-    const aramaFiltreleme = !aramaMetni || 
+    const aramaFiltreleme = !aramaMetni ||
       stok.urunAdi.toLowerCase().includes(aramaMetni.toLowerCase()) ||
       stok.aciklama?.toLowerCase().includes(aramaMetni.toLowerCase());
-    
     const kategoriFiltreleme = !secilenKategori || stok.kategori === secilenKategori;
-    
+
     return aramaFiltreleme && kategoriFiltreleme;
   });
 
@@ -341,7 +350,6 @@ export const StokKontrol: React.FC = () => {
   const toplamStokAdedi = filtrelenmisStoklar.reduce((total, stok) => total + stok.miktar, 0);
   const toplamStokCesidi = filtrelenmisStoklar.length;
   const normalStokAdedi = filtrelenmisStoklar.filter(stok => stok.miktar > stok.kritikSeviye).length;
-  
   const [detayModalAcik, setDetayModalAcik] = useState(false);
   const [secilenDetay, setSecilenDetay] = useState<StokItem | null>(null);
 
@@ -391,7 +399,7 @@ export const StokKontrol: React.FC = () => {
           </button>
         )}
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
           <div className="flex items-center justify-between">
@@ -474,6 +482,159 @@ export const StokKontrol: React.FC = () => {
         </div>
       </div>
 
+      {formAcik && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {duzenlemeModu ? 'Stok Güncelle' : 'Yeni Stok Ekle'}
+                </h2>
+                <button
+                  onClick={() => setFormAcik(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="sahaId" className="block text-sm font-medium text-gray-700">
+                      Saha
+                    </label>
+                    <select
+                      id="sahaId"
+                      value={form.sahaId}
+                      onChange={(e) => setForm({ ...form, sahaId: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                      required
+                    >
+                      <option value="">Saha Seçin</option>
+                      {sahalar.map(saha => (
+                        <option key={saha.id} value={saha.id}>{saha.ad}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="kategori" className="block text-sm font-medium text-gray-700">
+                      Kategori
+                    </label>
+                    <select
+                      id="kategori"
+                      value={form.kategori}
+                      onChange={(e) => setForm({ ...form, kategori: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                    >
+                      <option value="">Kategori Seçin</option>
+                      {stokKategorileri.map(kategori => (
+                        <option key={kategori} value={kategori}>{kategori}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="urunAdi" className="block text-sm font-medium text-gray-700">
+                      Ürün Adı
+                    </label>
+                    <input
+                      type="text"
+                      id="urunAdi"
+                      value={form.urunAdi}
+                      onChange={(e) => setForm({ ...form, urunAdi: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="miktar" className="block text-sm font-medium text-gray-700">
+                      Miktar
+                    </label>
+                    <input
+                      type="number"
+                      id="miktar"
+                      min="0"
+                      value={form.miktar}
+                      onChange={(e) => setForm({ ...form, miktar: parseInt(e.target.value) || 0 })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="birim" className="block text-sm font-medium text-gray-700">
+                      Birim
+                    </label>
+                    <input
+                      type="text"
+                      id="birim"
+                      value={form.birim}
+                      onChange={(e) => setForm({ ...form, birim: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                      placeholder="Adet, kg, m, vb."
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="kritikSeviye" className="block text-sm font-medium text-gray-700">
+                      Kritik Seviye
+                    </label>
+                    <input
+                      type="number"
+                      id="kritikSeviye"
+                      min="0"
+                      value={form.kritikSeviye}
+                      onChange={(e) => setForm({ ...form, kritikSeviye: parseInt(e.target.value) || 0 })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="aciklama" className="block text-sm font-medium text-gray-700">
+                    Açıklama
+                  </label>
+                  <textarea
+                    id="aciklama"
+                    value={form.aciklama}
+                    onChange={(e) => setForm({ ...form, aciklama: e.target.value })}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                  />
+                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fotoğraflar
+                  </label>
+                  <FileUploadZone
+                    onFileSelect={(files) => setForm({ ...form, fotograflar: [...form.fotograflar, ...files] })}
+                    selectedFiles={form.fotograflar}
+                    onFileRemove={(index) => {
+                      const newFiles = [...form.fotograflar];
+                      newFiles.splice(index, 1);
+                      setForm({ ...form, fotograflar: newFiles });
+                    }}
+                    uploadProgress={uploadProgress}
+                    disabled={!canUploadPhotos} // Fotoğraf yükleme yetkisi kontrolü
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setFormAcik(false)}
+                    className="mr-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
+                  >
+                    {duzenlemeModu ? 'Güncelle' : 'Kaydet'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -533,61 +694,56 @@ export const StokKontrol: React.FC = () => {
                           />
                         </div>
                       ) : (
-                        <div className="flex-shrink-0 h-10 w-10 mr-3 rounded-md bg-gray-200 flex items-center justify-center">
-                          <Package className="h-6 w-6 text-gray-500" />
+                        <div className="flex-shrink-0 h-10 w-10 mr-3 bg-gray-200 rounded-md flex items-center justify-center">
+                          <Package className="h-6 w-6 text-gray-400" />
                         </div>
                       )}
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {stok.urunAdi}
-                        </div>
-                        {stok.aciklama && (
-                          <div className="text-xs text-gray-500 max-w-xs truncate">
-                            {stok.aciklama}
-                          </div>
-                        )}
+                        <div className="text-sm font-medium text-gray-900">{stok.urunAdi}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {stok.kategori || "Kategorisiz"}
+                    {stok.kategori || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`text-sm font-medium ${stok.miktar <= stok.kritikSeviye ? "text-red-700" : "text-gray-900"}`}>
+                    <div className="text-sm text-gray-900">
                       {stok.miktar} {stok.birim}
-                    </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {stok.kritikSeviye} {stok.birim}
+                    </div>
+                    {stok.miktar <= stok.kritikSeviye && (
+                      <div className="mt-1 flex items-center text-xs text-red-600">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        Kritik seviyede
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {stok.kritikSeviye} {stok.birim}
+                    {sahalar.find(s => s.id === stok.sahaId)?.ad || stok.sahaId}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {sahalar.find(s => s.id === stok.sahaId)?.ad || "Bilinmiyor"}
+                    {stok.sonGuncelleme ? format(stok.sonGuncelleme.toDate(), 'dd MMMM yyyy, HH:mm', { locale: tr }) : '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {stok.sonGuncelleme ? format(stok.sonGuncelleme.toDate(), 'dd MMMM yyyy HH:mm', { locale: tr }) : 'Belirtilmemiş'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
-                    <div className="flex items-center justify-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <div className="flex items-center justify-center space-x-3" onClick={(e) => e.stopPropagation()}>
                       {canEdit && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(stok);
-                          }}
-                          className="text-yellow-600 hover:text-yellow-800"
-                        >
-                          <Edit2 className="h-4 w-4" />
+                        <button onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(stok);
+                        }} className="text-indigo-600 hover:text-indigo-900">
+                          <Edit2 className="h-5 w-5" />
                         </button>
                       )}
                       {canDelete && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(stok.id);
-                          }}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="h-4 w-4" />
+                        <button onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(stok.id);
+                        }} className="text-red-600 hover:text-red-900">
+                          <Trash2 className="h-5 w-5" />
                         </button>
                       )}
                     </div>
@@ -600,315 +756,114 @@ export const StokKontrol: React.FC = () => {
       </div>
 
       {detayModalAcik && secilenDetay && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg w-full max-w-2xl">
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-base font-medium text-gray-900">
-                {secilenDetay?.urunAdi}
-              </h2>
-              <button
-                onClick={() => {
-                  setDetayModalAcik(false);
-                  setSecilenDetay(null);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="w-full md:w-2/5">
-                  {secilenDetay.fotograflar && secilenDetay.fotograflar.length > 0 ? (
-                    <div className="h-48 rounded-lg overflow-hidden bg-gray-100">
-                      <img
-                        src={secilenDetay.fotograflar[0]}
-                        alt={secilenDetay.urunAdi}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder-image.png';
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="h-48 rounded-lg bg-gray-100 flex items-center justify-center">
-                      <Package className="h-16 w-16 text-gray-300" />
-                    </div>
-                  )}
-                  
-                  {secilenDetay.fotograflar && secilenDetay.fotograflar.length > 1 && (
-                    <div className="flex mt-2 gap-1 overflow-x-auto pb-1">
-                      {secilenDetay.fotograflar.slice(1).map((foto, idx) => (
-                        <div key={`thumb-${idx}`} className="h-12 w-12 rounded-md overflow-hidden flex-shrink-0 border border-gray-200">
-                          <img 
-                            src={foto} 
-                            alt={`${secilenDetay.urunAdi} - ${idx + 2}`}
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '/placeholder-image.png';
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="w-full md:w-3/5 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-gray-500">Kategori</p>
-                      <p className="text-sm font-medium">{secilenDetay.kategori || "Kategorisiz"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Saha</p>
-                      <p className="text-sm font-medium">{sahalar.find(s => s.id === secilenDetay.sahaId)?.ad || "Bilinmiyor"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Miktar</p>
-                      <p className={`text-sm font-medium ${secilenDetay.miktar <= secilenDetay.kritikSeviye ? "text-red-600" : ""}`}>
-                        {secilenDetay.miktar} {secilenDetay.birim}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Kritik Seviye</p>
-                      <p className="text-sm font-medium">{secilenDetay.kritikSeviye} {secilenDetay.birim}</p>
-                    </div>
-                  </div>
-                  
-                  {secilenDetay.aciklama && (
-                    <div>
-                      <p className="text-xs text-gray-500">Açıklama</p>
-                      <p className="mt-1 text-sm text-gray-700">{secilenDetay.aciklama}</p>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-gray-500">Son Güncelleme</p>
-                      <p className="text-xs text-gray-700">
-                        {secilenDetay.sonGuncelleme ? format(secilenDetay.sonGuncelleme.toDate(), 'dd MMMM yyyy HH:mm', { locale: tr }) : 'Belirtilmemiş'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Oluşturan</p>
-                      <p className="text-xs text-gray-700">{secilenDetay.olusturanKisi?.ad || "Bilinmiyor"}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-3 flex gap-2">
-                    {canEdit && (
-                      <button
-                        onClick={() => {
-                          setDetayModalAcik(false);
-                          handleEdit(secilenDetay);
-                        }}
-                        className="flex items-center px-3 py-1.5 border border-yellow-300 rounded-md shadow-sm text-xs font-medium text-yellow-700 bg-white hover:bg-yellow-50"
-                      >
-                        <Edit2 className="h-3 w-3 mr-1" />
-                        Düzenle
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={() => {
-                          setDetayModalAcik(false);
-                          handleDelete(secilenDetay.id);
-                        }}
-                        className="flex items-center px-3 py-1.5 border border-red-300 rounded-md shadow-sm text-xs font-medium text-red-700 bg-white hover:bg-red-50"
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Sil
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {formAcik && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg w-full max-w-3xl">
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-base font-medium text-gray-900">
-                {duzenlemeModu ? `Stok Düzenle: ${secilenStok?.urunAdi}` : 'Yeni Stok Ekle'}
-              </h2>
-              <button
-                onClick={() => setFormAcik(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Temel Bilgiler */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">
-                      Saha
-                    </label>
-                    <select
-                      required
-                      value={form.sahaId}
-                      onChange={e => setForm(prev => ({ ...prev, sahaId: e.target.value }))}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-                    >
-                      <option value="">Saha Seçin</option>
-                      {sahalar.map(saha => (
-                        <option key={saha.id} value={saha.id}>{saha.ad}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">
-                      Ürün Adı
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={form.urunAdi}
-                      onChange={e => setForm(prev => ({ ...prev, urunAdi: e.target.value }))}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">
-                      Kategori
-                    </label>
-                    <select
-                      value={form.kategori}
-                      onChange={e => setForm(prev => ({ ...prev, kategori: e.target.value }))}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-                    >
-                      <option value="">Kategori Seçin</option>
-                      {stokKategorileri.map(kategori => (
-                        <option key={kategori} value={kategori}>{kategori}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">
-                      Miktar
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={form.miktar}
-                      onChange={e => setForm(prev => ({ ...prev, miktar: parseInt(e.target.value) }))}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">
-                      Birim
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={form.birim}
-                      onChange={e => setForm(prev => ({ ...prev, birim: e.target.value }))}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-                      placeholder="adet, kg, metre vb."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">
-                      Kritik Seviye
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={form.kritikSeviye}
-                      onChange={e => setForm(prev => ({ ...prev, kritikSeviye: parseInt(e.target.value) }))}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700">
-                      Açıklama
-                    </label>
-                    <textarea
-                      value={form.aciklama}
-                      onChange={e => setForm(prev => ({ ...prev, aciklama: e.target.value }))}
-                      rows={2}
-                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Fotoğraflar
-                    </label>
-                    {!canUploadPhotos && (
-                      <div className="mb-2 p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700">
-                        <AlertCircle className="h-3 w-3 inline mr-1" />
-                        Fotoğraf yükleme için yönetici, tekniker veya mühendis yetkisi gereklidir.
-                      </div>
-                    )}
-                    <FileUploadZone
-                      onFileSelect={(files) => setForm(prev => ({ ...prev, fotograflar: files }))}
-                      selectedFiles={form.fotograflar}
-                      onFileRemove={(index) => {
-                        setForm(prev => ({
-                          ...prev,
-                          fotograflar: prev.fotograflar.filter((_, i) => i !== index)
-                        }));
-                      }}
-                      maxFiles={5}
-                      uploadProgress={uploadProgress}
-                      disabled={!canUploadPhotos}
-                    />
-                    {duzenlemeModu && secilenStok?.fotograflar && secilenStok.fotograflar.length > 0 && (
-                      <div className="mt-1 text-xs text-gray-500">
-                        Not: Yeni fotoğraf yüklerseniz, mevcut fotoğraflar değiştirilecektir.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Stok Detayları
+                </h2>
                 <button
-                  type="button"
-                  onClick={() => setFormAcik(false)}
-                  className="px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => {
+                    setDetayModalAcik(false);
+                    setSecilenDetay(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  İptal
-                </button>
-                <button
-                  type="submit"
-                  disabled={yukleniyor}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50"
-                >
-                  {yukleniyor ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      <span className="ml-2">Kaydediliyor...</span>
-                    </>
-                  ) : duzenlemeModu ? 'Güncelle' : 'Kaydet'}
+                  <X className="h-6 w-6" />
                 </button>
               </div>
-            </form>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Ürün Adı</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{secilenDetay.urunAdi}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Kategori</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{secilenDetay.kategori || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Miktar</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">
+                    {secilenDetay.miktar} {secilenDetay.birim}
+                    {secilenDetay.miktar <= secilenDetay.kritikSeviye && (
+                      <span className="ml-2 text-sm text-red-600 font-normal inline-flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        Kritik seviyede
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Kritik Seviye</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{secilenDetay.kritikSeviye} {secilenDetay.birim}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Saha</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">
+                    {sahalar.find(s => s.id === secilenDetay.sahaId)?.ad || secilenDetay.sahaId}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Son Güncelleme</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">
+                    {secilenDetay.sonGuncelleme ? format(secilenDetay.sonGuncelleme.toDate(), 'dd MMMM yyyy, HH:mm', { locale: tr }) : '-'}
+                  </p>
+                </div>
+              </div>
+              {secilenDetay.aciklama && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Açıklama</p>
+                  <p className="mt-1 text-gray-900 whitespace-pre-line">{secilenDetay.aciklama}</p>
+                </div>
+              )}
+              {secilenDetay.fotograflar && secilenDetay.fotograflar.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Fotoğraflar</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {secilenDetay.fotograflar.map((url, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={url}
+                          alt={`${secilenDetay.urunAdi} ${index + 1}`}
+                          className="h-40 w-full object-cover rounded-lg"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder-image.png';
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end">
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      handleEdit(secilenDetay);
+                      setDetayModalAcik(false);
+                    }}
+                    className="mr-3 inline-flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Düzenle
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={() => {
+                      handleDelete(secilenDetay.id);
+                      setDetayModalAcik(false);
+                    }}
+                    className="inline-flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Sil
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
