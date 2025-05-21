@@ -135,6 +135,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const girisYap = async (email: string, sifre: string): Promise<boolean> => {
     try {
+      // Check if the browser is online
+      if (!navigator.onLine) {
+        toast.error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.');
+        return false;
+      }
+
       const user = await signInUser(email, sifre);
       
       // Force token refresh to get the latest custom claims
@@ -179,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin';
       } else if (error.code === 'auth/network-request-failed') {
-        errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin';
+        errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin ve tekrar deneyin';
       }
       
       toast.error(errorMessage);

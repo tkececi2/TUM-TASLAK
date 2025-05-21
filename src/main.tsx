@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { BildirimProvider } from './contexts/BildirimContext';
 import { CompanyProvider } from './contexts/CompanyContext';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root elementi bulunamadı');
@@ -43,6 +44,7 @@ createRoot(rootElement).render(
                   },
                 }}
               />
+              <OfflineIndicator />
               <App />
             </BildirimProvider>
           </NotificationProvider>

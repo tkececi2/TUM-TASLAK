@@ -34,6 +34,13 @@ export const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if the browser is online
+    if (!navigator.onLine) {
+      toast.error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -42,6 +49,9 @@ export const Login = () => {
         const from = (location.state as any)?.from?.pathname || '/anasayfa';
         navigate(from, { replace: true });
       }
+    } catch (error) {
+      console.error('Login error:', error);
+      // Error handling is done in girisYap function
     } finally {
       setLoading(false);
     }
@@ -51,6 +61,12 @@ export const Login = () => {
     e.preventDefault();
     if (!resetEmail) {
       toast.error('Lütfen e-posta adresinizi girin');
+      return;
+    }
+
+    // Check if the browser is online
+    if (!navigator.onLine) {
+      toast.error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.');
       return;
     }
 
@@ -69,6 +85,8 @@ export const Login = () => {
         errorMessage = 'Geçersiz e-posta adresi';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Çok fazla istek gönderildi. Lütfen daha sonra tekrar deneyin';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin';
       }
       
       toast.error(errorMessage);
