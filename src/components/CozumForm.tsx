@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../lib/firebase';
+import { db, storage, auth } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import { X, Upload } from 'lucide-react';
@@ -48,11 +48,32 @@ export const CozumForm: React.FC<Props> = ({ ariza, onClose }) => {
       }
 
       // Yeni fotoğrafları yükle
-      for (const foto of form.fotograflar) {
-        const storageRef = ref(storage, `cozumler/${Date.now()}_${foto.name}`);
-        const snapshot = await uploadBytes(storageRef, foto);
-        const url = await getDownloadURL(snapshot.ref);
-        fotografURLleri.push(url);
+      if (form.fotograflar.length > 0) {
+        // Force token refresh before uploading to ensure latest claims are used
+        if (auth.currentUser) {
+          await auth.currentUser.getIdToken(true);
+          
+          // Log token claims for debugging
+          const idTokenResult = await auth.currentUser.getIdTokenResult();
+          console.log('Token claims before upload:', idTokenResult.claims);
+        }
+        
+        for (const foto of form.fotograflar) {
+          try {
+            const storageRef = ref(storage, `cozumler/${Date.now()}_${foto.name}`);
+            const snapshot = await uploadBytes(storageRef, foto);
+            const url = await getDownloadURL(snapshot.ref);
+            fotografURLleri.push(url);
+          } catch (uploadError: any) {
+            console.error('Fotoğraf yükleme hatası:', uploadError);
+            if (uploadError.code === 'storage/unauthorized') {
+              toast.error('Fotoğraf yükleme yetkiniz bulunmuyor. Lütfen yöneticinize başvurun.');
+            } else {
+              toast.error(`Fotoğraf yüklenirken bir hata oluştu: ${uploadError.message}`);
+            }
+            // Continue with the rest of the photos
+          }
+        }
       }
 
       // Arızayı güncelle
@@ -117,11 +138,11 @@ export const CozumForm: React.FC<Props> = ({ ariza, onClose }) => {
               Çözüm Açıklaması
             </label>
             <textarea
+              required
               value={form.aciklama}
               onChange={e => setForm(prev => ({ ...prev, aciklama: e.target.value }))}
               rows={4}
               className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-              placeholder="Arıza nasıl çözüldü?"
             />
           </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, doc, addDoc, updateDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../lib/firebase';
+import { db, storage, auth } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format } from 'date-fns';
 import { X } from 'lucide-react';
@@ -86,11 +86,32 @@ export const ArizaForm: React.FC<Props> = ({ ariza, onClose }) => {
       // Yeni fotoğrafları yükle
       const fotografURLleri = [...form.mevcutFotograflar];
       
-      for (const foto of form.fotograflar) {
-        const storageRef = ref(storage, `arizalar/${Date.now()}_${foto.name}`);
-        const snapshot = await uploadBytes(storageRef, foto);
-        const url = await getDownloadURL(snapshot.ref);
-        fotografURLleri.push(url);
+      if (form.fotograflar.length > 0) {
+        // Force token refresh before uploading to ensure latest claims are used
+        if (auth.currentUser) {
+          await auth.currentUser.getIdToken(true);
+          
+          // Log token claims for debugging
+          const idTokenResult = await auth.currentUser.getIdTokenResult();
+          console.log('Token claims before upload:', idTokenResult.claims);
+        }
+        
+        for (const foto of form.fotograflar) {
+          const storageRef = ref(storage, `arizalar/${Date.now()}_${foto.name}`);
+          try {
+            const snapshot = await uploadBytes(storageRef, foto);
+            const url = await getDownloadURL(snapshot.ref);
+            fotografURLleri.push(url);
+          } catch (uploadError: any) {
+            console.error('Fotoğraf yükleme hatası:', uploadError);
+            if (uploadError.code === 'storage/unauthorized') {
+              toast.error('Fotoğraf yükleme yetkiniz bulunmuyor. Lütfen yöneticinize başvurun.');
+            } else {
+              toast.error(`Fotoğraf yüklenirken bir hata oluştu: ${uploadError.message}`);
+            }
+            // Continue with the rest of the photos
+          }
+        }
       }
 
       const arizaData = {

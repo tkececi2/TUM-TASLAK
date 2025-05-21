@@ -116,6 +116,10 @@ export const uploadFile = async (file: File, path: string, maxSizeMB = 10): Prom
     // Force token refresh before uploading to ensure latest claims are used
     if (auth.currentUser) {
       await auth.currentUser.getIdToken(true);
+      
+      // Log token claims for debugging
+      const idTokenResult = await auth.currentUser.getIdTokenResult();
+      console.log('Token claims before upload:', idTokenResult.claims);
     }
     
     const storageRef = ref(storage, fullPath);
