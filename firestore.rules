@@ -1,1 +1,186 @@
-f
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        request.auth.token.rol == 'yonetici';
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+        request.auth.token.rol == 'superadmin';
+    }
+    
+    function isCompanyMember(companyId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId == companyId;
+    }
+    
+    function belongsToCompany(resource) {
+      return isAuthenticated() && 
+        resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
+    }
+    
+    function belongsToUserCompany() {
+      return isAuthenticated() && 
+        resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Companies collection
+    match /companies/{companyId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || isCompanyMember(companyId));
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && isCompanyMember(companyId)));
+      allow delete: if isSuperAdmin();
+    }
+    
+    // Users collection
+    match /kullanicilar/{userId} {
+      allow read: if isAuthenticated() && 
+        (userId == request.auth.uid || 
+         isSuperAdmin() || 
+         (resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+        (userId == request.auth.uid || 
+         isSuperAdmin() || 
+         (isAdmin() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
+      allow delete: if isAuthenticated() && 
+        (isSuperAdmin() || 
+         (isAdmin() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
+    }
+    
+    // Invitations collection
+    match /invitations/{inviteId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && 
+        (isSuperAdmin() || isAdmin());
+      allow delete: if isAuthenticated() && 
+        (isSuperAdmin() || isAdmin());
+    }
+    
+    // Settings collection
+    match /ayarlar/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+        (isSuperAdmin() || isAdmin());
+    }
+    
+    // Sahalar collection
+    match /sahalar/{sahaId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated() && 
+        (isSuperAdmin() || isAdmin());
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && belongsToCompany(resource)));
+    }
+    
+    // Santraller collection
+    match /santraller/{santralId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated() && 
+        (isSuperAdmin() || isAdmin());
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && belongsToCompany(resource)));
+    }
+    
+    // Arizalar collection
+    match /arizalar/{arizaId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // Stoklar collection
+    match /stoklar/{stokId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // MekanikBakimlar collection
+    match /mekanikBakimlar/{bakimId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // ElektrikBakimlar collection
+    match /elektrikBakimlar/{bakimId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // IsRaporlari collection
+    match /isRaporlari/{raporId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // ElektrikKesintileri collection
+    match /elektrikKesintileri/{kesintId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // InvertorKontroller collection
+    match /invertorKontroller/{kontrolId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // UretimVerileri collection
+    match /uretimVerileri/{veriId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || belongsToCompany(resource));
+    }
+    
+    // Bildirimler collection
+    match /bildirimler/{bildirimId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || 
+         resource.data.kullaniciId == request.auth.uid || 
+         resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+        (isSuperAdmin() || 
+         resource.data.kullaniciId == request.auth.uid || 
+         (isAdmin() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
+    }
+  }
+}
