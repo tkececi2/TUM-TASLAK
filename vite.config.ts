@@ -18,7 +18,9 @@ export default defineConfig({
     allowedHosts: [
       '59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev',
       '.replit.dev',
-      'localhost'
+      '.pike.replit.dev',
+      'localhost',
+      'all'
     ]
   },
   optimizeDeps: {
