@@ -12,7 +12,7 @@ const compressImage = async (file: File): Promise<File> => {
 
     const img = new Image();
     img.src = URL.createObjectURL(file);
-    
+
     img.onerror = () => {
       console.warn(`Resim sıkıştırma sırasında '${file.name}' yüklenemedi, orijinal dosya kullanılıyor.`);
       resolve(file);
@@ -46,7 +46,7 @@ const compressImage = async (file: File): Promise<File> => {
 
       canvas.width = width;
       canvas.height = height;
-      
+
       try {
         ctx.drawImage(img, 0, 0, width, height);
         canvas.toBlob(
@@ -98,6 +98,32 @@ const validateFileSize = (file: File, maxSizeMB = 10): void => { // Varsayılan 
   }
 };
 
+// Kullanıcıdan companyId alma
+export const getCurrentCompanyId = async (): Promise<string> => {
+  try {
+    // Eğer auth token'dan direkt erişebiliyorsak
+    const user = auth.currentUser;
+    if (user) {
+      const idTokenResult = await user.getIdTokenResult();
+      if (idTokenResult.claims.companyId) {
+        return idTokenResult.claims.companyId as string;
+      }
+    }
+
+    // LocalStorage'dan kullanıcı bilgisini al
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      return userData.companyId || '';
+    }
+
+    return '';
+  } catch (error) {
+    console.error('CompanyId alınırken hata:', error);
+    return '';
+  }
+};
+
 export const uploadFile = async (file: File, path: string, maxSizeMB = 10): Promise<string> => {
   try {
     validateFileType(file);
@@ -109,28 +135,30 @@ export const uploadFile = async (file: File, path: string, maxSizeMB = 10): Prom
         // Sıkıştırma sonrası dosya boyutunu da kontrol et, eğer sıkıştırma beklenenden az olduysa.
         validateFileSize(fileToUpload, maxSizeMB); 
     }
-    
+
     const timestamp = Date.now();
     const safeName = validateFileName(fileToUpload.name);
     const fullPath = `${path}/${timestamp}_${safeName}`;
-    
+
     // Force token refresh before uploading to ensure latest claims are used
     if (auth.currentUser) {
       await auth.currentUser.getIdToken(true);
-      
+
       // Log token claims for debugging
       const idTokenResult = await auth.currentUser.getIdTokenResult();
       console.log('Token claims before upload:', idTokenResult.claims);
     }
-    
+
     const storageRef = ref(storage, fullPath);
+    const companyId = await getCurrentCompanyId(); // companyId'yi al
 
     try {
       const snapshot = await uploadBytes(storageRef, fileToUpload, {
         contentType: fileToUpload.type,
         customMetadata: {
           originalName: file.name, // Orijinal adı sakla
-          timestamp: timestamp.toString()
+          timestamp: timestamp.toString(),
+          companyId: companyId // companyId'yi metadata'ya ekle
         }
       });
       const downloadURL = await getDownloadURL(snapshot.ref);
@@ -172,15 +200,15 @@ export const uploadMultipleFiles = async (
   if (auth.currentUser) {
     try {
       await auth.currentUser.getIdToken(true);
-      
+
       // Log token claims for debugging
       const idTokenResult = await auth.currentUser.getIdTokenResult();
       console.log('Token claims before upload:', idTokenResult.claims);
-      
+
       // Check if role claim exists in token
       if (!idTokenResult.claims.rol) {
         console.log('No role in token claims, getting user data from Firestore');
-        
+
         // Kullanıcı verilerini Firestore'dan al (kullanıcı rol değeri için)
         const userDoc = await userService.getUserById(auth.currentUser.uid);
         if (userDoc && userDoc.rol) {
@@ -262,7 +290,7 @@ export const uploadMultipleFiles = async (
     const firstErrorMessage = failedFiles.length > 0 ? failedFiles[0].reason : "Bilinmeyen bir nedenle dosyalar yüklenemedi.";
     throw new Error(`Dosya yükleme başarısız oldu. İlk hata: ${firstErrorMessage}. Lütfen yetkinizi kontrol edin veya yöneticinize başvurun.`);
   }
-  
+
   if (urls.length > 0 && urls.length < validFilesToUpload.length) { // Bazıları yüklendi, bazıları yüklenemedi
     toast.error(`${validFilesToUpload.length - urls.length} dosya yüklenemedi. Detaylar için konsolu kontrol edin.`);
   }

@@ -1,3 +1,65 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Kimlik doğrulama kontrolleri
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.rol == 'yonetici' || request.auth.token.rol == 'superadmin');
+    }
+    
+    function isTechnician() {
+      return isAuthenticated() && 
+        (request.auth.token.rol == 'tekniker' || request.auth.token.rol == 'muhendis');
+    }
+    
+    // Veri erişim kontrolleri
+    function isFromSameCompany() {
+      return isAuthenticated() && 
+        resource.data.companyId == request.auth.token.companyId && 
+        request.resource.data.companyId == request.auth.token.companyId;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.rol == 'superadmin';
+    }
+    
+    // Tüm koleksiyonlar için temel kurallar
+    match /{document=**} {
+      allow read: if isAuthenticated() && 
+        (resource.data.companyId == request.auth.token.companyId || isSuperAdmin());
+      allow write: if isAuthenticated() && 
+        (request.resource.data.companyId == request.auth.token.companyId || isSuperAdmin());
+    }
+    
+    // Kullanıcı koleksiyonu kuralları
+    match /kullanicilar/{userId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.companyId == request.auth.token.companyId || 
+         userId == request.auth.uid || 
+         isSuperAdmin());
+      allow update: if isAuthenticated() && 
+        (request.resource.data.companyId == request.auth.token.companyId || 
+         userId == request.auth.uid || 
+         isSuperAdmin());
+      allow create, delete: if isAdmin() || isSuperAdmin();
+    }
+    
+    // Şirket ayarları
+    match /companies/{companyId} {
+      allow read: if isAuthenticated() && 
+        (companyId == request.auth.token.companyId || isSuperAdmin());
+      allow write: if isAdmin() && companyId == request.auth.token.companyId || isSuperAdmin();
+    }
+    
+    // Diğer koleksiyonlar için özel kurallar eklenebilir
+  }
+}
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {

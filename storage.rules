@@ -1,34 +1,43 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Temel fonksiyonlar
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.rol == 'yonetici' || 
-         request.auth.token.rol == 'admin' || 
-         request.auth.token.rol == 'superadmin');
+      return isAuthenticated() && request.auth.token.rol == 'yonetici';
     }
 
     function isTechnician() {
-      return isAuthenticated() && 
-        (request.auth.token.rol == 'tekniker' || 
-         request.auth.token.rol == 'muhendis');
+      return isAuthenticated() && request.auth.token.rol == 'tekniker';
     }
 
     function hasUploadPermission() {
       return isAuthenticated();
     }
 
-    // Tüm yollar için kimlik doğrulamalı kullanıcılara okuma ve yazma izni ver
+    function getCompanyFromPath(path) {
+      // Metaveri'den companyId'yi çıkarma
+      return request.resource.metadata.companyId;
+    }
+
+    function belongsToSameCompany(path) {
+      // Dosya adında veya metaveride companyId kontrolü
+      return request.resource.metadata.companyId == request.auth.token.companyId;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.rol == 'superadmin';
+    }
+
+    // Tüm yollar için temel kurallar
     match /{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read: if isAuthenticated() && 
+        (request.resource.metadata.companyId == request.auth.token.companyId || isSuperAdmin());
+      allow write: if isAuthenticated() && 
+        (request.resource.metadata.companyId == request.auth.token.companyId || isSuperAdmin());
     }
 
     // Stoklar klasörü için kurallar
@@ -40,22 +49,20 @@ service firebase.storage {
     // Diğer klasörler için kurallar
     match /arizalar/{document=**} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if hasUploadPermission();
     }
 
-    match /cozumler/{document=**} {
+    match /profil/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    match /profil/{userId}/{document=**} {
-      allow read: if isAuthenticated();
-      allow write: if request.auth.uid == userId || isAdmin();
-    }
-
-    match /rapor/{document=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+    // Şirket klasörü için kurallar
+    match /companies/{companyId}/{allPaths=**} {
+      allow read: if isAuthenticated() && 
+        (companyId == request.auth.token.companyId || isSuperAdmin());
+      allow write: if isAuthenticated() && 
+        (companyId == request.auth.token.companyId || isSuperAdmin());
     }
   }
 }
