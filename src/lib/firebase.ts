@@ -30,8 +30,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-// Comment out or remove the emulator connections
-// This will prevent the "Running in emulator mode" warning
+// Comment out emulator connections to prevent "Running in emulator mode" warning
 /*
 if (process.env.NODE_ENV === 'development') {
   try {
@@ -57,53 +56,21 @@ try {
   console.warn('Error enabling persistence:', error);
 }
 
+// Simplified connection check that works in WebContainer environments
 const checkConnection = async () => {
   // First check if browser reports as online
   if (!navigator.onLine) {
     throw new Error('İnternet bağlantısı yok');
   }
-
-  try {
-    // Instead of trying to reach Firebase Auth servers directly,
-    // we'll use a more reliable method to check connection
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    
-    try {
-      // Try to reach a reliable endpoint
-      const response = await fetch('https://www.google.com/generate_204', {
-        method: 'HEAD',
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error('İnternet bağlantısı zayıf veya kararsız');
-      }
-      
-      return true;
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      console.error('Connection check failed:', fetchError);
-      
-      // If it's an abort error, it means the request timed out
-      if (fetchError.name === 'AbortError') {
-        throw new Error('Bağlantı zaman aşımına uğradı');
-      }
-      
-      throw new Error('İnternet bağlantısı yok');
-    }
-  } catch (error) {
-    console.error('Connection check failed:', error);
-    throw new Error('İnternet bağlantısı yok');
-  }
+  
+  // In WebContainer environments, we can't reliably make external fetch requests
+  // So we'll just trust the browser's online status and proceed
+  return true;
 };
 
 export const createUserWithProfile = async (email: string, password: string, userData: any) => {
   try {
-    await checkConnection();
-
+    // We don't need to check connection here, Firebase will handle network errors
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
@@ -156,8 +123,9 @@ export const createUserWithProfile = async (email: string, password: string, use
 
 export const signInUser = async (email: string, password: string) => {
   try {
-    await checkConnection();
-
+    // Skip the connection check in WebContainer environments
+    // Firebase will handle network errors appropriately
+    
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     
     // Force token refresh to get the custom claims
