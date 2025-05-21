@@ -72,10 +72,10 @@ service firebase.storage {
       allow create, update, delete: if hasUploadPermission() && isValidImage();
     }
     
-    // Stoklar
+    // Stoklar - Updated rules to properly handle permissions
     match /stoklar/{imageId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if hasUploadPermission() && isValidImage();
+      allow create, update, delete: if hasUploadPermission() && isValidImage() && request.auth.token.rol in ['yonetici', 'superadmin', 'tekniker', 'muhendis'];
     }
     
     // Santraller

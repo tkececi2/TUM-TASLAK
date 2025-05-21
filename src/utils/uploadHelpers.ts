@@ -137,13 +137,13 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
     } catch (uploadError: any) {
       console.error('Storage upload error:', uploadError);
       if (uploadError.code === 'storage/unauthorized') {
-        throw new Error(`${file.name}: Fotoğraf yükleme için yetkiniz bulunmamaktadır`);
+        throw new Error(`${file.name}: Fotoğraf yükleme için yetkiniz bulunmamaktadır. Lütfen yöneticinize başvurun.`);
       }
-      throw uploadError;
+      throw new Error(`${file.name}: Fotoğraf yüklenirken bir hata oluştu. Lütfen tekrar deneyin.`);
     }
   } catch (error: any) {
     console.error('Dosya yükleme hatası:', error);
-    throw new Error(`${file.name}: ${error.message}`);
+    throw new Error(error.message);
   }
 };
 
@@ -173,7 +173,7 @@ export const uploadMultipleFiles = async (
   }
 
   if (failedFiles.length === files.length) {
-    throw new Error(`Hiçbir dosya yüklenemedi`);
+    throw new Error(`Hiçbir dosya yüklenemedi. Lütfen dosya türü ve boyutunu kontrol edin.`);
   }
 
   // Only process files that passed validation
@@ -199,7 +199,7 @@ export const uploadMultipleFiles = async (
 
   // If all files failed, throw an error
   if (urls.length === 0 && files.length > 0) {
-    throw new Error(`Dosya yükleme başarısız: ${failedFiles.join(', ')}`);
+    throw new Error(`Dosya yükleme başarısız: ${failedFiles.join(', ')}. Lütfen yetkinizi kontrol edin veya yöneticinize başvurun.`);
   }
 
   return urls;
