@@ -13,7 +13,7 @@ export const Ayarlar: React.FC = () => {
   const [yukleniyor, setYukleniyor] = useState(false);
   const [aktifTab, setAktifTab] = useState('profil');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [profilForm, setProfilForm] = useState({
     ad: kullanici?.ad || '',
     telefon: kullanici?.telefon || '',
@@ -373,4 +373,27 @@ export const Ayarlar: React.FC = () => {
       </div>
     </div>
   );
+};
+
+// TokenYenilemeButonu component'i burada tanımlanmalı veya import edilmeli.
+const TokenYenilemeButonu: React.FC = () => {
+    const { yenileKullanici } = useAuth();
+
+    const handleYenile = async () => {
+        if (yenileKullanici) {
+            await yenileKullanici();
+            toast.success("Yetkiler yenilendi!");
+        } else {
+            toast.error("Yetki yenileme başarısız oldu.");
+        }
+    };
+
+    return (
+        <button
+            onClick={handleYenile}
+            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
+        >
+            Yetkileri Yenile
+        </button>
+    );
 };

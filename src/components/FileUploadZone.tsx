@@ -30,6 +30,10 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   // Check if user has permission to upload files
   const hasUploadPermission = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
   
+  // Logged token info for debugging
+  console.log('Mevcut kullanıcı rolü:', kullanici?.rol);
+  console.log('Yükleme izni var mı:', hasUploadPermission);
+  
   // If disabled prop is not explicitly set, determine based on user role
   const isDisabled = disabled || !hasUploadPermission;
 

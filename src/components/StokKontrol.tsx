@@ -104,7 +104,7 @@ export const StokKontrol: React.FC = () => {
             orderBy('ad')
           );
         }
-        
+
         const sahaSnapshot = await getDocs(sahaQuery);
         const sahaListesi = sahaSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -197,14 +197,14 @@ export const StokKontrol: React.FC = () => {
 
     setYukleniyor(true); // Yükleme başlıyor
     let fotografURLleri: string[] = [];
-    
+
     try {
       if (form.fotograflar.length > 0) {
         const uploadToast = toast.loading('Fotoğraflar yükleniyor...');
         try {
           // Force token refresh before uploading to ensure latest claims are used
           await auth.currentUser?.getIdToken(true);
-          
+
           fotografURLleri = await uploadMultipleFiles(
             form.fotograflar,
             'stoklar', // Firebase Storage'da kaydedilecek klasör yolu
@@ -272,7 +272,7 @@ export const StokKontrol: React.FC = () => {
         aciklama: '',
         fotograflar: []
       });
-      
+
       // Stok listesini yenilemek için secilenSaha'yı değiştirmeye gerek yok,
       // genel bir getirme fonksiyonu çağrılabilir veya useEffect'in bağımlılıkları tetiklenebilir.
       // Şimdilik basit olması için, en son seçili sahaya göre listeyi yenileyecek.
@@ -287,7 +287,7 @@ export const StokKontrol: React.FC = () => {
         ...doc.data()
       })) as StokItem[];
       setStoklar(stokVerileri);
-      
+
     } catch (error: any) { // Bu dıştaki catch, addDoc/updateDoc veya diğer genel hatalar için
       console.error('Stok işlemi genel hatası:', error);
       // Eğer hata mesajı zaten fotoğraf yüklemeden geliyorsa tekrar gösterme
@@ -349,9 +349,9 @@ export const StokKontrol: React.FC = () => {
     const aramaFiltreleme = !aramaMetni || 
       stok.urunAdi.toLowerCase().includes(aramaMetni.toLowerCase()) ||
       (stok.aciklama && stok.aciklama.toLowerCase().includes(aramaMetni.toLowerCase())); // Açıklama null olabilir
-    
+
     const kategoriFiltreleme = !secilenKategori || stok.kategori === secilenKategori;
-    
+
     return aramaFiltreleme && kategoriFiltreleme;
   });
 
@@ -359,7 +359,7 @@ export const StokKontrol: React.FC = () => {
   const toplamStokAdedi = filtrelenmisStoklar.reduce((total, stok) => total + stok.miktar, 0);
   const toplamStokCesidi = filtrelenmisStoklar.length;
   const normalStokAdedi = filtrelenmisStoklar.filter(stok => stok.miktar > stok.kritikSeviye).length;
-  
+
   const [detayModalAcik, setDetayModalAcik] = useState(false);
   const [secilenDetay, setSecilenDetay] = useState<StokItem | null>(null);
 
@@ -414,7 +414,7 @@ export const StokKontrol: React.FC = () => {
           </button>
         )}
       </div>
-      
+
       {/* Özet Kartları */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -472,7 +472,7 @@ export const StokKontrol: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Stok Tablosu */}
       {yukleniyor && stoklar.length > 0 && ( // Sadece veri yenilenirken ve zaten veri varsa göster
             <div className="my-4 text-center">
