@@ -185,39 +185,39 @@ export const StokKontrol: React.FC = () => {
       return;
     }
 
+    // Check photo upload permissions before attempting upload
+    if (form.fotograflar.length > 0 && !canUploadPhotos) {
+      toast.error('Fotoğraf yükleme yetkiniz bulunmuyor');
+      return;
+    }
+
     try {
       setYukleniyor(true);
-
       let fotografURLleri: string[] = [];
       
-      // Fotoğraf yükleme yetkisi kontrolü
       if (form.fotograflar.length > 0) {
-        if (!canUploadPhotos) {
-          toast.error('Fotoğraf yükleme yetkiniz bulunmuyor');
-          setYukleniyor(false);
-          return;
-        }
-        
         try {
-          toast.loading('Fotoğraflar yükleniyor...', { id: 'photoUpload' });
+          const uploadToast = toast.loading('Fotoğraflar yükleniyor...');
           fotografURLleri = await uploadMultipleFiles(
             form.fotograflar,
             'stoklar',
-            (progress) => {
-              if (typeof setUploadProgress === 'function') {
-                setUploadProgress(progress);
-              }
-            }
+            (progress) => setUploadProgress(progress)
           );
-          
-          if (fotografURLleri.length > 0) {
-            toast.success(`${fotografURLleri.length} fotoğraf başarıyla yüklendi`, { id: 'photoUpload' });
-          }
+          toast.success(`${fotografURLleri.length} fotoğraf başarıyla yüklendi`, {
+            id: uploadToast
+          });
         } catch (error: any) {
           console.error('Fotoğraf yükleme hatası:', error);
-          toast.error(error.message, { id: 'photoUpload' });
-          // Fotoğraf yükleme hatası olsa bile devam et, fotoğrafsız kaydet
-          console.log('Fotoğraf yükleme hatası olsa bile devam ediliyor, fotoğrafsız kaydedilecek');
+          // If the error is due to permissions, show a specific message
+          if (error.code === 'storage/unauthorized') {
+            toast.error('Fotoğraf yükleme için yetkiniz bulunmamaktadır. Lütfen yöneticinize başvurun.');
+            setYukleniyor(false);
+            return; // Exit early if permission error
+          } else {
+            toast.error(`Fotoğraf yükleme hatası: ${error.message}`);
+            // Continue without photos if other error
+            console.log('Fotoğraf yükleme hatası oluştu, fotoğrafsız devam ediliyor');
+          }
         }
       }
 
@@ -230,21 +230,16 @@ export const StokKontrol: React.FC = () => {
         kategori: form.kategori,
         aciklama: form.aciklama,
         sonGuncelleme: Timestamp.now(),
-        companyId: kullanici.companyId
+        companyId: kullanici.companyId,
+        ...(fotografURLleri.length > 0 && { fotograflar: fotografURLleri })
       };
 
       if (duzenlemeModu && secilenStok) {
-        const updateData = {
-          ...stokData,
-          ...(fotografURLleri.length > 0 ? { fotograflar: fotografURLleri } : {})
-        };
-
-        await updateDoc(doc(db, 'stoklar', secilenStok.id), updateData);
+        await updateDoc(doc(db, 'stoklar', secilenStok.id), stokData);
         toast.success('Stok başarıyla güncellendi');
       } else {
         await addDoc(collection(db, 'stoklar'), {
           ...stokData,
-          ...(fotografURLleri.length > 0 ? { fotograflar: fotografURLleri } : {}),
           olusturanKisi: {
             id: kullanici.id,
             ad: kullanici.ad
@@ -267,6 +262,7 @@ export const StokKontrol: React.FC = () => {
         fotograflar: []
       });
       
+      // Refresh stock list
       const stokQuery = query(
         collection(db, 'stoklar'),
         where('companyId', '==', kullanici.companyId)
@@ -278,13 +274,12 @@ export const StokKontrol: React.FC = () => {
       })) as StokItem[];
       setStoklar(stokVerileri);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Stok işlemi hatası:', error);
       toast.error(duzenlemeModu ? 'Stok güncellenirken bir hata oluştu' : 'Stok eklenirken bir hata oluştu');
     } finally {
       setYukleniyor(false);
       setUploadProgress(0);
-      toast.dismiss('photoUpload');
     }
   };
 

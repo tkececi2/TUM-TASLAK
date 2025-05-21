@@ -143,7 +143,7 @@ export const uploadFile = async (file: File, path: string): Promise<string> => {
     }
   } catch (error: any) {
     console.error('Dosya yükleme hatası:', error);
-    throw new Error(error.message);
+    throw error;
   }
 };
 
