@@ -203,7 +203,16 @@ export const StokKontrol: React.FC = () => {
         const uploadToast = toast.loading('Fotoğraflar yükleniyor...');
         try {
           // Force token refresh before uploading to ensure latest claims are used
-          await auth.currentUser?.getIdToken(true);
+          if (auth.currentUser) {
+            await auth.currentUser.getIdToken(true);
+            const idTokenResult = await auth.currentUser.getIdTokenResult();
+            console.log('Token yenilendi, mevcut rol:', idTokenResult.claims.rol || 'rol yok');
+          } else {
+            console.warn('Dosya yükleme için oturum açık değil');
+            toast.error('Dosya yüklemek için oturum açık olmalıdır');
+            toast.dismiss(uploadToast);
+            return;
+          }
 
           fotografURLleri = await uploadMultipleFiles(
             form.fotograflar,

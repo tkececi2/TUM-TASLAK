@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage, auth } from '../lib/firebase'; // Firebase config dosyanızın yolu
+import { userService } from '../services/userService';
 import toast from 'react-hot-toast';
 
 const compressImage = async (file: File): Promise<File> => {
@@ -137,14 +138,23 @@ export const uploadFile = async (file: File, path: string, maxSizeMB = 10): Prom
     } catch (uploadError: any) {
       console.error('Storage yükleme hatası:', uploadError, 'Path:', fullPath);
       if (uploadError.code === 'storage/unauthorized') {
-        // Bu mesaj StokKontrol.tsx'de toast ile gösterilecek.
-        throw new Error(`${file.name} adlı dosya için yükleme yetkiniz bulunmamaktadır. Lütfen yöneticinize başvurun.`);
+        // Yetki hatası detayını göster
+        console.log('Kullanıcının rol bilgisi:', auth.currentUser ? await auth.currentUser.getIdTokenResult().then(t => t.claims.rol || 'rol yok') : 'kullanıcı yok');
+        throw new Error(`${file.name} adlı dosya için yükleme yetkiniz bulunmamaktadır. Lütfen yöneticinize başvurun. (Hata kodu: ${uploadError.code})`);
       }
       throw new Error(`${file.name}: Fotoğraf yüklenirken bir hata oluştu. Kod: ${uploadError.code}`);
     }
   } catch (error: any) { // validateFileType veya validateFileSize'dan gelen hatalar da buraya düşer
     console.error('Dosya hazırlama/yükleme genel hatası:', error);
-    throw error; // Hata mesajını olduğu gibi yukarıya fırlat
+    // Hata objesinde message özelliği olduğundan emin ol
+    if (error instanceof Error) {
+      throw error; // Zaten Error objesi ise doğrudan fırlat
+    } else if (typeof error === 'object' && error !== null) {
+      console.log('Hata detayları:', JSON.stringify(error));
+      throw new Error(`Dosya yükleme hatası: ${error.code || 'Bilinmeyen hata'}`);
+    } else {
+      throw new Error('Bilinmeyen bir hata oluştu');
+    }
   }
 };
 
@@ -167,15 +177,38 @@ export const uploadMultipleFiles = async (
       const idTokenResult = await auth.currentUser.getIdTokenResult();
       console.log('Token claims before upload:', idTokenResult.claims);
       
-      // Check if role claim exists
+      // Check if role claim exists in token
       if (!idTokenResult.claims.rol) {
-        console.warn('No role claim found in token! This may cause storage permission issues.');
-        toast.error('Yetki bilgisi eksik. Dosya yükleme işlemi başarısız olabilir.');
+        console.log('No role in token claims, getting user data from Firestore');
+        
+        // Kullanıcı verilerini Firestore'dan al (kullanıcı rol değeri için)
+        const userDoc = await userService.getUserById(auth.currentUser.uid);
+        if (userDoc && userDoc.rol) {
+          console.log('Using role from Firestore document:', userDoc.rol);
+          if (['yonetici', 'tekniker', 'muhendis'].includes(userDoc.rol)) {
+            console.log('User has upload permission based on Firestore role');
+          } else {
+            toast.error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
+            throw new Error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
+          }
+        } else {
+          console.warn('No role found in Firestore user document either');
+          toast.error('Yetki bilgisi eksik. Dosya yükleme işlemi başarısız olabilir.');
+        }
       } else {
         console.log('User role from token:', idTokenResult.claims.rol);
+        if (['yonetici', 'tekniker', 'muhendis'].includes(idTokenResult.claims.rol)) {
+          console.log('User has upload permission based on token claims');
+        } else {
+          toast.error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
+          throw new Error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
+        }
       }
     } catch (error) {
       console.error('Error refreshing token:', error);
+      if (error instanceof Error) {
+        throw error; // Hata mesajını olduğu gibi yukarı fırlat
+      }
     }
   } else {
     console.warn('No authenticated user found when trying to upload files');
