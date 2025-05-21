@@ -24,10 +24,7 @@ service firebase.storage {
     
     function hasUploadPermission() {
       return isAuthenticated() && 
-        (request.auth.token.rol == 'yonetici' || 
-         request.auth.token.rol == 'superadmin' || 
-         request.auth.token.rol == 'tekniker' || 
-         request.auth.token.rol == 'muhendis');
+        (isAdmin() || isTechnician());
     }
     
     // Default rule - deny all
@@ -76,10 +73,14 @@ service firebase.storage {
       allow create, update, delete: if hasUploadPermission() && isValidImage();
     }
     
-    // Stoklar
+    // Stoklar - Updated rules to explicitly check role permissions
     match /stoklar/{imageId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if hasUploadPermission() && isValidImage();
+      allow create, update, delete: if hasUploadPermission() && isValidImage() && 
+        (request.auth.token.rol == 'yonetici' || 
+         request.auth.token.rol == 'superadmin' || 
+         request.auth.token.rol == 'tekniker' || 
+         request.auth.token.rol == 'muhendis');
     }
     
     // Santraller
