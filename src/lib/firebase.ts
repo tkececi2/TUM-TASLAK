@@ -61,23 +61,39 @@ const checkConnection = async () => {
   }
 
   try {
-    // Try to reach Firebase Auth servers
-    const response = await fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo', {
+    // Try to reach Firebase Auth endpoint with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const endpoint = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword'
+      : 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword';
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        idToken: await auth.currentUser?.getIdToken(),
+        returnSecureToken: true,
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      throw new Error('Firebase sunucularına erişilemiyor');
+      // We only care that we can reach the endpoint, not about the actual response
+      if (response.status !== 400) { // 400 is expected since we're not sending valid credentials
+        throw new Error('Firebase sunucularına erişilemiyor');
+      }
     }
 
     return true;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Sunucu yanıt vermiyor, lütfen internet bağlantınızı kontrol edin');
+    }
     console.error('Connection check failed:', error);
     throw new Error('İnternet bağlantısı yok');
   }
