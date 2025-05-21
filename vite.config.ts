@@ -21,7 +21,9 @@ export default defineConfig({
     watch: {
       usePolling: true
     },
-    cors: true
+    cors: true,
+    // Add explicit allowedHosts configuration to fix the blocked request issue
+    allowedHosts: 'all'
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
