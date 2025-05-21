@@ -55,8 +55,14 @@ try {
 }
 
 const checkConnection = async () => {
+  // First check if browser reports as online
+  if (!navigator.onLine) {
+    throw new Error('İnternet bağlantısı yok');
+  }
+
   try {
-    await fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo', {
+    // Try to reach Firebase Auth servers
+    const response = await fetch('https://www.googleapis.com/identitytoolkit/v3/relyingparty/getAccountInfo', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -65,18 +71,21 @@ const checkConnection = async () => {
         idToken: await auth.currentUser?.getIdToken(),
       }),
     });
+
+    if (!response.ok) {
+      throw new Error('Firebase sunucularına erişilemiyor');
+    }
+
     return true;
   } catch (error) {
-    return false;
+    console.error('Connection check failed:', error);
+    throw new Error('İnternet bağlantısı yok');
   }
 };
 
 export const createUserWithProfile = async (email: string, password: string, userData: any) => {
   try {
-    const isConnected = await checkConnection();
-    if (!isConnected) {
-      throw new Error('İnternet bağlantısı yok');
-    }
+    await checkConnection();
 
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -130,10 +139,7 @@ export const createUserWithProfile = async (email: string, password: string, use
 
 export const signInUser = async (email: string, password: string) => {
   try {
-    const isConnected = await checkConnection();
-    if (!isConnected) {
-      throw new Error('İnternet bağlantısı yok');
-    }
+    await checkConnection();
 
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     
@@ -142,11 +148,7 @@ export const signInUser = async (email: string, password: string) => {
     
     return userCredential.user;
   } catch (error) {
-    if (error instanceof Error && error.message === 'İnternet bağlantısı yok') {
-      toast.error('İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin.');
-    } else {
-      handleAuthError(error);
-    }
+    handleAuthError(error);
     throw error;
   }
 };
@@ -157,7 +159,7 @@ export const handleAuthError = (error: unknown) => {
   if (error instanceof FirebaseError) {
     switch (error.code) {
       case 'auth/network-request-failed':
-        toast.error('İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin.');
+        toast.error('İnternet bağlantısı yok. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.');
         break;
       case 'auth/email-already-in-use':
         toast.error('Bu e-posta adresi zaten kullanımda');
