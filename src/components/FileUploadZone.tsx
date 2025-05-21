@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 interface FileUploadZoneProps {
   onFileSelect: (files: File[]) => void;
@@ -24,8 +25,16 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   uploadProgress,
   disabled = false
 }) => {
+  const { kullanici } = useAuth();
+  
+  // Check if user has permission to upload files
+  const hasUploadPermission = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
+  
+  // If disabled prop is not explicitly set, determine based on user role
+  const isDisabled = disabled || !hasUploadPermission;
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (disabled) {
+    if (isDisabled) {
       toast.error('Fotoğraf yükleme izniniz bulunmuyor');
       return;
     }
@@ -58,14 +67,14 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     if (validFiles.length > 0) {
       onFileSelect(validFiles);
     }
-  }, [onFileSelect, maxFiles, selectedFiles.length, disabled]);
+  }, [onFileSelect, maxFiles, selectedFiles.length, isDisabled]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     maxFiles: maxFiles - selectedFiles.length,
     accept,
     maxSize: 10 * 1024 * 1024, // 10MB
-    disabled
+    disabled: isDisabled
   });
 
   return (
@@ -74,7 +83,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         {...getRootProps()}
         className={`upload-zone ${
           isDragActive ? 'border-primary-500 bg-primary-50' : ''
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input {...getInputProps()} />
         <div className="flex flex-col items-center">
@@ -84,12 +93,12 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
           ) : (
             <>
               <p className="text-gray-600">
-                {disabled 
+                {isDisabled 
                   ? 'Fotoğraf yükleme izniniz bulunmuyor'
                   : 'Dosyaları sürükleyip bırakın veya seçmek için tıklayın'
                 }
               </p>
-              {!disabled && (
+              {!isDisabled && (
                 <p className="text-sm text-gray-500 mt-2">
                   (Maksimum {maxFiles} dosya, her biri en fazla 10MB)
                 </p>

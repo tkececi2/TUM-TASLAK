@@ -85,12 +85,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
 
+          // Force token refresh to get the latest custom claims
+          await user.getIdToken(true);
+          
+          // Get the token result to check custom claims
+          const idTokenResult = await user.getIdTokenResult();
+          console.log('User token claims:', idTokenResult.claims);
+          
           // Kullanıcı profili bilgilerini getir
           const userData = await fetchUserProfile(user.uid);
           
           if (userData) {
+            // Add the role from custom claims if it exists
+            if (idTokenResult.claims.rol) {
+              userData.rol = idTokenResult.claims.rol as any;
+            }
+            
             setKullanici(userData);
             authService.setCurrentUser(userData);
+            
+            console.log('User authenticated with role:', userData.rol);
           } else {
             await signOut(auth);
             authService.clearUserData();
@@ -123,12 +137,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const user = await signInUser(email, sifre);
       
+      // Force token refresh to get the latest custom claims
+      await user.getIdToken(true);
+      
+      // Get the token result to check custom claims
+      const idTokenResult = await user.getIdTokenResult();
+      console.log('Login token claims:', idTokenResult.claims);
+      
       // Kullanıcı profili bilgilerini getir
       const userData = await fetchUserProfile(user.uid);
       
       if (userData) {
+        // Add the role from custom claims if it exists
+        if (idTokenResult.claims.rol) {
+          userData.rol = idTokenResult.claims.rol as any;
+        }
+        
         setKullanici(userData);
         authService.setCurrentUser(userData);
+        console.log('User logged in with role:', userData.rol);
         toast.success('Giriş başarılı');
         return true;
       }

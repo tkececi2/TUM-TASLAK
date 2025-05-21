@@ -189,6 +189,12 @@ export const StokKontrol: React.FC = () => {
       return;
     }
 
+    // Log user role for debugging
+    console.log('Current user role:', kullanici.rol);
+    console.log('Can add:', canAdd);
+    console.log('Can edit:', canEdit);
+    console.log('Can delete:', canDelete);
+
     setYukleniyor(true); // Yükleme başlıyor
     let fotografURLleri: string[] = [];
     

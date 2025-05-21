@@ -4,25 +4,30 @@ service firebase.storage {
   match /b/{bucket}/o {
     // Basic helper functions
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
     
     function isAdmin() {
       return isAuthenticated() && 
+        request.auth.token != null &&
         (request.auth.token.rol == 'yonetici' || request.auth.token.rol == 'superadmin');
     }
     
     function isTechnician() {
       return isAuthenticated() && 
+        request.auth.token != null &&
         (request.auth.token.rol == 'tekniker' || request.auth.token.rol == 'muhendis');
     }
 
     function isCustomer() {
-      return isAuthenticated() && request.auth.token.rol == 'musteri';
+      return isAuthenticated() && 
+        request.auth.token != null && 
+        request.auth.token.rol == 'musteri';
     }
     
     function isValidImage() {
-      return request.resource.contentType.matches('image/.*') && 
+      return request.resource != null &&
+        request.resource.contentType.matches('image/.*') && 
         request.resource.size < 10 * 1024 * 1024;
     }
     

@@ -152,3 +152,144 @@ export const sendArizaUpdateToWebhook = functions.firestore
       return { success: false, error: error.message };
     }
   });
+
+// Function to set custom claims for user roles
+export const setUserRole = functions.https.onCall(async (data, context) => {
+  // Check if the request is made by an authenticated user
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'The function must be called while authenticated.'
+    );
+  }
+
+  // Check if the caller is an admin
+  const callerUid = context.auth.uid;
+  const callerDoc = await admin.firestore().doc(`kullanicilar/${callerUid}`).get();
+  
+  if (!callerDoc.exists) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Caller not found in database.'
+    );
+  }
+  
+  const callerData = callerDoc.data();
+  const isAdmin = callerData?.rol === 'yonetici' || callerData?.rol === 'superadmin';
+  
+  if (!isAdmin) {
+    throw new functions.https.HttpsError(
+      'permission-denied',
+      'Only admins can set user roles.'
+    );
+  }
+
+  // Get parameters
+  const { userId, role } = data;
+  
+  if (!userId || !role) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'The function must be called with userId and role parameters.'
+    );
+  }
+
+  // Validate role
+  const validRoles = ['yonetici', 'tekniker', 'muhendis', 'musteri', 'bekci', 'superadmin'];
+  if (!validRoles.includes(role)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      `Role must be one of: ${validRoles.join(', ')}`
+    );
+  }
+
+  try {
+    // Set custom claim
+    await admin.auth().setCustomUserClaims(userId, { rol: role });
+    
+    // Update user document in Firestore
+    await admin.firestore().doc(`kullanicilar/${userId}`).update({
+      rol: role,
+      guncellenmeTarihi: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    return { success: true, message: `User ${userId} role set to ${role}` };
+  } catch (error) {
+    console.error('Error setting user role:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'An error occurred while setting the user role.'
+    );
+  }
+});
+
+// Function to sync user roles from Firestore to Auth custom claims
+export const syncUserRoles = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
+  try {
+    const usersSnapshot = await admin.firestore().collection('kullanicilar').get();
+    
+    const updates = usersSnapshot.docs.map(async (doc) => {
+      const userData = doc.data();
+      const userId = doc.id;
+      const role = userData.rol;
+      
+      if (role) {
+        try {
+          await admin.auth().setCustomUserClaims(userId, { rol: role });
+          console.log(`Updated custom claims for user ${userId} with role ${role}`);
+        } catch (error) {
+          console.error(`Error updating custom claims for user ${userId}:`, error);
+        }
+      }
+    });
+    
+    await Promise.all(updates);
+    return { success: true, message: `Synced roles for ${updates.length} users` };
+  } catch (error) {
+    console.error('Error syncing user roles:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Function to set custom claims when a new user is created in Firestore
+export const setNewUserRole = functions.firestore
+  .document('kullanicilar/{userId}')
+  .onCreate(async (snapshot, context) => {
+    try {
+      const userData = snapshot.data();
+      const userId = context.params.userId;
+      const role = userData.rol;
+      
+      if (role) {
+        await admin.auth().setCustomUserClaims(userId, { rol: role });
+        console.log(`Set custom claims for new user ${userId} with role ${role}`);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error setting new user role:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+// Function to update custom claims when a user's role is updated in Firestore
+export const updateUserRole = functions.firestore
+  .document('kullanicilar/{userId}')
+  .onUpdate(async (change, context) => {
+    try {
+      const newData = change.after.data();
+      const oldData = change.before.data();
+      const userId = context.params.userId;
+      
+      // Only update if the role has changed
+      if (newData.rol !== oldData.rol) {
+        await admin.auth().setCustomUserClaims(userId, { rol: newData.rol });
+        console.log(`Updated custom claims for user ${userId} with new role ${newData.rol}`);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      return { success: false, error: error.message };
+    }
+  });

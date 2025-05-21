@@ -1,7 +1,7 @@
 import { initializeApp, getApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, doc, setDoc, enableIndexedDbPersistence } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
+import { getFirestore, doc, setDoc, enableIndexedDbPersistence, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
@@ -29,6 +29,18 @@ try {
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Use emulators in development environment
+if (process.env.NODE_ENV === 'development') {
+  try {
+    connectAuthEmulator(auth, 'http://localhost:9099');
+    connectFirestoreEmulator(db, 'localhost', 8080);
+    connectStorageEmulator(storage, 'localhost', 9199);
+    console.log('Connected to Firebase emulators');
+  } catch (error) {
+    console.warn('Failed to connect to Firebase emulators:', error);
+  }
+}
 
 try {
   enableIndexedDbPersistence(db).catch((err) => {
@@ -80,6 +92,9 @@ export const createUserWithProfile = async (email: string, password: string, use
     await setDoc(doc(db, 'kullanicilar', user.uid), userProfile);
     authService.setCurrentUser(userProfile);
 
+    // Force token refresh to get the custom claims
+    await user.getIdToken(true);
+
     toast.success('Kullanıcı başarıyla oluşturuldu');
     return user;
   } catch (error: any) {
@@ -97,6 +112,9 @@ export const createUserWithProfile = async (email: string, password: string, use
 
         await setDoc(doc(db, 'kullanicilar', user.uid), userProfile, { merge: true });
         authService.setCurrentUser(userProfile);
+
+        // Force token refresh to get the custom claims
+        await user.getIdToken(true);
 
         toast.success('Kullanıcı profili güncellendi');
         return user;
@@ -118,6 +136,10 @@ export const signInUser = async (email: string, password: string) => {
     }
 
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    
+    // Force token refresh to get the custom claims
+    await userCredential.user.getIdToken(true);
+    
     return userCredential.user;
   } catch (error) {
     if (error instanceof Error && error.message === 'İnternet bağlantısı yok') {
