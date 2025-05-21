@@ -33,7 +33,7 @@ service firebase.storage {
     
     function hasUploadPermission() {
       return isAuthenticated() && 
-        (isAdmin() || isTechnician());  // Removed isCustomer() as they shouldn't upload to stoklar
+        (isAdmin() || isTechnician() || isCustomer());  // Allow customers to upload ariza images
     }
     
     // Default rule - deny all
@@ -70,10 +70,10 @@ service firebase.storage {
       allow create, update, delete: if hasUploadPermission() && isValidImage();
     }
     
-    // Arızalar
+    // Arızalar - Updated to use hasUploadPermission
     match /arizalar/{imageId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated() && isValidImage();
+      allow create, update, delete: if hasUploadPermission() && isValidImage();
     }
     
     // İş Raporları
