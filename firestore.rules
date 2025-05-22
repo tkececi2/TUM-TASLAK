@@ -1,216 +1,287 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Şirket bazında veri erişimi temel fonksiyonu
-    function isCompanyMember(companyId) {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId == companyId;
+    // Temel fonksiyonlar
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Kullanıcı yetkilerini kontrol et
     function isAdmin() {
-      return request.auth != null && 
-             (get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'yonetici' ||
-              get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'superadmin');
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'yonetici';
     }
 
     function isTechnician() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'tekniker';
-    }
-
-    function isEngineer() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'muhendis';
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
+        (get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'tekniker' || 
+         get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'muhendis');
     }
 
     function isCustomer() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'musteri';
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'musteri';
+    }
+
+    function isGuard() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'bekci';
     }
 
     function isSuperAdmin() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'superadmin';
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'superadmin';
     }
 
-    // Saha Erişim Kontrolü
-    function canAccessSite(sahaId) {
+    function hasAccessToSaha(sahaId) {
       let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
-      return request.auth != null && 
-             (user.rol == 'superadmin' || 
-              (user.rol == 'musteri' && user.sahalar != null && sahaId in user.sahalar) ||
-              user.companyId == resource.data.companyId);
+      return user.sahalar != null && (sahaId in user.sahalar || user.sahalar.hasAny([sahaId]));
     }
 
-    // Kullanıcılar koleksiyonu
+    function hasAccessToSantral(santralId) {
+      let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
+      return user.sahalar != null && (santralId in user.sahalar || user.sahalar.hasAny([santralId]));
+    }
+
+    function isSameCompany(resourceCompanyId) {
+      let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
+      return user.companyId == resourceCompanyId || isSuperAdmin();
+    }
+
+    function getUserCompanyId() {
+      return get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
+    }
+
+    // Şirket ayarları için kurallar
+    match /ayarlar/{sirketId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isAdmin() || isSuperAdmin());
+    }
+
+    // Kullanıcılar koleksiyonu için kurallar
     match /kullanicilar/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.companyId != null;
-      allow update: if request.auth != null && 
-                      (request.auth.uid == userId || isAdmin() || isSuperAdmin());
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read, list: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isSuperAdmin() || 
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId == 
+         resource.data.companyId)
+      );
+      allow create: if request.auth.uid == userId || (isAuthenticated() && (isSuperAdmin() || isAdmin()));
+      allow update: if isSuperAdmin() || isAdmin() || request.auth.uid == userId;
+      allow delete: if isSuperAdmin() || isAdmin();
     }
 
-    // Şirketler koleksiyonu
-    match /companies/{companyId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId == companyId);
-      allow write: if isSuperAdmin();
-    }
-
-    // Arızalar koleksiyonu
-    match /arizalar/{arizaId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow create: if request.auth != null && 
-                      (isAdmin() || isEngineer() || isTechnician());
-      allow update: if request.auth != null && 
-                      (isAdmin() || isEngineer() || isTechnician());
-      allow delete: if isAdmin() || isSuperAdmin();
-    }
-
-    // Sahalar koleksiyonu
-    match /sahalar/{sahaId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || isAdmin() || isEngineer() || isTechnician() || 
-                    (isCustomer() && 
-                      (get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.sahalar == null || 
-                       sahaId in get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.sahalar)));
-      allow write: if isAdmin() || isSuperAdmin();
-    }
-
-    // Santraller koleksiyonu
-    match /santraller/{santralId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || isAdmin() || isEngineer() || isTechnician() || 
-                    (isCustomer() && 
-                      (get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.sahalar == null || 
-                       santralId in get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.sahalar)));
-      allow write: if isAdmin() || isSuperAdmin();
-    }
-
-    // Stoklar koleksiyonu
-    match /stoklar/{stokId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow write: if isAdmin() || isTechnician() || isEngineer() || isSuperAdmin();
-    }
-
-    // Bildirimler koleksiyonu
-    match /bildirimler/{bildirimId} {
-      allow read: if request.auth != null && 
-                    (request.auth.uid == resource.data.kullaniciId || isSuperAdmin());
-      allow write: if request.auth != null;
-    }
-
-    // Davvetiyeler koleksiyonu
-    match /davetiyeler/{davetiyeId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin() || isSuperAdmin();
-    }
-
-    // Mekanik Bakımlar koleksiyonu
+    // Mekanik Bakım
     match /mekanikBakimlar/{bakimId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/mekanikBakimlar/$(bakimId)) && isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && exists(/databases/$(database)/documents/mekanikBakimlar/$(bakimId)) && 
-                      resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isTechnician() || isEngineer() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isTechnician() || isEngineer() || isSuperAdmin();
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() ||
+        isTechnician() ||
+        (isCustomer() && hasAccessToSaha(resource.data.sahaId)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
     }
 
-    // Elektrik Bakımlar koleksiyonu
+    // Elektrik Bakım
     match /elektrikBakimlar/{bakimId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/elektrikBakimlar/$(bakimId)) && isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && exists(/databases/$(database)/documents/elektrikBakimlar/$(bakimId)) && 
-                      resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isTechnician() || isEngineer() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isTechnician() || isEngineer() || isSuperAdmin();
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() ||
+        isTechnician() ||
+        (isCustomer() && hasAccessToSaha(resource.data.sahaId)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
     }
 
-    // İş Raporları koleksiyonu
-    match /isRaporlari/{raporId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/isRaporlari/$(raporId)) && isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && exists(/databases/$(database)/documents/isRaporlari/$(raporId)) && 
-                      resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isTechnician() || isEngineer() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isTechnician() || isEngineer() || isSuperAdmin();
+    // Arızalar
+    match /arizalar/{arizaId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || 
+         resource.data.companyId == getUserCompanyId() || 
+         (isGuard() && hasAccessToSaha(resource.data.saha)));
+      allow create: if isAuthenticated() && 
+        (isAdmin() || isTechnician() || isCustomer() || isGuard()) && 
+        request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && 
+        (isSuperAdmin() || 
+        (resource.data.companyId == getUserCompanyId() && 
+         (isAdmin() || isTechnician() || 
+          (isCustomer() && resource.data.raporlayanId == request.auth.uid) || 
+          (isGuard() && hasAccessToSaha(resource.data.saha)))));
+      allow delete: if isAuthenticated() && 
+        (isSuperAdmin() || 
+        (resource.data.companyId == getUserCompanyId() && isAdmin()));
     }
 
-    // Elektrik Kesintileri koleksiyonu
-    match /elektrikKesintileri/{kesintId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/elektrikKesintileri/$(kesintId)) && isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && exists(/databases/$(database)/documents/elektrikKesintileri/$(kesintId)) && 
-                      resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isTechnician() || isEngineer() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isTechnician() || isEngineer() || isSuperAdmin();
-    }
-
-    // İnvertör Kontrolleri koleksiyonu
-    match /invertorKontroller/{kontrolId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/invertorKontroller/$(kontrolId)) && isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && exists(/databases/$(database)/documents/invertorKontroller/$(kontrolId)) && 
-                      resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isTechnician() || isEngineer() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isTechnician() || isEngineer() || isSuperAdmin();
-    }
-
-    // Üretim Verileri koleksiyonu
+    // Üretim verileri
     match /uretimVerileri/{veriId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/uretimVerileri/$(veriId)) && isCompanyMember(resource.data.companyId) || 
-                     (isCustomer() && exists(/databases/$(database)/documents/uretimVerileri/$(veriId)) && 
-                      resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isTechnician() || isEngineer() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isTechnician() || isEngineer() || isSuperAdmin();
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() || 
+        isTechnician() ||
+        (isCustomer() && hasAccessToSantral(resource.data.santralId)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
     }
 
-    // Ekip koleksiyonu
-    match /ekip/{ekipId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/ekip/$(ekipId)) && isCompanyMember(resource.data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isSuperAdmin();
+    // Stok
+    match /stoklar/{stokId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() || 
+        isTechnician() || 
+        (isCustomer() && hasAccessToSaha(resource.data.sahaId)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
     }
 
-    // Müşteriler koleksiyonu
-    match /musteriler/{musteriId} {
-      allow read: if request.auth != null && 
-                    (isSuperAdmin() || 
-                     exists(/databases/$(database)/documents/musteriler/$(musteriId)) && isCompanyMember(resource.data.companyId));
-      allow create: if request.auth != null && 
-                     (isAdmin() || isSuperAdmin()) &&
-                     request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
-      allow update, delete: if isAdmin() || isSuperAdmin();
+    // İş Raporları
+    match /isRaporlari/{raporId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() || 
+        isTechnician() || 
+        (isCustomer() && hasAccessToSaha(resource.data.saha)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
+    }
+
+    // Elektrik Kesintileri
+    match /elektrikKesintileri/{kesintId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() || 
+        isTechnician() || 
+        (isCustomer() && hasAccessToSaha(resource.data.sahaId)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician() || isGuard()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician() || isGuard()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
+    }
+
+    // İnvertör Kontrolleri
+    match /invertorKontroller/{kontId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() || 
+        isTechnician() || 
+        (isCustomer() && hasAccessToSaha(resource.data.sahaId)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
+    }
+
+    // Santraller
+    match /santraller/{santralId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        isAdmin() || 
+        isTechnician() || 
+        (isCustomer() && hasAccessToSantral(santralId)) ||
+        (resource.data.companyId == getUserCompanyId())
+      );
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin()) && 
+                     request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin()) && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
+    }
+
+    // Sahalar - Güçlendirilmiş izolasyon kuralları
+    match /sahalar/{sahaId} {
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || 
+         resource.data.companyId == getUserCompanyId() || 
+         (isCustomer() && hasAccessToSaha(sahaId)) || 
+         (isGuard() && hasAccessToSaha(sahaId)));
+      allow list: if isAuthenticated() &&
+        (isSuperAdmin() || isAdmin() || isCustomer() || isTechnician() || isGuard());
+      allow create: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && request.resource.data.companyId == getUserCompanyId()));
+      allow update: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && resource.data.companyId == getUserCompanyId()));
+      allow delete: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && resource.data.companyId == getUserCompanyId()));
+    }
+
+    // Bildirimler
+    match /bildirimler/{bildirimId} {
+      allow read, list: if isAuthenticated() && (
+        request.auth.uid == resource.data.kullaniciId && 
+        resource.data.companyId == getUserCompanyId()
+      );
+      allow create: if isAuthenticated() && request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.kullaniciId && 
+                     resource.data.companyId == getUserCompanyId();
+      allow delete: if isAuthenticated() && (
+        isSuperAdmin() ||
+        request.auth.uid == resource.data.kullaniciId
+      ) && resource.data.companyId == getUserCompanyId();
+    }
+
+    // Companies
+    match /companies/{companyId} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() ||
+        resource.data.createdBy == request.auth.uid ||
+        get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId == companyId
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (isAdmin() && get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId == companyId)
+      );
+      allow delete: if isAuthenticated() && isSuperAdmin();
+    }
+
+    // Invitations
+    match /invitations/{inviteId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin());
+      allow update: if isAuthenticated() || resource.data.email == request.resource.data.email;
+      allow delete: if isAuthenticated() && (isSuperAdmin() || isAdmin());
     }
   }
 }
