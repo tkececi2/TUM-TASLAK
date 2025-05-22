@@ -207,11 +207,9 @@ service cloud.firestore {
     
     // ElektrikKesintileri collection
     match /elektrikKesintileri/{kesintId} {
-      allow read: if isAuthenticated() && 
-        (isSuperAdmin() || belongsToCompany(resource));
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && 
-        (isSuperAdmin() || belongsToCompany(resource));
+      allow update, delete: if isAuthenticated();
     }
     
     // InvertorKontroller collection

@@ -58,7 +58,8 @@ export const ElektrikKesintisiForm: React.FC<Props> = ({ onClose, sahalar }) => 
           id: kullanici.id,
           ad: kullanici.ad
         },
-        olusturmaTarihi: Timestamp.now()
+        olusturmaTarihi: Timestamp.now(),
+        companyId: kullanici.companyId
       });
 
       toast.success('Kesinti kaydı başarıyla oluşturuldu');
