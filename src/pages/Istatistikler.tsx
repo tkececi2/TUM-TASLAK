@@ -52,11 +52,19 @@ export const Istatistikler: React.FC = () => {
         // Arızaları getir - şirket bazlı izolasyon ekle
         let arizaQuery;
         
-        // Superadmin değilse sadece kendi şirketinin verilerini göster
+        // Her durumda şirket filtresi uygulanmalı (superadmin hariç)
         const companyFilter = kullanici.rol !== 'superadmin' 
           ? where('companyId', '==', kullanici.companyId) 
           : null;
           
+        // Şirket filtresi olmadan hiçbir sorgu çalıştırılmamalı (superadmin hariç)
+        if (kullanici.rol !== 'superadmin' && !kullanici.companyId) {
+          console.error("Kullanıcının şirket ID'si yok, veri getirilemez");
+          setArizalar([]);
+          setYukleniyor(false);
+          return;
+        }
+        
         if (kullanici.rol === 'musteri' && kullanici.sahalar) {
           if (secilenSaha) {
             if (!kullanici.sahalar.includes(secilenSaha)) {
@@ -66,6 +74,7 @@ export const Istatistikler: React.FC = () => {
             
             // Müşteri seçili sahaya göre filtreleme
             const filters = [where('saha', '==', secilenSaha)];
+            // Şirket filtresi her zaman uygulanmalı
             if (companyFilter) filters.push(companyFilter);
             
             arizaQuery = query(
@@ -76,6 +85,7 @@ export const Istatistikler: React.FC = () => {
           } else {
             // Müşteri tüm sahalarına göre filtreleme
             const filters = [where('saha', 'in', kullanici.sahalar)];
+            // Şirket filtresi her zaman uygulanmalı
             if (companyFilter) filters.push(companyFilter);
             
             arizaQuery = query(
@@ -87,6 +97,7 @@ export const Istatistikler: React.FC = () => {
         } else if (secilenSaha) {
           // Seçili sahaya göre filtreleme
           const filters = [where('saha', '==', secilenSaha)];
+          // Şirket filtresi her zaman uygulanmalı
           if (companyFilter) filters.push(companyFilter);
           
           arizaQuery = query(
@@ -96,10 +107,13 @@ export const Istatistikler: React.FC = () => {
           );
         } else if (sahaIdList.length > 0) {
           // Şirkete ait tüm sahalara göre filtreleme
-          const filters = kullanici.rol !== 'superadmin' 
-            ? [where('saha', 'in', sahaIdList)] 
-            : [];
-            
+          const filters = [];
+          // Kullanıcı superadmin değilse saha filtresini ekle
+          if (kullanici.rol !== 'superadmin' && sahaIdList.length <= 10) {
+            filters.push(where('saha', 'in', sahaIdList));
+          }
+          
+          // Şirket filtresi her zaman uygulanmalı
           if (companyFilter) filters.push(companyFilter);
           
           arizaQuery = query(
@@ -110,6 +124,7 @@ export const Istatistikler: React.FC = () => {
         } else {
           // Şirket filtresi ile tüm arızaları getir
           const filters = [];
+          // Şirket filtresi her zaman uygulanmalı
           if (companyFilter) filters.push(companyFilter);
           
           arizaQuery = query(
@@ -119,7 +134,21 @@ export const Istatistikler: React.FC = () => {
           );
         }
 
-        console.log("Arıza sorgusu oluşturuldu:", kullanici.companyId);
+        console.log("Arıza sorgusu oluşturuldu. Kullanıcı:", {
+          rol: kullanici.rol,
+          companyId: kullanici.companyId,
+          secilenSaha: secilenSaha,
+          sahaIdList: sahaIdList.length
+        });
+        
+        // Query içeriğini loglama
+        const queryFilters = arizaQuery._query.filters 
+          ? arizaQuery._query.filters.map(f => {
+              return { field: f.field.segments.join('.'), op: f.op.name, value: f.value };
+            }) 
+          : [];
+        console.log("Sorgu filtreleri:", queryFilters);
+        
         const snapshot = await getDocs(arizaQuery);
         const arizaVerileri = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -127,7 +156,29 @@ export const Istatistikler: React.FC = () => {
         })) as Ariza[];
         
         console.log(`${arizaVerileri.length} arıza verisi getirildi`);
-        setArizalar(arizaVerileri);
+        
+        // Şirket ID'lerine göre veri doğrulama
+        if (kullanici.rol !== 'superadmin') {
+          const yabanciSirketVerileri = arizaVerileri.filter(ariza => 
+            ariza.companyId !== kullanici.companyId
+          );
+          
+          if (yabanciSirketVerileri.length > 0) {
+            console.error("UYARI: Farklı şirketlere ait veriler tespit edildi:", 
+              yabanciSirketVerileri.map(v => v.companyId));
+            
+            // Sadece kullanıcının kendi şirketine ait verileri kullan
+            const filtrelenmisVeriler = arizaVerileri.filter(
+              ariza => ariza.companyId === kullanici.companyId
+            );
+            
+            setArizalar(filtrelenmisVeriler);
+          } else {
+            setArizalar(arizaVerileri);
+          }
+        } else {
+          setArizalar(arizaVerileri);
+        }
       } catch (error) {
         console.error('Veri getirme hatası:', error);
         toast.error('Veriler yüklenirken bir hata oluştu');

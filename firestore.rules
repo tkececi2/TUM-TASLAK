@@ -228,13 +228,15 @@ service cloud.firestore {
       allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
     }
 
-    // Sahalar - Updated rules to fix permission issues
+    // Sahalar - Güçlendirilmiş izolasyon kuralları
     match /sahalar/{sahaId} {
       allow read: if isAuthenticated() && 
         (isSuperAdmin() || 
          resource.data.companyId == getUserCompanyId() || 
          (isCustomer() && hasAccessToSaha(sahaId)) || 
          (isGuard() && hasAccessToSaha(sahaId)));
+      allow list: if isAuthenticated() &&
+        (isSuperAdmin() || isAdmin() || isCustomer() || isTechnician() || isGuard());
       allow create: if isAuthenticated() && 
         (isSuperAdmin() || (isAdmin() && request.resource.data.companyId == getUserCompanyId()));
       allow update: if isAuthenticated() && 
