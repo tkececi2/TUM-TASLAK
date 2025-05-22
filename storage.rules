@@ -2,67 +2,16 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Temel fonksiyonlar
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return isAuthenticated() && request.auth.token.rol == 'yonetici';
-    }
-
-    function isTechnician() {
-      return isAuthenticated() && request.auth.token.rol == 'tekniker';
-    }
-
-    function hasUploadPermission() {
-      return isAuthenticated();
-    }
-
-    function getCompanyFromPath(path) {
-      // Metaveri'den companyId'yi çıkarma
-      return request.resource.metadata.companyId;
-    }
-
-    function belongsToSameCompany(path) {
-      // Dosya adında veya metaveride companyId kontrolü
-      return request.resource.metadata.companyId == request.auth.token.companyId;
-    }
-
-    function isSuperAdmin() {
-      return isAuthenticated() && request.auth.token.rol == 'superadmin';
-    }
-
-    // Tüm yollar için temel kurallar
+    // Tüm yollar için kimlik doğrulamalı kullanıcılara okuma izni ver
     match /{allPaths=**} {
-      allow read: if isAuthenticated() && 
-        (request.resource.metadata.companyId == request.auth.token.companyId || isSuperAdmin());
-      allow write: if isAuthenticated() && 
-        (request.resource.metadata.companyId == request.auth.token.companyId || isSuperAdmin());
-    }
-
-    // Stoklar klasörü için kurallar
-    match /stoklar/{document=**} {
       allow read: if isAuthenticated();
+      // Kimlik doğrulaması yeterli, rol kontrolünü uygulama tarafında yapacağız
       allow write: if isAuthenticated();
-    }
-
-    // Diğer klasörler için kurallar
-    match /arizalar/{document=**} {
-      allow read: if isAuthenticated();
-      allow write: if hasUploadPermission();
-    }
-
-    match /profil/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Şirket klasörü için kurallar
-    match /companies/{companyId}/{allPaths=**} {
-      allow read: if isAuthenticated() && 
-        (companyId == request.auth.token.companyId || isSuperAdmin());
-      allow write: if isAuthenticated() && 
-        (companyId == request.auth.token.companyId || isSuperAdmin());
     }
   }
 }

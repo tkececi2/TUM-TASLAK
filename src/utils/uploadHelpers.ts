@@ -205,37 +205,56 @@ export const uploadMultipleFiles = async (
       const idTokenResult = await auth.currentUser.getIdTokenResult();
       console.log('Token claims before upload:', idTokenResult.claims);
 
-      // Check if role claim exists in token
-      if (!idTokenResult.claims.rol) {
-        console.log('No role in token claims, getting user data from Firestore');
-
-        // Kullanıcı verilerini Firestore'dan al (kullanıcı rol değeri için)
+      // LocalStorage'dan kullanıcı bilgilerini al
+      const storageUserStr = localStorage.getItem('currentUser');
+      let userHasPermission = false;
+      
+      if (storageUserStr) {
+        try {
+          const storageUser = JSON.parse(storageUserStr);
+          console.log('StorageUser role:', storageUser.rol);
+          
+          // Rol bilgisi varsa ve izinli rollerdense yetki ver
+          if (storageUser.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(storageUser.rol)) {
+            userHasPermission = true;
+            console.log('User has upload permission based on localStorage role');
+          }
+        } catch (e) {
+          console.error('Error parsing user from localStorage', e);
+        }
+      }
+      
+      // Token claim'de rol varsa kontrol et
+      if (idTokenResult.claims && idTokenResult.claims.rol) {
+        if (['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(idTokenResult.claims.rol as string)) {
+          userHasPermission = true;
+          console.log('User has upload permission based on token claims');
+        }
+      }
+      
+      // Hala yetki yoksa, Firestore'dan kullanıcı verilerini almayı dene
+      if (!userHasPermission) {
+        console.log('No permission found, checking Firestore');
         const userDoc = await userService.getUserById(auth.currentUser.uid);
+        
         if (userDoc && userDoc.rol) {
           console.log('Using role from Firestore document:', userDoc.rol);
-          if (['yonetici', 'tekniker', 'muhendis'].includes(userDoc.rol)) {
+          if (['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(userDoc.rol)) {
+            userHasPermission = true;
             console.log('User has upload permission based on Firestore role');
-          } else {
-            toast.error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
-            throw new Error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
           }
-        } else {
-          console.warn('No role found in Firestore user document either');
-          toast.error('Yetki bilgisi eksik. Dosya yükleme işlemi başarısız olabilir.');
         }
-      } else {
-        console.log('User role from token:', idTokenResult.claims.rol);
-        if (['yonetici', 'tekniker', 'muhendis'].includes(idTokenResult.claims.rol)) {
-          console.log('User has upload permission based on token claims');
-        } else {
-          toast.error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
-          throw new Error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
-        }
+      }
+      
+      // Hala yetki yoksa, hatayı fırlat
+      if (!userHasPermission) {
+        toast.error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
+        throw new Error('Dosya yükleme için gerekli yetkiniz bulunmamaktadır');
       }
     } catch (error) {
       console.error('Error refreshing token:', error);
       if (error instanceof Error) {
-        throw error; // Hata mesajını olduğu gibi yukarı fırlat
+        throw error;
       }
     }
   } else {

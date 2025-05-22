@@ -55,55 +55,20 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   const isDisabled = disabled || !hasUploadPermission;
 
   const uploadFile = async (file: File): Promise<string> => {
-    const timestamp = Date.now();
-    const cleanName = cleanFileName(file.name);
-    const companyId = await getCurrentCompanyId();
-    const storageRef = ref(storage, `${path}/${timestamp}_${cleanName}`);
-
-    // Metadata içinde companyId'yi ekle
-    const metadata = {
-      customMetadata: {
-        companyId: companyId
-      }
-    };
-
-    console.log('Token claims before upload:', idTokenResult?.claims);
-    console.log('Dosya yükleniyor, şirket ID:', companyId);
-    
     try {
-      const uploadTask = uploadBytesResumable(storageRef, file, metadata);
-
-        return new Promise((resolve, reject) => {
-            uploadTask.on('state_changed',
-                (snapshot) => {
-                    // Observe state change events such as progress, pause, and resume
-                    // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                    console.log('Upload is ' + progress + '% done');
-                    // setUploadProgress(progress); // Assuming you have a state to track upload progress
-                },
-                (error) => {
-                    // Handle unsuccessful uploads
-                    console.error("Upload failed", error);
-                    reject(error);
-                },
-                () => {
-                    // Handle successful uploads on complete
-                   // getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                        console.log('File available at', downloadURL);
-                        resolve(downloadURL);
-
-                        if (onUploadComplete) {
-                            onUploadComplete(downloadURL);
-                        }
-                    });
-                }
-            );
-        });
+      // utils/uploadHelpers.ts içindeki uploadFile fonksiyonunu kullan
+      const uploadResult = await import('../utils/uploadHelpers').then(module => {
+        return module.uploadFile(file, path, 10); // 10MB max boyut
+      });
+      
+      if (onUploadComplete) {
+        onUploadComplete(uploadResult);
+      }
+      
+      return uploadResult;
     } catch (error) {
-        console.error("Error uploading file:", error);
-        throw error;
+      console.error("Error uploading file:", error);
+      throw error;
     }
   };
   
@@ -140,17 +105,30 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
     if (validFiles.length > 0) {
       // Upload files and get URLs
-      const uploadPromises = validFiles.map(file => uploadFile(file));
       try {
-          const urls = await Promise.all(uploadPromises);
-          onFileSelect(validFiles); // Notify parent component about selected (and uploaded) files
-          console.log("Uploaded file URLs:", urls);
-      } catch (error) {
-          console.error("File upload failed", error);
-          toast.error("Dosya yüklenirken bir hata oluştu.");
+        // utils/uploadHelpers.ts içindeki uploadMultipleFiles fonksiyonunu kullan
+        const module = await import('../utils/uploadHelpers');
+        const urls = await module.uploadMultipleFiles(
+          validFiles,
+          path,
+          undefined, // progress callback'i buraya verilebilir
+          10 // 10MB max boyut
+        );
+        
+        onFileSelect(validFiles); // Notify parent component about selected (and uploaded) files
+        console.log("Uploaded file URLs:", urls);
+        
+        // Eğer her bir dosya URL'si için callback varsa, burada işlenebilir
+        if (onUploadComplete && urls.length > 0) {
+          // Son URL'yi gönder veya tüm URL'lerin birleştirilmiş halini
+          onUploadComplete(urls[0]);
+        }
+      } catch (error: any) {
+        console.error("File upload failed", error);
+        toast.error(error.message || "Dosya yüklenirken bir hata oluştu.");
       }
     }
-  }, [onFileSelect, maxFiles, selectedFiles.length, isDisabled, path, kullanici, idTokenResult, storage, onUploadComplete]);
+  }, [onFileSelect, maxFiles, selectedFiles.length, isDisabled, path, kullanici, onUploadComplete]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
