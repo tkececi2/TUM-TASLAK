@@ -6,23 +6,45 @@ service firebase.storage {
     function isAuthenticated() {
       return request.auth != null;
     }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.rol == 'yonetici';
+    }
+    
+    function isTechnician() {
+      return isAuthenticated() && 
+        (request.auth.token.rol == 'tekniker' || request.auth.token.rol == 'muhendis');
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && request.auth.token.rol == 'superadmin';
+    }
 
-    // Tüm yollar için kimlik doğrulamalı kullanıcılara okuma ve yazma izni ver
+    function isGuard() {
+      return isAuthenticated() && request.auth.token.rol == 'bekci';
+    }
+    
+    function hasUploadPermission() {
+      return isAuthenticated() && 
+        (isAdmin() || isTechnician() || isSuperAdmin() || isGuard());
+    }
+
+    // Ana kural: Kimlik doğrulamalı kullanıcılara okuma izni
     match /{allPaths=**} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      // Yazma izni özel kurallara göre kontrol edilecek
     }
 
     // Uploads klasörü için kurallar
     match /uploads/{document=**} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if hasUploadPermission();
     }
 
     // Stoklar klasörü için kurallar
     match /stoklar/{document=**} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if hasUploadPermission();
     }
 
     // Kullanıcı profil fotoğrafları için kurallar
@@ -34,13 +56,19 @@ service firebase.storage {
     // Saha fotoğrafları için kurallar
     match /saha_photos/{sahaId}/{photoId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if hasUploadPermission();
     }
 
     // Arıza fotoğrafları için kurallar
     match /ariza_photos/{arizaId}/{photoId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if hasUploadPermission();
+    }
+    
+    // Bakım fotoğrafları için kurallar
+    match /bakim_photos/{bakimId}/{photoId} {
+      allow read: if isAuthenticated();
+      allow write: if hasUploadPermission();
     }
   }
 }
