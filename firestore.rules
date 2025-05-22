@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -7,38 +6,38 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isAdmin() {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'yonetici';
     }
-    
+
     function isTechnician() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
         (get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'tekniker' || 
          get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'muhendis');
     }
-    
+
     function isCustomer() {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'musteri';
     }
-    
+
     function isGuard() {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'bekci';
     }
-    
+
     function isSuperAdmin() {
       return isAuthenticated() && 
         exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'superadmin';
     }
-    
+
     function hasAccessToSaha(sahaId) {
       let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
       return user.sahalar != null && (sahaId in user.sahalar || user.sahalar.hasAny([sahaId]));
@@ -48,12 +47,12 @@ service cloud.firestore {
       let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
       return user.sahalar != null && (santralId in user.sahalar || user.sahalar.hasAny([santralId]));
     }
-    
+
     function isSameCompany(resourceCompanyId) {
       let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
       return user.companyId == resourceCompanyId || isSuperAdmin();
     }
-    
+
     function getUserCompanyId() {
       return get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId;
     }
@@ -95,7 +94,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
                      resource.data.companyId == getUserCompanyId();
     }
-    
+
     // Elektrik Bakım
     match /elektrikBakimlar/{bakimId} {
       allow read: if isAuthenticated() && (
@@ -112,27 +111,27 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (isSuperAdmin() || isAdmin() || isTechnician()) && 
                      resource.data.companyId == getUserCompanyId();
     }
-    
+
     // Arızalar
     match /arizalar/{arizaId} {
-      allow read: if isAuthenticated() && (
-        isSuperAdmin() ||
-        isAdmin() || 
-        isTechnician() || 
-        (isCustomer() && hasAccessToSaha(resource.data.saha)) ||
-        (resource.data.companyId == getUserCompanyId())
-      );
-      allow create: if isAuthenticated() && request.resource.data.companyId == getUserCompanyId();
-      allow update: if isAuthenticated() && (
-        isSuperAdmin() ||
-        isAdmin() ||
-        isTechnician() ||
-        resource.data.olusturanKisi == request.auth.uid ||
-        (isCustomer() && hasAccessToSaha(resource.data.saha))
-      ) && resource.data.companyId == getUserCompanyId();
-      allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || 
+         resource.data.companyId == getUserCompanyId() || 
+         (isGuard() && hasAccessToSaha(resource.data.saha)));
+      allow create: if isAuthenticated() && 
+        (isAdmin() || isTechnician() || isCustomer() || isGuard()) && 
+        request.resource.data.companyId == getUserCompanyId();
+      allow update: if isAuthenticated() && 
+        (isSuperAdmin() || 
+        (resource.data.companyId == getUserCompanyId() && 
+         (isAdmin() || isTechnician() || 
+          (isCustomer() && resource.data.raporlayanId == request.auth.uid) || 
+          (isGuard() && hasAccessToSaha(resource.data.saha)))));
+      allow delete: if isAuthenticated() && 
+        (isSuperAdmin() || 
+        (resource.data.companyId == getUserCompanyId() && isAdmin()));
     }
-    
+
     // Üretim verileri
     match /uretimVerileri/{veriId} {
       allow read: if isAuthenticated() && (
@@ -148,7 +147,7 @@ service cloud.firestore {
                      resource.data.companyId == getUserCompanyId();
       allow delete: if (isSuperAdmin() || isAdmin()) && resource.data.companyId == getUserCompanyId();
     }
-    
+
     // Stok
     match /stoklar/{stokId} {
       allow read: if isAuthenticated() && (
@@ -231,19 +230,17 @@ service cloud.firestore {
 
     // Sahalar - Updated rules to fix permission issues
     match /sahalar/{sahaId} {
-      allow read: if isAuthenticated() && (
-        isSuperAdmin() || 
-        isAdmin() ||
-        isTechnician() ||
-        (resource.data.companyId == getUserCompanyId()) ||
-        (isCustomer() && hasAccessToSaha(sahaId))
-      );
-      allow create: if isAuthenticated() && (isSuperAdmin() || isAdmin()) && 
-                     request.resource.data.companyId == getUserCompanyId();
-      allow update: if isAuthenticated() && (isSuperAdmin() || isAdmin()) && 
-                     resource.data.companyId == getUserCompanyId();
-      allow delete: if isAuthenticated() && (isSuperAdmin() || isAdmin()) && 
-                     resource.data.companyId == getUserCompanyId();
+      allow read: if isAuthenticated() && 
+        (isSuperAdmin() || 
+         resource.data.companyId == getUserCompanyId() || 
+         (isCustomer() && hasAccessToSaha(sahaId)) || 
+         (isGuard() && hasAccessToSaha(sahaId)));
+      allow create: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && request.resource.data.companyId == getUserCompanyId()));
+      allow update: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && resource.data.companyId == getUserCompanyId()));
+      allow delete: if isAuthenticated() && 
+        (isSuperAdmin() || (isAdmin() && resource.data.companyId == getUserCompanyId()));
     }
 
     // Bildirimler

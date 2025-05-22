@@ -20,63 +20,113 @@ export const Istatistikler: React.FC = () => {
       if (!kullanici) return;
 
       try {
-        // Sahaları getir
+        // Sahaları getir - sadece kendi şirketine ait sahaları getir
         let sahaQuery;
         if (kullanici.rol === 'musteri' && kullanici.sahalar) {
           sahaQuery = query(
             collection(db, 'sahalar'),
-            where('__name__', 'in', kullanici.sahalar)
+            where('__name__', 'in', kullanici.sahalar),
+            where('companyId', '==', kullanici.companyId)
           );
-        } else {
+        } else if (kullanici.rol === 'superadmin') {
+          // Superadmin tüm sahaları görebilir
           sahaQuery = query(collection(db, 'sahalar'));
+        } else {
+          // Diğer roller sadece kendi şirketlerinin sahalarını görebilir
+          sahaQuery = query(
+            collection(db, 'sahalar'),
+            where('companyId', '==', kullanici.companyId)
+          );
         }
         
         const sahaSnapshot = await getDocs(sahaQuery);
         const sahaMap: Record<string, string> = {};
+        const sahaIdList: string[] = [];
+        
         sahaSnapshot.docs.forEach(doc => {
           sahaMap[doc.id] = doc.data().ad;
+          sahaIdList.push(doc.id);
         });
         setSahalar(sahaMap);
 
-        // Arızaları getir
+        // Arızaları getir - şirket bazlı izolasyon ekle
         let arizaQuery;
+        
+        // Superadmin değilse sadece kendi şirketinin verilerini göster
+        const companyFilter = kullanici.rol !== 'superadmin' 
+          ? where('companyId', '==', kullanici.companyId) 
+          : null;
+          
         if (kullanici.rol === 'musteri' && kullanici.sahalar) {
           if (secilenSaha) {
             if (!kullanici.sahalar.includes(secilenSaha)) {
               setArizalar([]);
               return;
             }
+            
+            // Müşteri seçili sahaya göre filtreleme
+            const filters = [where('saha', '==', secilenSaha)];
+            if (companyFilter) filters.push(companyFilter);
+            
             arizaQuery = query(
               collection(db, 'arizalar'),
-              where('saha', '==', secilenSaha),
+              ...filters,
               orderBy('olusturmaTarihi', 'desc')
             );
           } else {
+            // Müşteri tüm sahalarına göre filtreleme
+            const filters = [where('saha', 'in', kullanici.sahalar)];
+            if (companyFilter) filters.push(companyFilter);
+            
             arizaQuery = query(
               collection(db, 'arizalar'),
-              where('saha', 'in', kullanici.sahalar),
+              ...filters,
               orderBy('olusturmaTarihi', 'desc')
             );
           }
         } else if (secilenSaha) {
+          // Seçili sahaya göre filtreleme
+          const filters = [where('saha', '==', secilenSaha)];
+          if (companyFilter) filters.push(companyFilter);
+          
           arizaQuery = query(
             collection(db, 'arizalar'),
-            where('saha', '==', secilenSaha),
+            ...filters,
+            orderBy('olusturmaTarihi', 'desc')
+          );
+        } else if (sahaIdList.length > 0) {
+          // Şirkete ait tüm sahalara göre filtreleme
+          const filters = kullanici.rol !== 'superadmin' 
+            ? [where('saha', 'in', sahaIdList)] 
+            : [];
+            
+          if (companyFilter) filters.push(companyFilter);
+          
+          arizaQuery = query(
+            collection(db, 'arizalar'),
+            ...filters,
             orderBy('olusturmaTarihi', 'desc')
           );
         } else {
+          // Şirket filtresi ile tüm arızaları getir
+          const filters = [];
+          if (companyFilter) filters.push(companyFilter);
+          
           arizaQuery = query(
             collection(db, 'arizalar'),
+            ...filters,
             orderBy('olusturmaTarihi', 'desc')
           );
         }
 
+        console.log("Arıza sorgusu oluşturuldu:", kullanici.companyId);
         const snapshot = await getDocs(arizaQuery);
         const arizaVerileri = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Ariza[];
         
+        console.log(`${arizaVerileri.length} arıza verisi getirildi`);
         setArizalar(arizaVerileri);
       } catch (error) {
         console.error('Veri getirme hatası:', error);
