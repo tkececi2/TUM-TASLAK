@@ -4,7 +4,7 @@ import { Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { getStorage, ref, uploadBytesResumable } from "firebase/storage";
-import {app} from '../firebaseConfig';
+import app from '../lib/firebase';
 
 // Assume getCurrentCompanyId and cleanFileName are defined elsewhere and imported
 async function getCurrentCompanyId(): Promise<string> {
