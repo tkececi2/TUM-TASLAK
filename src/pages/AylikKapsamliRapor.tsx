@@ -189,10 +189,11 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('olusturmaTarihi', '<=', ayBitisTimestamp),
             orderBy('olusturmaTarihi', 'desc')
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
+          // Sadece sahaları varsa 'in' operatörünü kullan
           arizaQuery = query(
             collection(db, 'arizalar'),
-            where('saha', 'in', kullanici.sahalar),
+            where('saha', 'in', kullanici.sahalar.slice(0, 10)), // Firestore 'in' operatörü maksimum 10 değer destekler
             where('companyId', '==', kullanici.companyId),
             where('olusturmaTarihi', '>=', ayBaslangicTimestamp),
             where('olusturmaTarihi', '<=', ayBitisTimestamp),
@@ -208,11 +209,18 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const arizaSnapshot = await getDocs(arizaQuery);
-        const arizalar = arizaSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let arizalar = [];
+        try {
+          const arizaSnapshot = await getDocs(arizaQuery);
+          arizalar = arizaSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('Arıza verileri getirme hatası:', error);
+          // Hata durumunda boş bir dizi ile devam et
+          arizalar = [];
+        }
         
         // Stok verileri
         let stokQuery;
@@ -222,10 +230,10 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('sahaId', '==', secilenSaha),
             where('companyId', '==', kullanici.companyId)
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
           stokQuery = query(
             collection(db, 'stoklar'),
-            where('sahaId', 'in', kullanici.sahalar),
+            where('sahaId', 'in', kullanici.sahalar.slice(0, 10)),
             where('companyId', '==', kullanici.companyId)
           );
         } else {
@@ -235,11 +243,17 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const stokSnapshot = await getDocs(stokQuery);
-        const stoklar = stokSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let stoklar = [];
+        try {
+          const stokSnapshot = await getDocs(stokQuery);
+          stoklar = stokSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('Stok verileri getirme hatası:', error);
+          stoklar = [];
+        }
         
         // Mekanik bakım verileri
         let mekanikBakimQuery;
@@ -251,10 +265,10 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
           mekanikBakimQuery = query(
             collection(db, 'mekanikBakimlar'),
-            where('sahaId', 'in', kullanici.sahalar),
+            where('sahaId', 'in', kullanici.sahalar.slice(0, 10)),
             where('companyId', '==', kullanici.companyId),
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
@@ -268,11 +282,17 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const mekanikBakimSnapshot = await getDocs(mekanikBakimQuery);
-        const mekanikBakimlar = mekanikBakimSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let mekanikBakimlar = [];
+        try {
+          const mekanikBakimSnapshot = await getDocs(mekanikBakimQuery);
+          mekanikBakimlar = mekanikBakimSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('Mekanik bakım verileri getirme hatası:', error);
+          mekanikBakimlar = [];
+        }
         
         // Elektrik bakım verileri
         let elektrikBakimQuery;
@@ -284,10 +304,10 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
           elektrikBakimQuery = query(
             collection(db, 'elektrikBakimlar'),
-            where('sahaId', 'in', kullanici.sahalar),
+            where('sahaId', 'in', kullanici.sahalar.slice(0, 10)),
             where('companyId', '==', kullanici.companyId),
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
@@ -301,11 +321,17 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const elektrikBakimSnapshot = await getDocs(elektrikBakimQuery);
-        const elektrikBakimlar = elektrikBakimSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let elektrikBakimlar = [];
+        try {
+          const elektrikBakimSnapshot = await getDocs(elektrikBakimQuery);
+          elektrikBakimlar = elektrikBakimSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('Elektrik bakım verileri getirme hatası:', error);
+          elektrikBakimlar = [];
+        }
         
         // Yapılan işler verileri
         let isRaporlariQuery;
@@ -317,10 +343,10 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
           isRaporlariQuery = query(
             collection(db, 'isRaporlari'),
-            where('saha', 'in', kullanici.sahalar),
+            where('saha', 'in', kullanici.sahalar.slice(0, 10)),
             where('companyId', '==', kullanici.companyId),
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
@@ -334,11 +360,17 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const isRaporlariSnapshot = await getDocs(isRaporlariQuery);
-        const isRaporlari = isRaporlariSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let isRaporlari = [];
+        try {
+          const isRaporlariSnapshot = await getDocs(isRaporlariQuery);
+          isRaporlari = isRaporlariSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('İş raporları getirme hatası:', error);
+          isRaporlari = [];
+        }
         
         // Elektrik kesintileri verileri
         let kesintilerQuery;
@@ -350,10 +382,10 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('baslangicTarihi', '>=', ayBaslangicTimestamp),
             where('baslangicTarihi', '<=', ayBitisTimestamp)
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
           kesintilerQuery = query(
             collection(db, 'elektrikKesintileri'),
-            where('sahaId', 'in', kullanici.sahalar),
+            where('sahaId', 'in', kullanici.sahalar.slice(0, 10)),
             where('companyId', '==', kullanici.companyId),
             where('baslangicTarihi', '>=', ayBaslangicTimestamp),
             where('baslangicTarihi', '<=', ayBitisTimestamp)
@@ -367,11 +399,17 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const kesintilerSnapshot = await getDocs(kesintilerQuery);
-        const kesintiler = kesintilerSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let kesintiler = [];
+        try {
+          const kesintilerSnapshot = await getDocs(kesintilerQuery);
+          kesintiler = kesintilerSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('Kesinti verileri getirme hatası:', error);
+          kesintiler = [];
+        }
         
         // İnvertör kontrol verileri
         let invertorKontrolQuery;
@@ -383,10 +421,10 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
           invertorKontrolQuery = query(
             collection(db, 'invertorKontroller'),
-            where('sahaId', 'in', kullanici.sahalar),
+            where('sahaId', 'in', kullanici.sahalar.slice(0, 10)),
             where('companyId', '==', kullanici.companyId),
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp)
@@ -400,11 +438,17 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const invertorKontrolSnapshot = await getDocs(invertorKontrolQuery);
-        const invertorKontroller = invertorKontrolSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let invertorKontroller = [];
+        try {
+          const invertorKontrolSnapshot = await getDocs(invertorKontrolQuery);
+          invertorKontroller = invertorKontrolSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('İnvertör kontrol verileri getirme hatası:', error);
+          invertorKontroller = [];
+        }
         
         // Üretim verileri
         let uretimQuery;
@@ -417,11 +461,11 @@ export const AylikKapsamliRapor: React.FC = () => {
             where('tarih', '<=', ayBitisTimestamp),
             orderBy('tarih', 'asc')
           );
-        } else if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        } else if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
           // Müşteri için tüm santrallerin üretim verilerini getir
           uretimQuery = query(
             collection(db, 'uretimVerileri'),
-            where('santralId', 'in', kullanici.sahalar),
+            where('santralId', 'in', kullanici.sahalar.slice(0, 10)),
             where('companyId', '==', kullanici.companyId),
             where('tarih', '>=', ayBaslangicTimestamp),
             where('tarih', '<=', ayBitisTimestamp),
@@ -437,11 +481,17 @@ export const AylikKapsamliRapor: React.FC = () => {
           );
         }
         
-        const uretimSnapshot = await getDocs(uretimQuery);
-        const uretimVerileri = uretimSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        let uretimVerileri = [];
+        try {
+          const uretimSnapshot = await getDocs(uretimQuery);
+          uretimVerileri = uretimSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+        } catch (error) {
+          console.error('Üretim verileri getirme hatası:', error);
+          uretimVerileri = [];
+        }
         
         // Rapor verilerini hazırla
         const arizaRaporu = {
@@ -451,10 +501,15 @@ export const AylikKapsamliRapor: React.FC = () => {
           cozumSuresi: arizalar
             .filter(a => a.durum === 'cozuldu' && a.cozum)
             .reduce((acc, a) => {
-              const baslangic = a.olusturmaTarihi.toDate();
-              const bitis = a.cozum.tamamlanmaTarihi.toDate();
-              const sureSaat = (bitis.getTime() - baslangic.getTime()) / (1000 * 60 * 60);
-              return acc + sureSaat;
+              try {
+                const baslangic = a.olusturmaTarihi.toDate();
+                const bitis = a.cozum.tamamlanmaTarihi.toDate();
+                const sureSaat = (bitis.getTime() - baslangic.getTime()) / (1000 * 60 * 60);
+                return acc + sureSaat;
+              } catch (error) {
+                console.error('Çözüm süresi hesaplama hatası:', error);
+                return acc;
+              }
             }, 0) / (arizalar.filter(a => a.durum === 'cozuldu' && a.cozum).length || 1),
           oncelikDagilimi: [
             { oncelik: 'Düşük', sayi: arizalar.filter(a => a.oncelik === 'dusuk').length },
@@ -472,15 +527,15 @@ export const AylikKapsamliRapor: React.FC = () => {
         
         const stokRaporu = {
           toplamCesit: stoklar.length,
-          kritikSeviye: stoklar.filter(s => s.miktar <= s.kritikSeviye).length,
+          kritikSeviye: stoklar.filter(s => s.miktar <= (s.kritikSeviye || 0)).length,
           eksikMalzemeler: stoklar
-            .filter(s => s.miktar <= s.kritikSeviye)
+            .filter(s => s.miktar <= (s.kritikSeviye || 0))
             .map(s => ({
-              urunAdi: s.urunAdi,
-              miktar: s.miktar,
-              birim: s.birim,
-              kritikSeviye: s.kritikSeviye,
-              eksikMiktar: s.kritikSeviye - s.miktar
+              urunAdi: s.urunAdi || 'İsimsiz Ürün',
+              miktar: s.miktar || 0,
+              birim: s.birim || 'adet',
+              kritikSeviye: s.kritikSeviye || 0,
+              eksikMiktar: (s.kritikSeviye || 0) - (s.miktar || 0)
             }))
             .sort((a, b) => b.eksikMiktar - a.eksikMiktar)
             .slice(0, 5)
@@ -488,64 +543,117 @@ export const AylikKapsamliRapor: React.FC = () => {
         
         const mekanikBakimRaporu = {
           toplam: mekanikBakimlar.length,
-          sorunlu: mekanikBakimlar.filter(bakim => 
-            Object.values(bakim.durumlar).some(kategori => 
-              Object.values(kategori).some(durum => durum === false)
-            )
-          ).length
+          sorunlu: mekanikBakimlar.filter(bakim => {
+            try {
+              return Object.values(bakim.durumlar || {}).some(kategori => 
+                Object.values(kategori || {}).some(durum => durum === false)
+              );
+            } catch (error) {
+              console.error('Mekanik bakım durumu kontrolü hatası:', error);
+              return false;
+            }
+          }).length
         };
         
         const elektrikBakimRaporu = {
           toplam: elektrikBakimlar.length,
-          sorunlu: elektrikBakimlar.filter(bakim => 
-            Object.values(bakim.durumlar).some(kategori => 
-              Object.values(kategori).some(durum => durum === false)
-            )
-          ).length
+          sorunlu: elektrikBakimlar.filter(bakim => {
+            try {
+              return Object.values(bakim.durumlar || {}).some(kategori => 
+                Object.values(kategori || {}).some(durum => durum === false)
+              );
+            } catch (error) {
+              console.error('Elektrik bakım durumu kontrolü hatası:', error);
+              return false;
+            }
+          }).length
         };
         
         const yapilanIslerRaporu = {
           toplam: isRaporlari.length,
-          isListesi: isRaporlari.map(is => ({
-            id: is.id,
-            baslik: is.baslik,
-            tarih: is.tarih.toDate(),
-            saha: sahalar.find(s => s.id === is.saha)?.ad || 'Bilinmeyen Saha',
-            yapilanIsler: is.yapilanIsler
-          }))
+          isListesi: isRaporlari.map(is => {
+            try {
+              return {
+                id: is.id,
+                baslik: is.baslik || 'İsimsiz İş',
+                tarih: is.tarih ? is.tarih.toDate() : new Date(),
+                saha: sahalar.find(s => s.id === is.saha)?.ad || 'Bilinmeyen Saha',
+                yapilanIsler: is.yapilanIsler || ''
+              };
+            } catch (error) {
+              console.error('İş raporu dönüştürme hatası:', error);
+              return {
+                id: is.id,
+                baslik: 'Veri Hatası',
+                tarih: new Date(),
+                saha: 'Bilinmeyen Saha',
+                yapilanIsler: ''
+              };
+            }
+          })
         };
         
         const kesintilerRaporu = {
           toplam: kesintiler.length,
-          toplamSure: kesintiler.reduce((acc, k) => acc + k.sure, 0),
-          kesintiler: kesintiler.map(k => ({
-            id: k.id,
-            sahaAdi: sahalar.find(s => s.id === k.sahaId)?.ad || 'Bilinmeyen Saha',
-            baslangicTarihi: k.baslangicTarihi.toDate(),
-            bitisTarihi: k.bitisTarihi ? k.bitisTarihi.toDate() : null,
-            sure: k.sure,
-            durum: k.durum
-          }))
+          toplamSure: kesintiler.reduce((acc, k) => acc + (k.sure || 0), 0),
+          kesintiler: kesintiler.map(k => {
+            try {
+              return {
+                id: k.id,
+                sahaAdi: sahalar.find(s => s.id === k.sahaId)?.ad || 'Bilinmeyen Saha',
+                baslangicTarihi: k.baslangicTarihi ? k.baslangicTarihi.toDate() : new Date(),
+                bitisTarihi: k.bitisTarihi ? k.bitisTarihi.toDate() : null,
+                sure: k.sure || 0,
+                durum: k.durum || 'bilinmiyor'
+              };
+            } catch (error) {
+              console.error('Kesinti dönüştürme hatası:', error);
+              return {
+                id: k.id,
+                sahaAdi: 'Bilinmeyen Saha',
+                baslangicTarihi: new Date(),
+                bitisTarihi: null,
+                sure: 0,
+                durum: 'bilinmiyor'
+              };
+            }
+          })
         };
         
         const invertorRaporu = {
           toplamKontrol: invertorKontroller.length,
           calismaOrani: invertorKontroller.length > 0 
             ? invertorKontroller.reduce((acc, kontrol) => {
-                const calisanDizeSayisi = kontrol.invertorler.filter(inv => inv.dizeCalisiyor).length;
-                const toplamDizeSayisi = kontrol.invertorler.length;
-                return acc + (calisanDizeSayisi / toplamDizeSayisi);
+                try {
+                  if (!kontrol.invertorler || !Array.isArray(kontrol.invertorler)) return acc;
+                  const calisanDizeSayisi = kontrol.invertorler.filter(inv => inv && inv.dizeCalisiyor).length;
+                  const toplamDizeSayisi = kontrol.invertorler.length;
+                  return acc + (toplamDizeSayisi > 0 ? (calisanDizeSayisi / toplamDizeSayisi) : 0);
+                } catch (error) {
+                  console.error('İnvertör çalışma oranı hesaplama hatası:', error);
+                  return acc;
+                }
               }, 0) / invertorKontroller.length * 100
             : 0
         };
         
         const uretimRaporu = {
-          toplamUretim: uretimVerileri.reduce((acc, v) => acc + v.gunlukUretim, 0),
+          toplamUretim: uretimVerileri.reduce((acc, v) => acc + (v.gunlukUretim || 0), 0),
           hedefGerceklesme: 0, // Hedef bilgisi olmadığı için 0 olarak bırakıldı
-          gunlukUretim: uretimVerileri.map(v => ({
-            tarih: format(v.tarih.toDate(), 'dd MMM', { locale: tr }),
-            uretim: v.gunlukUretim
-          }))
+          gunlukUretim: uretimVerileri.map(v => {
+            try {
+              return {
+                tarih: v.tarih ? format(v.tarih.toDate(), 'dd MMM', { locale: tr }) : '-',
+                uretim: v.gunlukUretim || 0
+              };
+            } catch (error) {
+              console.error('Üretim verisi dönüştürme hatası:', error);
+              return {
+                tarih: '-',
+                uretim: 0
+              };
+            }
+          })
         };
         
         setRapor({
