@@ -1,0 +1,24 @@
+[2025-05-22T14:31:21.578Z]  @firebase/firestore: Firestore (10.14.1): enableIndexedDbPersistence() will be deprecated in the future, you can use `FirestoreSettings.cache` instead.
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+User token claims: 
+Object {iss: "https://securetoken.google.com/yenisirket-2ec3b", aud: "yenisirket-2ec3b", auth_time: 1747919334, user_id: "t1wreh4gczXxnXPuvjoCgRIR9Y53", sub: "t1wreh4gczXxnXPuvjoCgRIR9Y53", …}
+No role in custom claims, using role from Firestore: yonetici
+User authenticated with role: yonetici
+You cannot render a  inside another . You should never have more than one in your app.
+You cannot render a  inside another . You should never have more than one in your app.
+The above error occurred in the <Router> component:
+
+    at Router (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=5a23a7fa:4502:15)
+    at BrowserRouter (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=5a23a7fa:5248:5)
+    at App
+    at BildirimProvider (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/src/contexts/BildirimContext.tsx:36:36)
+    at NotificationProvider (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/src/contexts/NotificationContext.tsx:29:40)
+    at CompanyProvider (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/src/contexts/CompanyContext.tsx:35:35)
+    at AuthProvider (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/src/contexts/AuthContext.tsx:39:32)
+    at Router (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=5a23a7fa:4502:15)
+    at BrowserRouter (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=5a23a7fa:5248:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+You cannot render a  inside another . You should never have more than one in your app.
