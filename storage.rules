@@ -1,16 +1,45 @@
-rules_version = '2';
 
+rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Temel fonksiyonlar
+    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Tüm yollar için kimlik doğrulamalı kullanıcılara okuma izni ver
+    // Tüm yollar için kimlik doğrulamalı kullanıcılara okuma ve yazma izni ver
     match /{allPaths=**} {
       allow read: if isAuthenticated();
-      // Kimlik doğrulaması yeterli, rol kontrolünü uygulama tarafında yapacağız
+      allow write: if isAuthenticated();
+    }
+
+    // Uploads klasörü için kurallar
+    match /uploads/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Stoklar klasörü için kurallar
+    match /stoklar/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Kullanıcı profil fotoğrafları için kurallar
+    match /profile_pictures/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Saha fotoğrafları için kurallar
+    match /saha_photos/{sahaId}/{photoId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Arıza fotoğrafları için kurallar
+    match /ariza_photos/{arizaId}/{photoId} {
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
   }
