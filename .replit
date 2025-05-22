@@ -8,7 +8,7 @@ channel = "stable-24_05"
 run = ["sh", "-c", "npm run dev"]
 
 [[ports]]
-localPort = 3000
+localPort = 3001
 externalPort = 80
 
 [workflows]
