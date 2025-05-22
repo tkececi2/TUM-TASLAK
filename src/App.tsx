@@ -1,257 +1,85 @@
-
-import React, { useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Layout } from './components/Layout';
-import { LoadingSpinner } from './components/LoadingSpinner';
-import { Giris } from './pages/Giris';
-import { Register } from './pages/Register';
-import { Anasayfa } from './pages/Anasayfa';
-import { Arizalar } from './pages/Arizalar';
-import { ArizaDetay } from './pages/ArizaDetay';
-import { PrivateRoute } from './components/PrivateRoute';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useEffect } from 'react';
+import { AuthProvider } from './contexts/AuthContext';
 import { CompanyProvider } from './contexts/CompanyContext';
-import { BildirimProvider } from './contexts/BildirimContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { BildirimProvider } from './contexts/BildirimContext';
 
-// Lazy loaded components
-const Ekip = lazy(() => import('./pages/Ekip').then(module => ({ default: module.Ekip })));
-const Musteriler = lazy(() => import('./pages/Musteriler').then(module => ({ default: module.Musteriler })));
-const Ayarlar = lazy(() => import('./pages/Ayarlar').then(module => ({ default: module.Ayarlar })));
-const ElektrikBakim = lazy(() => import('./pages/ElektrikBakim').then(module => ({ default: module.ElektrikBakim })));
-const MekanikBakim = lazy(() => import('./pages/MekanikBakim').then(module => ({ default: module.MekanikBakim })));
-const ElektrikKesintileri = lazy(() => import('./pages/ElektrikKesintileri').then(module => ({ default: module.ElektrikKesintileri })));
-const InvertorKontrol = lazy(() => import('./pages/InvertorKontrol').then(module => ({ default: module.InvertorKontrol })));
-const GesYonetimi = lazy(() => import('./pages/GesYonetimi').then(module => ({ default: module.GesYonetimi })));
-const YapilanIsler = lazy(() => import('./pages/YapilanIsler').then(module => ({ default: module.YapilanIsler })));
-const AkilliBakim = lazy(() => import('./pages/AkilliBakim').then(module => ({ default: module.AkilliBakim })));
-const UretimVerileri = lazy(() => import('./pages/UretimVerileri').then(module => ({ default: module.UretimVerileri })));
-const StokKontrol = lazy(() => import('./pages/StokKontrol').then(module => ({ default: module.StokKontrol })));
-const FinansalAnaliz = lazy(() => import('./pages/FinansalAnaliz').then(module => ({ default: module.FinansalAnaliz })));
-const AylikKapsamliRapor = lazy(() => import('./pages/AylikKapsamliRapor').then(module => ({ default: module.AylikKapsamliRapor })));
-const CompanySettings = lazy(() => import('./pages/CompanySettings').then(module => ({ default: module.CompanySettings })));
-const InviteUser = lazy(() => import('./pages/InviteUser').then(module => ({ default: module.InviteUser })));
+// Pages
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Anasayfa from './pages/Anasayfa';
+import Dashboard from './pages/Dashboard';
+import Arizalar from './pages/Arizalar';
+import ArizaDetay from './pages/ArizaDetay';
+import ElektrikKesintileri from './pages/ElektrikKesintileri';
+import InvertorKontrol from './pages/InvertorKontrol';
+import Sahalar from './pages/Sahalar';
+import YapilanIsler from './pages/YapilanIsler';
+import Musteriler from './pages/Musteriler';
+import MekanikBakim from './pages/MekanikBakim';
+import ElektrikBakim from './pages/ElektrikBakim';
+import Ekip from './pages/Ekip';
+import StokKontrol from './pages/StokKontrol';
+import Ayarlar from './pages/Ayarlar';
+import Raporlar from './pages/Raporlar';
+import PrivateRoute from './components/PrivateRoute';
+import Istatistikler from './pages/Istatistikler';
+import GesSahalari from './pages/GesSahalari';
+import GesYonetimi from './pages/GesYonetimi';
+import AylikKapsamliRapor from './pages/AylikKapsamliRapor';
+import InviteUser from './pages/InviteUser';
+import CompanySettings from './pages/CompanySettings';
+import AkilliBakim from './pages/AkilliBakim';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import FinansalAnaliz from './pages/FinansalAnaliz';
+import UretimVerileri from './pages/UretimVerileri';
+import NobetKontrol from './pages/NobetKontrol';
+import Layout from './components/Layout';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <CompanyProvider>
+    <AuthProvider>
+      <CompanyProvider>
+        <NotificationProvider>
           <BildirimProvider>
-            <NotificationProvider>
-              <Toaster position="top-right" />
-              <AppRoutes />
-            </NotificationProvider>
+            <Toaster position="top-right" />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+
+              <Route path="/" element={<PrivateRoute><Layout><Anasayfa /></Layout></PrivateRoute>} />
+              <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
+              <Route path="/arizalar" element={<PrivateRoute><Layout><Arizalar /></Layout></PrivateRoute>} />
+              <Route path="/ariza/:id" element={<PrivateRoute><Layout><ArizaDetay /></Layout></PrivateRoute>} />
+              <Route path="/elektrik-kesintileri" element={<PrivateRoute><Layout><ElektrikKesintileri /></Layout></PrivateRoute>} />
+              <Route path="/invertor-kontrol" element={<PrivateRoute><Layout><InvertorKontrol /></Layout></PrivateRoute>} />
+              <Route path="/sahalar" element={<PrivateRoute><Layout><Sahalar /></Layout></PrivateRoute>} />
+              <Route path="/yapilan-isler" element={<PrivateRoute><Layout><YapilanIsler /></Layout></PrivateRoute>} />
+              <Route path="/musteriler" element={<PrivateRoute roles={['yonetici', 'superadmin']}><Layout><Musteriler /></Layout></PrivateRoute>} />
+              <Route path="/mekanik-bakim" element={<PrivateRoute><Layout><MekanikBakim /></Layout></PrivateRoute>} />
+              <Route path="/elektrik-bakim" element={<PrivateRoute><Layout><ElektrikBakim /></Layout></PrivateRoute>} />
+              <Route path="/ekip" element={<PrivateRoute roles={['yonetici', 'superadmin']}><Layout><Ekip /></Layout></PrivateRoute>} />
+              <Route path="/stok-kontrol" element={<PrivateRoute><Layout><StokKontrol /></Layout></PrivateRoute>} />
+              <Route path="/ayarlar" element={<PrivateRoute><Layout><Ayarlar /></Layout></PrivateRoute>} />
+              <Route path="/raporlar" element={<PrivateRoute><Layout><Raporlar /></Layout></PrivateRoute>} />
+              <Route path="/istatistikler" element={<PrivateRoute><Layout><Istatistikler /></Layout></PrivateRoute>} />
+              <Route path="/ges-sahalari" element={<PrivateRoute><Layout><GesSahalari /></Layout></PrivateRoute>} />
+              <Route path="/ges-yonetimi/:id" element={<PrivateRoute><Layout><GesYonetimi /></Layout></PrivateRoute>} />
+              <Route path="/aylik-kapsamli-rapor" element={<PrivateRoute><Layout><AylikKapsamliRapor /></Layout></PrivateRoute>} />
+              <Route path="/invite-user" element={<PrivateRoute roles={['yonetici', 'superadmin']}><Layout><InviteUser /></Layout></PrivateRoute>} />
+              <Route path="/company-settings" element={<PrivateRoute roles={['yonetici', 'superadmin']}><Layout><CompanySettings /></Layout></PrivateRoute>} />
+              <Route path="/akilli-bakim" element={<PrivateRoute><Layout><AkilliBakim /></Layout></PrivateRoute>} />
+              <Route path="/superadmin" element={<PrivateRoute roles={['superadmin']}><Layout><SuperAdminDashboard /></Layout></PrivateRoute>} />
+              <Route path="/finansal-analiz" element={<PrivateRoute><Layout><FinansalAnaliz /></Layout></PrivateRoute>} />
+              <Route path="/uretim-verileri" element={<PrivateRoute><Layout><UretimVerileri /></Layout></PrivateRoute>} />
+              <Route path="/nobet-kontrol" element={<PrivateRoute><Layout><NobetKontrol /></Layout></PrivateRoute>} />
+            </Routes>
           </BildirimProvider>
-        </CompanyProvider>
-      </AuthProvider>
-    </Router>
-  );
-}
-
-function AppRoutes() {
-  const { kullanici, yukleniyor } = useAuth();
-
-  if (yukleniyor) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  return (
-    <Routes>
-      <Route path="/login" element={kullanici ? <Navigate to="/" /> : <Giris />} />
-      <Route path="/register" element={kullanici ? <Navigate to="/" /> : <Register />} />
-      
-      <Route path="/" element={
-        <PrivateRoute>
-          <Layout>
-            <Anasayfa />
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/arizalar" element={
-        <PrivateRoute>
-          <Layout>
-            <Arizalar />
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/arizalar/:id" element={
-        <PrivateRoute>
-          <Layout>
-            <ArizaDetay />
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/ekip" element={
-        <PrivateRoute roles={['yonetici', 'admin', 'superadmin']}>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <Ekip />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/musteriler" element={
-        <PrivateRoute roles={['yonetici', 'admin']}>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <Musteriler />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/elektrik-bakim" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <ElektrikBakim />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/mekanik-bakim" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <MekanikBakim />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/elektrik-kesintileri" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <ElektrikKesintileri />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/invertor-kontrol" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <InvertorKontrol />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/ges-yonetimi" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <GesYonetimi />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/yapilan-isler" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <YapilanIsler />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/akilli-bakim" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <AkilliBakim />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/uretim-verileri" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <UretimVerileri />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/stok-kontrol" element={
-        <PrivateRoute roles={['yonetici', 'admin', 'superadmin']}>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <StokKontrol />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/finansal-analiz" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <FinansalAnaliz />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/aylik-kapsamli-rapor" element={
-        <PrivateRoute>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <AylikKapsamliRapor />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/ayarlar" element={
-        <PrivateRoute roles={['admin', 'superadmin']}>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <Ayarlar />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/company-settings" element={
-        <PrivateRoute roles={['admin', 'superadmin']}>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <CompanySettings />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/invite-user" element={
-        <PrivateRoute roles={['admin', 'superadmin']}>
-          <Layout>
-            <Suspense fallback={<LoadingSpinner />}>
-              <InviteUser />
-            </Suspense>
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        </NotificationProvider>
+      </CompanyProvider>
+    </AuthProvider>
   );
 }
 
