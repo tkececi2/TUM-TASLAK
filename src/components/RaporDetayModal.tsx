@@ -137,7 +137,7 @@ export const RaporDetayModal: React.FC<Props> = ({ ariza, sahaAdi, onClose }) =>
                     <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
                     <p className="mt-2 text-sm text-gray-500">Fotoğraf bulunmuyor</p>
                   </div>
-                </div>
+                </div>v>
               )}
 
               {ariza.yorumlar && ariza.yorumlar.length > 0 && (
