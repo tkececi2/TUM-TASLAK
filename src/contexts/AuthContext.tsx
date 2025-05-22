@@ -6,7 +6,6 @@ import { signInUser } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Kullanici } from '../types';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   kullanici: Kullanici | null;
@@ -31,21 +30,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const authCheckCompleted = useRef(false);
-  const navigate = useNavigate();
 
   // Kullanıcı verilerini normalize et
   const normalizeUserData = (userData: any): Kullanici => {
     // Sahalar dizisini kontrol et
     let sahalar = userData.sahalar || [];
-
+    
     // Eğer sahalar bir dizi değilse, dizi haline getir
     if (sahalar && !Array.isArray(sahalar)) {
       sahalar = Object.keys(sahalar);
     }
-
+    
     // Ensure companyId exists (default to empty string if not present)
     const companyId = userData.companyId || '';
-
+    
     return {
       ...userData,
       sahalar,
@@ -58,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userDoc = await getDoc(doc(db, 'kullanicilar', userId));
       if (!userDoc.exists()) return null;
-
+      
       const userData = userDoc.data();
       return normalizeUserData({ id: userId, ...userData });
     } catch (error) {
@@ -89,14 +87,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           // Force token refresh to get the latest custom claims
           await user.getIdToken(true);
-
+          
           // Get the token result to check custom claims
           const idTokenResult = await user.getIdTokenResult();
           console.log('User token claims:', idTokenResult.claims);
-
+          
           // Kullanıcı profili bilgilerini getir
           const userData = await fetchUserProfile(user.uid);
-
+          
           if (userData) {
             // Add the role from custom claims if it exists
             if (idTokenResult.claims.rol) {
@@ -105,10 +103,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               console.log('No role in custom claims, using role from Firestore:', userData.rol);
             }
-
+            
             setKullanici(userData);
             authService.setCurrentUser(userData);
-
+            
             console.log('User authenticated with role:', userData.rol);
           } else {
             await signOut(auth);
@@ -147,17 +145,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const user = await signInUser(email, sifre);
-
+      
       // Force token refresh to get the latest custom claims
       await user.getIdToken(true);
-
+      
       // Get the token result to check custom claims
       const idTokenResult = await user.getIdTokenResult();
       console.log('Login token claims:', idTokenResult.claims);
-
+      
       // Kullanıcı profili bilgilerini getir
       const userData = await fetchUserProfile(user.uid);
-
+      
       if (userData) {
         // Add the role from custom claims if it exists
         if (idTokenResult.claims.rol) {
@@ -166,14 +164,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           console.log('No role in custom claims after login, using role from Firestore:', userData.rol);
         }
-
+        
         setKullanici(userData);
         authService.setCurrentUser(userData);
         console.log('User logged in with role:', userData.rol);
         toast.success('Giriş başarılı');
         return true;
       }
-
+      
       toast.error('Kullanıcı profili bulunamadı');
       await signOut(auth);
       authService.clearUserData();
@@ -181,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } catch (error: any) {
       console.error('Giriş hatası:', error);
-
+      
       // Hata mesajını belirle
       let errorMessage = 'Giriş yapılırken bir hata oluştu';
       if (error.code === 'auth/invalid-credential') {
@@ -195,7 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (error.code === 'auth/network-request-failed') {
         errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin ve tekrar deneyin';
       }
-
+      
       toast.error(errorMessage);
       return false;
     }
@@ -228,7 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       toast.success('Başarıyla çıkış yapıldı');
-      navigate('/login');
+      window.location.href = '/login';
     } catch (error) {
       console.error('Çıkış yapılırken hata:', error);
       toast.error('Çıkış yapılırken bir hata oluştu');
