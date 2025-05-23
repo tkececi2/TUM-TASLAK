@@ -15,7 +15,7 @@
     overscroll-behavior-y: none;
     touch-action: manipulation;
   }
-  
+
   /* Mobil cihazlar için metin boyutlarını optimize et */
   @media (max-width: 640px) {
     h1 {
@@ -62,12 +62,12 @@
   .modern-modal-overlay {
     @apply absolute inset-0 bg-gray-500 bg-opacity-75 backdrop-blur-sm transition-opacity;
   }
-  
+
   /* Mobil cihazlar için grid düzenleri */
   .grid-responsive {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
   }
-  
+
   /* Mobil dokunma alanları için daha büyük tıklama hedefleri */
   .mobile-touch-target {
     @apply min-h-[44px] min-w-[44px];

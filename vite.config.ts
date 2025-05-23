@@ -11,15 +11,16 @@ export default defineConfig({
     assetsInlineLimit: 4096, // 4kb'ye kadar olan dosyaları inline yap
   },
   server: {
-    host: true, // tüm ağ arayüzlerinde dinle (0.0.0.0)
+    host: '0.0.0.0', // tüm ağ arayüzlerinde dinle
     port: 3000,
     strictPort: true,
     hmr: {
       host: '0.0.0.0',
+      clientPort: 443,
     },
     watch: {
       usePolling: true,
     },
-    allowedHosts: 'all', // Tüm host isteklerine izin ver
+    allowedHosts: ['all', '59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev'],
   },
 });
