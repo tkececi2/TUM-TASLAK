@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sun, Shield, Zap, CheckCircle, ArrowRight, Users, BarChart2, Globe, Mail, Phone, Clock, ChevronDown } from 'lucide-react';
@@ -18,7 +17,7 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
-      
+
       // Aktif bölümü belirle
       const sections = ['home', 'features', 'benefits', 'testimonials', 'contact'];
       for (const section of sections) {
@@ -45,7 +44,7 @@ const HomePage: React.FC = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <Sun className={`h-8 w-8 ${scrolled ? 'text-primary-600' : 'text-white'} mr-2`} />
-              <span className={`font-bold text-xl ${scrolled ? 'text-gray-900' : 'text-white'}`}>EDEON ENERJİ</span>
+              <span className={`font-bold text-xl ${scrolled ? 'text-gray-900' : 'text-white'}`}>SolarVeyo</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <button 
@@ -107,11 +106,11 @@ const HomePage: React.FC = () => {
                 ✨ Yenilikçi Solar Teknolojisi
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 leading-tight">
-                Solar Panel <span className="text-blue-300">Arıza Takip</span> Sistemi
-              </h1>
-              <p className="text-xl text-white/80 mb-8 max-w-2xl leading-relaxed">
-                Güneş enerjisi santrallerinizi 7/24 izleyin, arıza durumlarında anında müdahale edin ve enerji üretiminizi maksimuma çıkarın.
-              </p>
+                  Solar Panel <span className="text-blue-300">Yönetim</span> Sistemi
+                </h1>
+                <p className="text-xl text-white/80 mb-8 max-w-2xl leading-relaxed">
+                  Güneş enerjisi santrallerinizi tek platformdan izleyin, arızaları yönetin, bakım süreçlerini takip edin ve üretim analizleriyle performansı maksimuma çıkarın.
+                </p>
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/login"
@@ -127,7 +126,7 @@ const HomePage: React.FC = () => {
                   Daha Fazla Bilgi
                 </Link>
               </div>
-              
+
               <div className="flex items-center mt-10 text-sm">
                 <div className="flex -space-x-2">
                   <img src="https://randomuser.me/api/portraits/men/32.jpg" className="w-10 h-10 rounded-full border-2 border-white" alt="User" />
@@ -154,7 +153,7 @@ const HomePage: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="absolute bottom-0 left-0 right-0 flex justify-center">
             <button 
               onClick={() => scrollToSection('features')}
@@ -212,20 +211,24 @@ const HomePage: React.FC = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Akıllı Arıza Takibi</h3>
               <p className="text-gray-600 mb-4">
-                Yapay zeka desteği ile arızaları önceden tespit edin, müdahale sürecinizi hızlandırın ve üretim kayıplarını minimize edin.
+                Günlük, aylık ve yıllık enerji kontrolleri, hedef gerçekleşme analizleri ile arıza takibinizi akıllı hale getirin.
               </p>
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Gerçek zamanlı izleme ve bildirimler</span>
+                  <span>Günlük enerji kontrolü</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Yapay zeka destekli arıza tahmini</span>
+                  <span>Aylık enerji kontrolü</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Otomasyon ile hızlı müdahale</span>
+                   <span>Yıllık enerji kontrolü</span>
+                </li>
+                  <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Hedef Gerçekleşme Analizleri</span>
                 </li>
               </ul>
               <button 
@@ -240,22 +243,22 @@ const HomePage: React.FC = () => {
               <div className="p-4 bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <BarChart2 className="h-8 w-8 text-green-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Detaylı Üretim Analizi</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Arıza Takibi</h3>
               <p className="text-gray-600 mb-4">
-                Kapsamlı üretim grafikleri ve raporlar ile santrallerinizin performansını anlık olarak takip edin ve optimize edin.
+               Arıza oluşturma, silme, düzenleme ve çözüm süresi takibi ile arıza süreçlerinizi kolaylaştırın.
               </p>
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>İnteraktif veri görselleştirme</span>
+                  <span>Arıza Oluşturma</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Özelleştirilebilir raporlar ve grafikler</span>
+                  <span>Arıza Silme ve Düzenleme</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Dışa aktarma ve paylaşım özellikleri</span>
+                  <span>Çözüm Süresi Takibi</span>
                 </li>
               </ul>
               <button 
@@ -272,20 +275,20 @@ const HomePage: React.FC = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Akıllı Bakım Yönetimi</h3>
               <p className="text-gray-600 mb-4">
-                Planlı bakım süreçlerinizi otomatikleştirin, mekanik ve elektrik bakımlarını zamanında gerçekleştirin.
+                Aylık bakım kontrolleri, müşteri ekleme/silme ve müşterilere özel santral izleme ile bakım süreçlerinizi optimize edin.
               </p>
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Bakım planlaması ve hatırlatıcılar</span>
+                  <span>Aylık Bakım Kontrolleri</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Mobil uygulama ile saha denetimleri</span>
+                  <span>Müşteri Ekleme/Silme</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Görev yönetimi ve ekip koordinasyonu</span>
+                  <span>Müşteriye Özel Santral İzleme</span>
                 </li>
               </ul>
               <button 
@@ -325,7 +328,7 @@ const HomePage: React.FC = () => {
                 Basit kayıt sürecini tamamlayın ve hemen kullanmaya başlayın. Telefon numarası ve e-posta ile doğrulama gerekir.
               </p>
             </div>
-            
+
             <div className="flex flex-col items-center text-center">
               <div className="relative">
                 <div className="w-16 h-16 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">2</div>
@@ -336,7 +339,7 @@ const HomePage: React.FC = () => {
                 GES santrallerinizin bilgilerini girin ve sistem otomatik olarak izlemeye başlasın. Ölçüm cihazlarınızı entegre edin.
               </p>
             </div>
-            
+
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">3</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Anlık Takibe Başlayın</h3>
@@ -345,7 +348,7 @@ const HomePage: React.FC = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="mt-16 text-center">
             <Link
               to="/register"
@@ -370,7 +373,7 @@ const HomePage: React.FC = () => {
               Solar Enerji Sistemlerinizi Profesyonelce Takip Edin
             </h2>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              EDEON ENERJİ ile güneş enerjisi yatırımlarınızdan maksimum verim alın.
+              SolarVeyo ile güneş enerjisi yatırımlarınızdan maksimum verim alın.
             </p>
           </div>
 
@@ -461,7 +464,7 @@ const HomePage: React.FC = () => {
               Müşterilerimiz Ne Diyor?
             </h2>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Türkiye'nin önde gelen enerji şirketleri EDEON Enerji'yi tercih ediyor.
+              Türkiye'nin önde gelen enerji şirketleri SolarVeyo'yu tercih ediyor.
             </p>
           </div>
 
@@ -475,7 +478,7 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
               <p className="text-gray-700 mb-4">
-                "EDEON Enerji sayesinde santrallerimizin verimliliği %15 arttı. Arıza tespiti ve müdahale süreleri ciddi oranda kısaldı. Kesinlikle tavsiye ediyorum."
+                "SolarVeyo sayesinde santrallerimizin verimliliği %15 arttı. Arıza tespiti ve müdahale süreleri ciddi oranda kısaldı. Kesinlikle tavsiye ediyorum."
               </p>
               <div className="flex text-yellow-400">
                 <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
@@ -507,14 +510,14 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
               <p className="text-gray-700 mb-4">
-                "6 farklı ilde bulunan santrallerimizi tek bir platformdan yönetebiliyoruz. Bakım süreçlerimiz artık çok daha düzenli ve verimli. EDEON ekibine teşekkürler."
+                "6 farklı ilde bulunan santrallerimizi tek bir platformdan yönetebiliyoruz. Bakım süreçlerimiz artık çok daha düzenli ve verimli. SolarVeyo ekibine teşekkürler."
               </p>
               <div className="flex text-yellow-400">
                 <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
               </div>
             </div>
           </div>
-          
+
           <div className="mt-16 flex justify-center">
             <img src="/edeon-logo.png" alt="Edeon Logo" className="h-16" />
           </div>
@@ -523,7 +526,8 @@ const HomePage: React.FC = () => {
 
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:```text
+sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Hemen Başlayın</h2>
           <p className="text-xl text-white/90 mb-10 max-w-3xl mx-auto">
             Solar Panel Arıza Takip Sistemimiz ile güneş enerjisi yatırımlarınızı daha verimli hale getirin. İlk 14 gün ücretsiz deneyin.
@@ -574,7 +578,7 @@ const HomePage: React.FC = () => {
                 +90 (212) 123 45 67
               </a>
             </div>
-            
+
             <div className="bg-gray-50 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-center text-center">
               <div className="p-4 bg-primary-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Mail className="h-8 w-8 text-primary-600" />
@@ -584,10 +588,10 @@ const HomePage: React.FC = () => {
                 Sorularınızı e-posta ile iletebilirsiniz, en kısa sürede dönüş yapacağız.
               </p>
               <a href="mailto:info@edeonenerji.com" className="text-primary-600 font-bold">
-                info@edeonenerji.com
+                info@solarveyo.com
               </a>
             </div>
-            
+
             <div className="bg-gray-50 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-center text-center">
               <div className="p-4 bg-primary-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Globe className="h-8 w-8 text-primary-600" />
@@ -611,7 +615,7 @@ const HomePage: React.FC = () => {
             <div>
               <div className="flex items-center mb-6">
                 <Sun className="h-8 w-8 text-white mr-3" />
-                <h3 className="text-xl font-bold">EDEON ENERJİ</h3>
+                <h3 className="text-xl font-bold">SolarVeyo</h3>
               </div>
               <p className="text-gray-400 mb-6">
                 Güneş enerjisi santrallerinizi 7/24 izleyin, arıza durumlarında anında müdahale edin.
@@ -631,7 +635,7 @@ const HomePage: React.FC = () => {
                 </a>
               </div>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-bold mb-4">Hızlı Erişim</h4>
               <ul className="space-y-2">
@@ -642,7 +646,7 @@ const HomePage: React.FC = () => {
                 <li><button onClick={() => scrollToSection('contact')} className="text-gray-400 hover:text-white transition-colors">İletişim</button></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-bold mb-4">Hizmetlerimiz</h4>
               <ul className="space-y-2">
@@ -653,7 +657,7 @@ const HomePage: React.FC = () => {
                 <li><a href="#" className="text-gray-400 hover:text-white transition-colors">API Entegrasyonu</a></li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-bold mb-4">İletişim</h4>
               <ul className="space-y-4">
@@ -663,7 +667,7 @@ const HomePage: React.FC = () => {
                 </li>
                 <li className="flex items-start">
                   <Mail className="h-5 w-5 text-primary-400 mr-2 mt-0.5" />
-                  <span className="text-gray-400">info@edeonenerji.com</span>
+                  <span className="text-gray-400">info@solarveyo.com</span>
                 </li>
                 <li className="flex items-start">
                   <Globe className="h-5 w-5 text-primary-400 mr-2 mt-0.5" />
@@ -672,10 +676,10 @@ const HomePage: React.FC = () => {
               </ul>
             </div>
           </div>
-          
+
           <div className="mt-12 pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-400 text-sm mb-4 md:mb-0">
-              © {new Date().getFullYear()} EDEON ENERJİ - Solar Panel Arıza Takip Sistemi. Tüm hakları saklıdır.
+              © {new Date().getFullYear()} SolarVeyo - Solar Panel Arıza Takip Sistemi. Tüm hakları saklıdır.
             </div>
             <div className="flex space-x-6">
               <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors">Gizlilik Politikası</a>
@@ -685,7 +689,7 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </footer>
-      
+
       {/* Sayfanın en üstüne çıkma butonu */}
       {scrolled && (
         <button 
