@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isCompanyMember(companyId) {
+      return isAuthenticated() && 
+             (request.auth.token.rol == 'yonetici' || 
+              request.auth.token.rol == 'tekniker' || 
+              request.auth.token.rol == 'muhendis' || 
+              request.auth.token.rol == 'superadmin' ||
+              exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) && 
+              get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId == companyId);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.rol == 'yonetici' || 
+              request.auth.token.rol == 'superadmin');
+    }
+
+    function isTechStaff() {
+      return isAuthenticated() && 
+             (request.auth.token.rol == 'tekniker' || 
+              request.auth.token.rol == 'muhendis');
+    }
+
+    function hasManagementAccess() {
+      return isAuthenticated() && 
+             (request.auth.token.rol == 'yonetici' || 
+              request.auth.token.rol == 'tekniker' || 
+              request.auth.token.rol == 'muhendis' || 
+              request.auth.token.rol == 'superadmin');
+    }
+
+    // Company rules
+    match /companies/{companyId} {
+      allow read: if isCompanyMember(companyId) || request.auth.token.rol == 'superadmin';
+      allow write: if isAdmin() || request.auth.token.rol == 'superadmin';
+    }
+
+    // Users rules
+    match /kullanicilar/{userId} {
+      // Sadece yöneticiler ekip üyesi ekleyip silebilir
+      allow create, delete: if isAdmin() || request.auth.token.rol == 'superadmin';
+      // Kullanıcılar kendi bilgilerini güncelleyebilir, yöneticiler ve teknik ekip tüm kullanıcıları güncelleyebilir
+      allow update: if request.auth.uid == userId || isAdmin() || request.auth.token.rol == 'superadmin';
+      // Kullanıcılar kendi bilgilerini okuyabilir, yöneticiler ve teknik ekip tüm kullanıcıları okuyabilir
+      allow read: if request.auth.uid == userId || hasManagementAccess() || request.auth.token.rol == 'superadmin';
+    }
+
+    // Ariza rules (includes tekniker and muhendis access)
+    match /arizalar/{arizaId} {
+      allow read: if hasManagementAccess() || 
+                   (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+      allow create: if hasManagementAccess() || 
+                     (isAuthenticated() && request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+      allow update, delete: if hasManagementAccess() || 
+                             (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // GES data rules (includes tekniker and muhendis access)
+    match /santralVerileri/{veriId} {
+      allow read, write: if hasManagementAccess() ||
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // Sahalar rules (includes tekniker and muhendis access)
+    match /sahalar/{sahaId} {
+      allow read, write: if hasManagementAccess() || 
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // Bakim rules (includes tekniker and muhendis access)
+    match /mekanikBakimlar/{bakimId} {
+      allow read, write: if hasManagementAccess() || 
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    match /elektrikBakimlar/{bakimId} {
+      allow read, write: if hasManagementAccess() || 
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // Kesinti rules (includes tekniker and muhendis access)
+    match /elektrikKesintileri/{kesintiId} {
+      allow read, write: if hasManagementAccess() || 
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // Invertor rules (includes tekniker and muhendis access)
+    match /invertorKontroller/{kontrolId} {
+      allow read, write: if hasManagementAccess() || 
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // Yapilan isler rules (includes tekniker and muhendis access)
+    match /yapilanIsler/{isId} {
+      allow read, write: if hasManagementAccess() || 
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // Stok rules (includes tekniker and muhendis access)
+    match /stoklar/{stokId} {
+      allow read, write: if hasManagementAccess() || 
+                          (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
+    // Bildirim rules
+    match /bildirimler/{bildirimId} {
+      allow read: if isAuthenticated() && resource.data.kullaniciId == request.auth.uid;
+      allow create, update: if hasManagementAccess();
+      allow delete: if isAuthenticated() && resource.data.kullaniciId == request.auth.uid;
+    }
+  }
+}
