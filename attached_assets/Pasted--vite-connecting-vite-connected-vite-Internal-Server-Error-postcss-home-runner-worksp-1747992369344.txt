@@ -1,0 +1,28 @@
+[vite] connecting...
+[vite] connected.
+[vite] Internal Server Error
+[postcss] /home/runner/workspace/src/index.css:26:5: The `bg-white` class cannot be used with `@apply` because `@apply` does not currently support nested CSS.
+Rewrite the selector without nesting or configure the `tailwindcss/nesting` plugin:
+https://tailwindcss.com/docs/using-with-preprocessors#nesting
+    at /home/runner/workspace/src/index.css:216:3
+    at Input.error (/home/runner/workspace/node_modules/postcss/lib/input.js:106:16)
+    at AtRule.error (/home/runner/workspace/node_modules/postcss/lib/node.js:145:32)
+    at /home/runner/workspace/node_modules/tailwindcss/lib/lib/expandApplyAtRules.js:389:33
+    at /home/runner/workspace/node_modules/postcss/lib/container.js:377:18
+    at /home/runner/workspace/node_modules/postcss/lib/container.js:305:18
+    at AtRule.each (/home/runner/workspace/node_modules/postcss/lib/container.js:53:16)
+    at AtRule.walk (/home/runner/workspace/node_modules/postcss/lib/container.js:302:17)
+    at /home/runner/workspace/node_modules/postcss/lib/container.js:310:24
+    at Rule.each (/home/runner/workspace/node_modules/postcss/lib/container.js:53:16)
+    at Rule.walk (/home/runner/workspace/node_modules/postcss/lib/container.js:302:17)
+    at Rule.walkRules (/home/runner/workspace/node_modules/postcss/lib/container.js:375:19)
+    at processApply (/home/runner/workspace/node_modules/tailwindcss/lib/lib/expandApplyAtRules.js:388:22)
+    at /home/runner/workspace/node_modules/tailwindcss/lib/lib/expandApplyAtRules.js:551:9
+    at /home/runner/workspace/node_modules/tailwindcss/lib/processTailwindFeatures.js:55:50
+    at async plugins (/home/runner/workspace/node_modules/tailwindcss/lib/plugin.js:38:17)
+    at async LazyResult.runAsync (/home/runner/workspace/node_modules/postcss/lib/lazy-result.js:261:11)
+    at async compileCSS (file:///home/runner/workspace/node_modules/vite/dist/node/chunks/dep-DbT5NFX0.js:36898:21)
+    at async TransformPluginContext.transform (file:///home/runner/workspace/node_modules/vite/dist/node/chunks/dep-DbT5NFX0.js:36171:11)
+    at async PluginContainer.transform (file:///home/runner/workspace/node_modules/vite/dist/node/chunks/dep-DbT5NFX0.js:49099:18)
+    at async loadAndTransform (file:///home/runner/workspace/node_modules/vite/dist/node/chunks/dep-DbT5NFX0.js:51938:27)
+    at async viteTransformMiddleware (file:///home/runner/workspace/node_modules/vite/dist/node/chunks/dep-DbT5NFX0.js:62055:24)
