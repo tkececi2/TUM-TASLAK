@@ -176,52 +176,71 @@ export const UretimVerileri: React.FC = () => {
         const yilBitisTimestamp = Timestamp.fromDate(yilBitis);
         
         try {
-          // Önce kompleks sorguyu dene
+          // Daha az karmaşık sorgu - sorgu başarısızlık oranını azaltmak için where koşullarını azaltıyoruz
           const yillikUretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
-            where('companyId', '==', kullanici?.companyId),
-            where('tarih', '>=', yilBaslangicTimestamp),
-            where('tarih', '<=', yilBitisTimestamp),
             orderBy('tarih', 'asc')
           );
           
           const snapshot = await getDocs(yillikUretimQuery);
-          const veriler = snapshot.docs.map(doc => ({
+          const tumVeriler = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           })) as UretimVerisi[];
           
-          setYillikUretimVerileri(veriler);
-        } catch (queryError) {
-          console.error('Yıllık sorgu hatası, basitleştirilmiş sorgu deneniyor:', queryError);
-          
-          // Daha basit bir sorgu dene (daha az where koşulu)
-          const fallbackQuery = query(
-            collection(db, 'uretimVerileri'),
-            where('santralId', '==', secilenSantral),
-            orderBy('tarih', 'asc')
-          );
-          
-          const fallbackSnapshot = await getDocs(fallbackQuery);
-          const tumVeriler = fallbackSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as UretimVerisi[];
-          
-          // Filtrelemeyi JavaScript ile yap
+          // Filtrelemeyi JavaScript ile yap - daha güvenilir
           const filtreliVeriler = tumVeriler.filter(veri => {
-            const veriTarih = veri.tarih.toDate();
-            const dogruCompany = kullanici?.companyId ? veri.companyId === kullanici.companyId : true;
-            return veriTarih >= yilBaslangic && veriTarih <= yilBitis && dogruCompany;
+            try {
+              const veriTarih = veri.tarih.toDate();
+              const dogruCompany = kullanici?.companyId ? veri.companyId === kullanici.companyId : true;
+              return veriTarih >= yilBaslangic && veriTarih <= yilBitis && dogruCompany;
+            } catch (err) {
+              console.warn('Veri filtreleme hatası:', err);
+              return false;
+            }
           });
           
           setYillikUretimVerileri(filtreliVeriler);
-          toast.warning('Veriler alternatif modda yüklendi', {duration: 3000});
+        } catch (queryError) {
+          console.error('Yıllık veri sorgusu başarısız:', queryError);
+          
+          // Tam bir fallback çözümü - tüm verileri getir
+          try {
+            const fallbackQuery = query(
+              collection(db, 'uretimVerileri')
+            );
+            
+            const fallbackSnapshot = await getDocs(fallbackQuery);
+            const tumVeriler = fallbackSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as UretimVerisi[];
+            
+            // Tüm filtrelemeyi manuel yap
+            const filtreliVeriler = tumVeriler.filter(veri => {
+              try {
+                const veriTarih = veri.tarih.toDate();
+                return veri.santralId === secilenSantral && 
+                       veriTarih >= yilBaslangic && 
+                       veriTarih <= yilBitis && 
+                       veri.companyId === kullanici?.companyId;
+              } catch (err) {
+                return false;
+              }
+            });
+            
+            setYillikUretimVerileri(filtreliVeriler);
+            toast.warning('Veriler yedek modda yüklendi', {duration: 3000});
+          } catch (fallbackError) {
+            console.error('Yedek sorgu da başarısız oldu:', fallbackError);
+            setYillikUretimVerileri([]);
+            toast.error('Veri yüklenirken tekrarlanan hatalar oluştu');
+          }
         }
       } catch (error) {
         console.error('Yıllık üretim verileri getirilemedi:', error);
-        toast.error('Yıllık üretim verileri yüklenirken bir hata oluştu');
+        toast.error('Yıllık üretim verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
         setYillikUretimVerileri([]);
       } finally {
         setYillikVerilerYukleniyor(false);
@@ -246,55 +265,75 @@ export const UretimVerileri: React.FC = () => {
         const ayBaslangic = new Date(secilenYil, secilenAy, 1);
         const ayBitis = endOfMonth(ayBaslangic);
         
-        const ayBaslangicTimestamp = Timestamp.fromDate(ayBaslangic);
-        const ayBitisTimestamp = Timestamp.fromDate(ayBitis);
-        
-        // Üretim verilerini getir
-        const uretimQuery = query(
-          collection(db, 'uretimVerileri'),
-          where('santralId', '==', secilenSantral),
-          where('companyId', '==', kullanici.companyId),
-          where('tarih', '>=', ayBaslangicTimestamp),
-          where('tarih', '<=', ayBitisTimestamp),
-          orderBy('tarih', 'asc')
-        );
-        
+        // Başlangıçta en basit sorguyla başla - bu hataya düşme olasılığını azaltır
         try {
-          const snapshot = await getDocs(uretimQuery);
-          const veriler = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as UretimVerisi[];
-          
-          setUretimVerileri(veriler);
-        } catch (queryError) {
-          console.error('Üretim verileri sorgu hatası:', queryError);
-          
-          // Fallback: Daha basit bir sorgu ile veri getirmeyi dene
-          const fallbackQuery = query(
+          const uretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
             orderBy('tarih', 'asc')
           );
           
-          const fallbackSnapshot = await getDocs(fallbackQuery);
-          const allVeriler = fallbackSnapshot.docs.map(doc => ({
+          const snapshot = await getDocs(uretimQuery);
+          const tumVeriler = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           })) as UretimVerisi[];
           
-          // Tarih filtresini JavaScript ile uygula
-          const filteredVeriler = allVeriler.filter(veri => {
-            const veriTarih = veri.tarih.toDate();
-            return veriTarih >= ayBaslangic && veriTarih <= ayBitis;
+          // Tüm filtrelemeyi manuel olarak yap - daha güvenilir
+          const filtreliVeriler = tumVeriler.filter(veri => {
+            try {
+              const veriTarih = veri.tarih.toDate();
+              return veri.companyId === kullanici.companyId && 
+                     veriTarih >= ayBaslangic && 
+                     veriTarih <= ayBitis;
+            } catch (err) {
+              console.warn('Veri filtreleme hatası (ay):', err);
+              return false;
+            }
           });
           
-          setUretimVerileri(filteredVeriler);
-          toast.warning('Veriler kısıtlı modda yüklendi. Tüm filtreler uygulanamadı.');
+          setUretimVerileri(filtreliVeriler);
+          
+          if (filtreliVeriler.length === 0) {
+            // Veri bulunamadı, ancak hata oluşmadı - kullanıcıyı sessizce bilgilendir
+            console.log(`${secilenYil} yılı ${secilenAy+1}. ayında veri bulunamadı.`);
+          }
+        } catch (ilkSorguHatasi) {
+          console.error('İlk sorgu başarısız, son çare sorgusunu deneniyor:', ilkSorguHatasi);
+          
+          // Son çare - hiçbir filtre olmadan tüm koleksiyonu getir
+          try {
+            const sonCareQuery = query(collection(db, 'uretimVerileri'));
+            const sonCareSnapshot = await getDocs(sonCareQuery);
+            const tumVeriler = sonCareSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as UretimVerisi[];
+            
+            // Tüm filtreleri manuel uygula
+            const tamamenFiltreliVeriler = tumVeriler.filter(veri => {
+              try {
+                const veriTarih = veri.tarih.toDate();
+                return veri.santralId === secilenSantral &&
+                       veri.companyId === kullanici.companyId &&
+                       veriTarih >= ayBaslangic && 
+                       veriTarih <= ayBitis;
+              } catch (filtreHatasi) {
+                return false;
+              }
+            });
+            
+            setUretimVerileri(tamamenFiltreliVeriler);
+            toast.warning('Veriler acil durum modunda yüklendi', {duration: 3000});
+          } catch (sonHata) {
+            console.error('Tüm sorgu denemeleri başarısız oldu:', sonHata);
+            setUretimVerileri([]);
+            toast.error('Üretim verileri yüklenemedi. Lütfen internet bağlantınızı kontrol edin ve sayfayı yenileyiniz.');
+          }
         }
       } catch (error) {
         console.error('Üretim verileri getirilemedi:', error);
-        toast.error('Üretim verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.');
+        toast.error('Üretim verileri yüklenirken bir hata oluştu. Tekrar deneyiniz.');
         setUretimVerileri([]);
       } finally {
         setYukleniyor(false);

@@ -1,6 +1,7 @@
+
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, doc, setDoc, enableIndexedDbPersistence, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
 import { authService } from '../services/authService';
@@ -44,43 +45,42 @@ if (process.env.NODE_ENV === 'development') {
 }
 */
 
-// Configure Firestore persistence with fallback options
+// Düzeltilmiş persistence konfigürasyonu
 try {
-  // First attempt: enable with synchronizeTabs
+  // Uygulamanın yenilenmesine veya diğer sekmelerde de çalışmasına izin veriyoruz
   enableIndexedDbPersistence(db, {
-    synchronizeTabs: true,
-    forceOwningTab: false
+    synchronizeTabs: true  // Bu, çoklu sekme desteğini etkinleştirir
   }).catch((err) => {
-    console.warn('First persistence attempt failed:', err.code);
-    
+    // Hata durumlarını daha iyi yönetiyoruz
     if (err.code === 'failed-precondition') {
-      console.warn('Failed to obtain persistence access. Using memory cache instead.');
-      // No need to try again, Firestore will automatically fall back to memory
+      console.warn('IndexedDB persistence etkinleştirilemedi: Muhtemelen birden fazla sekme açık. Uygulama hafıza önbelleğini kullanacak.');
     } else if (err.code === 'unimplemented') {
-      console.warn('The current browser does not support all required features.');
+      console.warn('Bu tarayıcı IndexedDB persistence desteklemiyor. Uygulama hafıza önbelleğini kullanacak.');
+    } else {
+      console.error('Persistence hatası:', err);
     }
+    // Bu durumda Firebase otomatik olarak bellek önbelleğine düşecektir
   });
 } catch (error) {
-  console.warn('Error in persistence configuration:', error);
-  // The SDK will fall back to memory-only persistence
-  console.warn('Using memory-only persistence as fallback.');
+  console.error('Persistence yapılandırma hatası:', error);
+  console.warn('Hafıza tabanlı önbellek kullanılacak.');
 }
 
-// Simplified connection check that works in WebContainer environments
+// Bağlantı kontrolü - WebContainer ortamları için basitleştirilmiş
 const checkConnection = async () => {
-  // First check if browser reports as online
+  // Önce tarayıcının çevrimiçi olup olmadığını kontrol et
   if (!navigator.onLine) {
     throw new Error('İnternet bağlantısı yok');
   }
   
-  // In WebContainer environments, we can't reliably make external fetch requests
-  // So we'll just trust the browser's online status and proceed
+  // WebContainer ortamlarında güvenilir harici fetch istekleri yapamayız
+  // Bu yüzden sadece tarayıcının çevrimiçi durumuna güveniyoruz
   return true;
 };
 
 export const createUserWithProfile = async (email: string, password: string, userData: any) => {
   try {
-    // We don't need to check connection here, Firebase will handle network errors
+    // Burada bağlantı kontrolü yapmanıza gerek yok, Firebase ağ hatalarını kendisi yönetecek
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
@@ -95,7 +95,7 @@ export const createUserWithProfile = async (email: string, password: string, use
     await setDoc(doc(db, 'kullanicilar', user.uid), userProfile);
     authService.setCurrentUser(userProfile);
 
-    // Force token refresh to get the custom claims
+    // Özel iddiaları almak için tokeni yenileyin
     await user.getIdToken(true);
 
     toast.success('Kullanıcı başarıyla oluşturuldu');
@@ -116,7 +116,7 @@ export const createUserWithProfile = async (email: string, password: string, use
         await setDoc(doc(db, 'kullanicilar', user.uid), userProfile, { merge: true });
         authService.setCurrentUser(userProfile);
 
-        // Force token refresh to get the custom claims
+        // Özel iddiaları almak için tokeni yenileyin
         await user.getIdToken(true);
 
         toast.success('Kullanıcı profili güncellendi');
@@ -133,17 +133,17 @@ export const createUserWithProfile = async (email: string, password: string, use
 
 export const signInUser = async (email: string, password: string) => {
   try {
-    // Skip the connection check in WebContainer environments
-    // Firebase will handle network errors appropriately
+    // WebContainer ortamlarında bağlantı kontrolünü atlayın
+    // Firebase ağ hatalarını uygun şekilde yönetecektir
     
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     
-    // Force token refresh to get the latest custom claims
+    // En son özel iddiaları almak için token yenileme
     await userCredential.user.getIdToken(true);
     
-    // Log token details for debugging
+    // Hata ayıklama için token ayrıntılarını günlüğe kaydedin
     const idTokenResult = await userCredential.user.getIdTokenResult();
-    console.log('Token claims after sign in:', idTokenResult.claims);
+    console.log('Giriş sonrası token iddiaları:', idTokenResult.claims);
     
     return userCredential.user;
   } catch (error) {
@@ -153,7 +153,7 @@ export const signInUser = async (email: string, password: string) => {
 };
 
 export const handleAuthError = (error: unknown) => {
-  console.error('Authentication Error:', error);
+  console.error('Kimlik doğrulama hatası:', error);
   
   if (error instanceof FirebaseError) {
     switch (error.code) {
@@ -200,9 +200,9 @@ export const handleAuthError = (error: unknown) => {
   }
 };
 
-// General Firebase error handler for non-auth errors
+// Kimlik doğrulama olmayan Firebase hataları için genel işleyici
 export const handleFirebaseError = (error: unknown, customMessage?: string) => {
-  console.error('Firebase Error:', error);
+  console.error('Firebase hatası:', error);
   
   if (error instanceof FirebaseError) {
     switch (error.code) {
