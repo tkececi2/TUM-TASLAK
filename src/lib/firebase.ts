@@ -1,6 +1,6 @@
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, doc, setDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
 import { authService } from '../services/authService';
@@ -234,8 +234,9 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
   if (error instanceof FirebaseError) {
     switch (error.code) {
       case 'failed-precondition':
-        toast.error(customMessage || 'Veri işleme sorunu. Lütfen sayfayı yenileyip tekrar deneyin.');
-        break;
+        toast.error(customMessage || 'Veritabanı erişim sorunu. Lütfen sayfayı yenileyip tekrar deneyin.');
+        // failed-precondition hatası için ayrı bir işleme yukarıda yapıldığından burada break kullanmıyoruz
+        return; // Özel işlemi yukarıda yaptığımız için fonksiyondan çıkıyoruz
       case 'unavailable':
         toast.error('Firebase hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
         break;
@@ -243,7 +244,8 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
         toast.error('Çok fazla istek gönderildi. Lütfen daha sonra tekrar deneyin.');
         break;
       case 'permission-denied':
-        // İzin hatası durumunda token'ı 3 kez yenilemeyi dene
+      case 'failed-precondition':
+        // İzin hatası veya failed-precondition durumunda token'ı 3 kez yenilemeyi dene
         if (auth.currentUser) {
           let tokenRenewed = false;
           let attempts = 0;
@@ -255,24 +257,29 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
               console.log(`Token yenileme başarılı (${attempts}. deneme)`);
               tokenRenewed = true;
 
-              // Kullanıcı bilgilerini kontrol et
-              const userSnapshot = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
-              if (userSnapshot.exists()) {
-                const userData = userSnapshot.data();
-                console.log('Firestore kullanıcı rolü:', userData.rol);
-                console.log('Firestore şirket ID:', userData.companyId);
+              try {
+                // Kullanıcı bilgilerini kontrol et
+                const userSnapshot = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
+                if (userSnapshot.exists()) {
+                  const userData = userSnapshot.data();
+                  console.log('Firestore kullanıcı rolü:', userData.rol);
+                  console.log('Firestore şirket ID:', userData.companyId);
 
-                // LocalStorage'daki bilgileri güncelle
-                authService.setCurrentUser({
-                  ...userData,
-                  id: auth.currentUser.uid,
-                  email: auth.currentUser.email
-                });
+                  // LocalStorage'daki bilgileri güncelle
+                  authService.setCurrentUser({
+                    ...userData,
+                    id: auth.currentUser.uid,
+                    email: auth.currentUser.email
+                  });
 
-                toast.success('Yetkilendirme yenilendi. İşlemi tekrar deneyin.');
-              } else {
-                console.error('Kullanıcı Firestore\'da bulunamadı:', auth.currentUser.uid);
-                toast.error('Kullanıcı bilgileriniz bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.');
+                  toast.success('Yetkilendirme yenilendi. İşlemi tekrar deneyin.');
+                } else {
+                  console.error('Kullanıcı Firestore\'da bulunamadı:', auth.currentUser.uid);
+                  toast.error('Kullanıcı bilgileriniz bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.');
+                }
+              } catch (userFetchError) {
+                console.error('Kullanıcı bilgileri getirme hatası:', userFetchError);
+                toast.error('Kullanıcı bilgileri güncellenirken hata oluştu.');
               }
 
               // 1 saniye bekleyerek token güncellemesinin sistem genelinde yayılmasını sağla
