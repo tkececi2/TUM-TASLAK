@@ -428,22 +428,21 @@ export const Layout: React.FC = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top Navigation Bar */}
-          <header className="bg-white shadow-sm h-16 flex items-center px-2 sm:px-4 sticky top-0 z-30">
+          <header className="bg-white shadow-sm h-16 flex items-center px-4">
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuAcik(!mobileMenuAcik)}
-              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none mobile-touch-target"
-              aria-label="Menü"
+              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none"
             >
               <Menu className="h-6 w-6" />
             </button>
             
             <div className="flex-1 flex justify-between items-center">
-              <div className="ml-2 sm:ml-4 lg:ml-0">
-                <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate max-w-[150px] sm:max-w-xs">{pageTitle}</h1>
+              <div className="ml-4 lg:ml-0">
+                <h1 className="text-lg font-semibold text-gray-900">{pageTitle}</h1>
               </div>
               
-              <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="flex items-center space-x-4">
                 <BildirimMenusu />
                 
                 {/* User Profile */}
