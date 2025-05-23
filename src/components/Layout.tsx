@@ -508,8 +508,8 @@ export const Layout: React.FC = () => {
           {/* Page Content */}
           <main className={`flex-1 overflow-auto bg-gray-50 p-6 transition-all duration-300 ${
             !menuAcik ? 'lg:pl-24' : 'lg:pl-6'
-          } pl-24 sm:pl-28`}>
-            <div className="max-w-7xl mx-auto">
+          } pl-24 sm:pl-28 md:pl-32 relative z-20`}>
+            <div className="max-w-7xl mx-auto relative">
               <Outlet />
             </div>
           </main>

@@ -209,6 +209,29 @@
 }
 
 .bg-gradient-light {
+
+/* Ekstra mobil düzenlemeler */
+@media (max-width: 640px) {
+  /* Header'ın daha yüksek z-index ile görünmesini sağla */
+  header.bg-white {
+    z-index: 20;
+    position: relative;
+  }
+  
+  /* Ana içerik içindeki kartların sol menüden daha üstte görünmesini sağla */
+  .modern-card, 
+  .stats-card, 
+  .tremor-Card-root {
+    position: relative;
+    z-index: 30;
+  }
+  
+  /* Ana içerik için daha geniş boşluk */
+  main {
+    padding-left: 36px !important;
+  }
+}
+
   @apply bg-gradient-to-br from-gray-50 to-gray-100;
 }
 
@@ -246,20 +269,31 @@
   
   /* Mobil ekran ana içerik kenar boşluğu */
   main {
-    padding-left: 28px !important;
+    padding-left: 32px !important;
   }
   
   /* Kapalı sol menü için minimal genişlik */
   .w-20 {
     width: 4rem !important;
-    z-index: 10;
+    z-index: 5;
     position: fixed;
   }
   
   /* İçeriğin sol menüden daha önde görünmesi için */
   .max-w-7xl {
     position: relative;
-    z-index: 15;
+    z-index: 30;
+  }
+  
+  /* Sol kenar çubuğu için konteyner */
+  .fixed.inset-y-0.left-0 {
+    z-index: 5 !important;
+  }
+  
+  /* Ana içerik için daha yüksek z-index */
+  .flex-1.flex.flex-col.overflow-hidden {
+    position: relative;
+    z-index: 10;
   }
 }
 
