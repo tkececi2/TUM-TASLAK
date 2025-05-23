@@ -109,6 +109,14 @@ service cloud.firestore {
                           (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
     }
 
+    // Üretim verileri rules
+    match /uretimVerileri/{veriId} {
+      allow read: if hasManagementAccess() || 
+                   (isAuthenticated() && resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+      allow create, update, delete: if hasManagementAccess() || 
+                                     (isAuthenticated() && request.resource.data.companyId == get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.companyId);
+    }
+
     // Bildirim rules
     match /bildirimler/{bildirimId} {
       allow read: if isAuthenticated() && resource.data.kullaniciId == request.auth.uid;
