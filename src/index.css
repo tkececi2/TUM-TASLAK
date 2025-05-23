@@ -31,6 +31,19 @@
   }
 
   .modern-modal {
+
+  .animate-fadeIn {
+    animation: fadeIn 1s ease-out;
+  }
+
+  .animate-float {
+    animation: bounceSoft 3s ease-in-out infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
     @apply fixed inset-0 flex items-center justify-center z-50;
   }
 
