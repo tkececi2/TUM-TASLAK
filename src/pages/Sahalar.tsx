@@ -29,7 +29,7 @@ export const Sahalar: React.FC = () => {
     companyId: '' // Şirket ID'si eklendi
   });
 
-  const canManage = kullanici?.rol === 'yonetici' || kullanici?.rol === 'superadmin';
+  const canManage = kullanici?.rol === 'yonetici' || kullanici?.rol === 'superadmin' || kullanici?.rol === 'muhendis' || kullanici?.rol === 'tekniker';
 
   useEffect(() => {
     if (!kullanici) return;
