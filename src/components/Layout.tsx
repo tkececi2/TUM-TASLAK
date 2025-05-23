@@ -183,10 +183,23 @@ export const Layout: React.FC = () => {
     if (mobileMenuAcik) {
       document.body.style.overflow = 'hidden';
       document.body.classList.add('menu-open');
+      
+      // Mobil menüyü görünür yap
+      const mobileMenuElement = document.querySelector('.mobile-menu-panel');
+      if (mobileMenuElement) {
+        mobileMenuElement.classList.add('visible', 'transform-none');
+      }
     } else {
       document.body.style.overflow = 'unset';
       document.body.classList.remove('menu-open');
+      
+      // Mobil menüyü gizle
+      const mobileMenuElement = document.querySelector('.mobile-menu-panel');
+      if (mobileMenuElement) {
+        mobileMenuElement.classList.remove('visible', 'transform-none');
+      }
     }
+    
     return () => {
       document.body.style.overflow = 'unset';
       document.body.classList.remove('menu-open');
@@ -524,8 +537,8 @@ export const Layout: React.FC = () => {
               className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden backdrop-blur-sm"
               onClick={() => setMobileMenuAcik(false)}
             />
-            <div className="fixed inset-y-0 left-0 z-50 w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel translate-x-0">
-              <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white shadow-md">
+            <div className="fixed inset-y-0 left-0 z-[100] w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel translate-x-0 shadow-xl">
+              <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white shadow-md sticky top-0 z-10">
                 <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3">
                   <img 
                     src={sirketBilgileri.logoURL} 
@@ -537,13 +550,13 @@ export const Layout: React.FC = () => {
                     }}
                   />
                 </div>
-                <div>
-                  <h1 className="text-lg font-bold">{sirketBilgileri.sirketAdi}</h1>
-                  <p className="text-xs text-gray-300">{sirketBilgileri.slogan}</p>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-lg font-bold truncate">{sirketBilgileri.sirketAdi}</h1>
+                  <p className="text-xs text-gray-300 truncate">{sirketBilgileri.slogan}</p>
                 </div>
                 <button
                   onClick={() => setMobileMenuAcik(false)}
-                  className="ml-auto p-2 text-white hover:bg-blue-800 rounded-full transition-colors"
+                  className="ml-2 p-2 text-white hover:bg-blue-800 rounded-full transition-colors flex-shrink-0"
                 >
                   <X className="h-6 w-6" />
                 </button>
