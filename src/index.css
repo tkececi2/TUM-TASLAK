@@ -222,6 +222,29 @@
   @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-secondary-500;
 }
 
+/* Mobil Görünüm İyileştirmeleri */
+@media (max-width: 768px) {
+  .mobile-nav-fixed {
+    position: fixed;
+    width: 85%;
+    max-width: 300px;
+    z-index: 50;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .mobile-menu-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+  }
+  
+  body.menu-open {
+    overflow: hidden;
+  }
+}
+
 .heading-1 {
   @apply text-3xl font-bold text-gray-900;
 }

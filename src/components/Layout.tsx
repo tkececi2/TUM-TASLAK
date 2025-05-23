@@ -182,11 +182,14 @@ export const Layout: React.FC = () => {
   useEffect(() => {
     if (mobileMenuAcik) {
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('menu-open');
     } else {
       document.body.style.overflow = 'unset';
+      document.body.classList.remove('menu-open');
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.body.classList.remove('menu-open');
     };
   }, [mobileMenuAcik]);
 
@@ -517,7 +520,7 @@ export const Layout: React.FC = () => {
               className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
               onClick={() => setMobileMenuAcik(false)}
             />
-            <div className="fixed inset-y-0 left-0 z-50 w-full sm:w-80 bg-[#0a2351] lg:hidden">
+            <div className="fixed inset-y-0 left-0 z-50 w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto">
               <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white">
                 <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3">
                   <img 
@@ -541,7 +544,7 @@ export const Layout: React.FC = () => {
                   <X className="h-6 w-6" />
                 </button>
               </div>
-              <div className="mt-2 px-3 py-2 h-[calc(100%-4rem)] overflow-y-auto">
+              <div className="mt-2 px-3 py-2 h-[calc(100vh-4rem)] overflow-y-auto pb-20">
                 <div className="space-y-1">
                   {navigation.map(item => {
                     if (item.children) {
