@@ -1,4 +1,3 @@
-
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, doc, setDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
@@ -50,7 +49,7 @@ try {
   // Web içinde IndexedDB sorunlarını önlemek için bellek tabanlı cache kullanma
   // Bu, Replit WebView ile daha uyumlu çalışacaktır
   console.warn('Hafıza tabanlı önbellek kullanılacak.');
-  
+
   // Persistence devre dışı, yalnızca bellek önbelleği aktif
 } catch (error) {
   console.error('Persistence yapılandırma hatası:', error);
@@ -63,20 +62,20 @@ export const refreshAuthToken = async (): Promise<boolean> => {
     console.error('Token yenilenemedi: Oturum açık değil');
     return false;
   }
-  
+
   try {
     await auth.currentUser.getIdToken(true);
-    
+
     // Başarılı token yenileme
     const idTokenResult = await auth.currentUser.getIdTokenResult();
     console.log('Token başarıyla yenilendi:', new Date().toISOString());
-    
+
     // LocalStorage'daki kullanıcı bilgilerini kontrol et
     const currentUserStr = localStorage.getItem('currentUser');
     if (currentUserStr) {
       try {
         const currentUser = JSON.parse(currentUserStr);
-        
+
         // Token claims'de rol yoksa, localStorage'dan al ve claims'e ekle
         if (!idTokenResult.claims.rol && currentUser.rol) {
           console.log('Rol bilgisi token claims\'de yok, localStorage\'dan alınıyor:', currentUser.rol);
@@ -86,7 +85,7 @@ export const refreshAuthToken = async (): Promise<boolean> => {
         console.error('localStorage kullanıcı bilgisi ayrıştırma hatası', e);
       }
     }
-    
+
     return true;
   } catch (error) {
     console.error('Token yenileme hatası:', error);
@@ -100,7 +99,7 @@ const checkConnection = async () => {
   if (!navigator.onLine) {
     throw new Error('İnternet bağlantısı yok');
   }
-  
+
   // WebContainer ortamlarında güvenilir harici fetch istekleri yapamayız
   // Bu yüzden sadece tarayıcının çevrimiçi durumuna güveniyoruz
   return true;
@@ -163,16 +162,16 @@ export const signInUser = async (email: string, password: string) => {
   try {
     // WebContainer ortamlarında bağlantı kontrolünü atlayın
     // Firebase ağ hatalarını uygun şekilde yönetecektir
-    
+
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    
+
     // En son özel iddiaları almak için token yenileme
     await userCredential.user.getIdToken(true);
-    
+
     // Hata ayıklama için token ayrıntılarını günlüğe kaydedin
     const idTokenResult = await userCredential.user.getIdTokenResult();
     console.log('Giriş sonrası token iddiaları:', idTokenResult.claims);
-    
+
     return userCredential.user;
   } catch (error) {
     handleAuthError(error);
@@ -182,7 +181,7 @@ export const signInUser = async (email: string, password: string) => {
 
 export const handleAuthError = (error: unknown) => {
   console.error('Kimlik doğrulama hatası:', error);
-  
+
   if (error instanceof FirebaseError) {
     switch (error.code) {
       case 'auth/network-request-failed':
@@ -231,7 +230,7 @@ export const handleAuthError = (error: unknown) => {
 // Kimlik doğrulama olmayan Firebase hataları için genel işleyici
 export const handleFirebaseError = async (error: unknown, customMessage?: string) => {
   console.error('Firebase hatası:', error);
-  
+
   if (error instanceof FirebaseError) {
     switch (error.code) {
       case 'failed-precondition':
@@ -248,34 +247,34 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
         if (auth.currentUser) {
           let tokenRenewed = false;
           let attempts = 0;
-          
+
           while (!tokenRenewed && attempts < 3) {
             attempts++;
             try {
               await auth.currentUser.getIdToken(true);
               console.log(`Token yenileme başarılı (${attempts}. deneme)`);
               tokenRenewed = true;
-              
+
               // Kullanıcı bilgilerini kontrol et
               const userSnapshot = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
               if (userSnapshot.exists()) {
                 const userData = userSnapshot.data();
                 console.log('Firestore kullanıcı rolü:', userData.rol);
                 console.log('Firestore şirket ID:', userData.companyId);
-                
+
                 // LocalStorage'daki bilgileri güncelle
                 authService.setCurrentUser({
                   ...userData,
                   id: auth.currentUser.uid,
                   email: auth.currentUser.email
                 });
-                
+
                 toast.success('Yetkilendirme yenilendi. İşlemi tekrar deneyin.');
               } else {
                 console.error('Kullanıcı Firestore\'da bulunamadı:', auth.currentUser.uid);
                 toast.error('Kullanıcı bilgileriniz bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.');
               }
-              
+
               // 1 saniye bekleyerek token güncellemesinin sistem genelinde yayılmasını sağla
               await new Promise(resolve => setTimeout(resolve, 1000));
               return; // Başarılı yenileme durumunda
@@ -283,12 +282,12 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
               console.error(`Token yenileme hatası (${attempts}. deneme):`, tokenError);
             }
           }
-          
+
           if (!tokenRenewed) {
             // Tüm yenileme denemeleri başarısız oldu
             await authService.clearUserData(); // Önce kullanıcı verilerini temizle
             toast.error('Yetki sorunu. Lütfen tekrar giriş yapmanız gerekiyor.');
-            
+
             // IndexedDB temizliği
             try {
               const databases = await window.indexedDB.databases();
@@ -300,7 +299,7 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
             } catch (dbError) {
               console.error('IndexedDB temizleme hatası:', dbError);
             }
-            
+
             // Kullanıcıyı login sayfasına yönlendir
             if (window.location.pathname !== '/login') {
               setTimeout(() => {

@@ -205,6 +205,15 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
         setYukleniyor(false);
         return;
       }
+      
+      // CompanyId kontrolü
+      if (!kullanici.companyId) {
+        toast.error('Şirket bilginiz (companyId) eksik. Bu bilgi olmadan veri eklenemez.');
+        setYukleniyor(false);
+        return;
+      }
+      
+      console.log('Kontroller başarılı - Yetki:', kullanici.rol, 'CompanyID:', kullanici.companyId);
 
       // CompanyId kontrolü
       if (!kullanici.companyId) {
@@ -294,6 +303,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
             id: kullanici.id,
             ad: kullanici.ad
           },
+          companyId: kullanici.companyId, // Firestore kuralları için companyId eklenmeli
           olusturmaTarihi: Timestamp.now()
         });
 
@@ -302,13 +312,29 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
       }
 
       // Tüm batch'leri commit et
-      for (const batch of batches) {
-        await batch.commit();
-      }
+      try {
+        for (let i = 0; i < batches.length; i++) {
+          console.log(`Batch ${i+1}/${batches.length} commit ediliyor...`);
+          await batches[i].commit();
+          // Batch işlemleri arasında kısa bir gecikme
+          if (i < batches.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
 
-      toast.success(`${validData.length} üretim verisi başarıyla içe aktarıldı`);
-      onSuccess();
-      onClose();
+        toast.success(`${validData.length} üretim verisi başarıyla içe aktarıldı`);
+        onSuccess();
+        onClose();
+      } catch (batchError) {
+        console.error('Batch commit hatası:', batchError);
+        
+        if (batchError.code === 'permission-denied') {
+          toast.error('Veri yazma izniniz yok. Firestore izin hatası: permission-denied');
+          console.error('Firestore izin detayları - companyId:', kullanici.companyId, 'rol:', kullanici.rol);
+        } else {
+          toast.error(`Batch işlemi hatası: ${batchError.message || batchError.code || 'Bilinmeyen hata'}`);
+        }
+      }
     } catch (error) {
       console.error('Toplu içe aktarma hatası:', error);
 
