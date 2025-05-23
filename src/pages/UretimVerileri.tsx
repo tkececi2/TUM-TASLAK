@@ -175,26 +175,54 @@ export const UretimVerileri: React.FC = () => {
         const yilBaslangicTimestamp = Timestamp.fromDate(yilBaslangic);
         const yilBitisTimestamp = Timestamp.fromDate(yilBitis);
         
-        // Yıllık üretim verilerini getir
-        const yillikUretimQuery = query(
-          collection(db, 'uretimVerileri'),
-          where('santralId', '==', secilenSantral),
-          where('companyId', '==', kullanici?.companyId),
-          where('tarih', '>=', yilBaslangicTimestamp),
-          where('tarih', '<=', yilBitisTimestamp),
-          orderBy('tarih', 'asc')
-        );
-        
-        const snapshot = await getDocs(yillikUretimQuery);
-        const veriler = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as UretimVerisi[];
-        
-        setYillikUretimVerileri(veriler);
+        try {
+          // Önce kompleks sorguyu dene
+          const yillikUretimQuery = query(
+            collection(db, 'uretimVerileri'),
+            where('santralId', '==', secilenSantral),
+            where('companyId', '==', kullanici?.companyId),
+            where('tarih', '>=', yilBaslangicTimestamp),
+            where('tarih', '<=', yilBitisTimestamp),
+            orderBy('tarih', 'asc')
+          );
+          
+          const snapshot = await getDocs(yillikUretimQuery);
+          const veriler = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as UretimVerisi[];
+          
+          setYillikUretimVerileri(veriler);
+        } catch (queryError) {
+          console.error('Yıllık sorgu hatası, basitleştirilmiş sorgu deneniyor:', queryError);
+          
+          // Daha basit bir sorgu dene (daha az where koşulu)
+          const fallbackQuery = query(
+            collection(db, 'uretimVerileri'),
+            where('santralId', '==', secilenSantral),
+            orderBy('tarih', 'asc')
+          );
+          
+          const fallbackSnapshot = await getDocs(fallbackQuery);
+          const tumVeriler = fallbackSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as UretimVerisi[];
+          
+          // Filtrelemeyi JavaScript ile yap
+          const filtreliVeriler = tumVeriler.filter(veri => {
+            const veriTarih = veri.tarih.toDate();
+            const dogruCompany = kullanici?.companyId ? veri.companyId === kullanici.companyId : true;
+            return veriTarih >= yilBaslangic && veriTarih <= yilBitis && dogruCompany;
+          });
+          
+          setYillikUretimVerileri(filtreliVeriler);
+          toast.warning('Veriler alternatif modda yüklendi', {duration: 3000});
+        }
       } catch (error) {
         console.error('Yıllık üretim verileri getirilemedi:', error);
-        toast.error('Yıllık üretim verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+        toast.error('Yıllık üretim verileri yüklenirken bir hata oluştu');
+        setYillikUretimVerileri([]);
       } finally {
         setYillikVerilerYukleniyor(false);
       }

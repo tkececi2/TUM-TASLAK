@@ -44,18 +44,26 @@ if (process.env.NODE_ENV === 'development') {
 }
 */
 
+// Configure Firestore persistence with fallback options
 try {
+  // First attempt: enable with synchronizeTabs
   enableIndexedDbPersistence(db, {
-    synchronizeTabs: true  // Enable multi-tab synchronization
+    synchronizeTabs: true,
+    forceOwningTab: false
   }).catch((err) => {
+    console.warn('First persistence attempt failed:', err.code);
+    
     if (err.code === 'failed-precondition') {
-      console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
+      console.warn('Failed to obtain persistence access. Using memory cache instead.');
+      // No need to try again, Firestore will automatically fall back to memory
     } else if (err.code === 'unimplemented') {
-      console.warn('The current browser does not support persistence.');
+      console.warn('The current browser does not support all required features.');
     }
   });
 } catch (error) {
-  console.warn('Error enabling persistence:', error);
+  console.warn('Error in persistence configuration:', error);
+  // The SDK will fall back to memory-only persistence
+  console.warn('Using memory-only persistence as fallback.');
 }
 
 // Simplified connection check that works in WebContainer environments
@@ -179,6 +187,9 @@ export const handleAuthError = (error: unknown) => {
       case 'auth/permission-denied':
         toast.error('Bu işlem için yetkiniz bulunmuyor');
         break;
+      case 'failed-precondition':
+        toast.error('Veritabanı erişim sorunu. Lütfen sayfayı yenileyip tekrar deneyin.');
+        break;
       default:
         toast.error('Bir hata oluştu: ' + error.message);
     }
@@ -186,6 +197,37 @@ export const handleAuthError = (error: unknown) => {
     toast.error(error.message);
   } else {
     toast.error('Beklenmeyen bir hata oluştu');
+  }
+};
+
+// General Firebase error handler for non-auth errors
+export const handleFirebaseError = (error: unknown, customMessage?: string) => {
+  console.error('Firebase Error:', error);
+  
+  if (error instanceof FirebaseError) {
+    switch (error.code) {
+      case 'failed-precondition':
+        toast.error(customMessage || 'Veri işleme sorunu. Lütfen sayfayı yenileyip tekrar deneyin.');
+        break;
+      case 'unavailable':
+        toast.error('Firebase hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
+        break;
+      case 'resource-exhausted':
+        toast.error('Çok fazla istek gönderildi. Lütfen daha sonra tekrar deneyin.');
+        break;
+      case 'permission-denied':
+        toast.error('Bu işlem için yetkiniz bulunmuyor.');
+        break;
+      case 'unauthenticated':
+        toast.error('Oturum süreniz doldu. Lütfen tekrar giriş yapın.');
+        break;
+      default:
+        toast.error(customMessage || `Veritabanı hatası: ${error.code}`);
+    }
+  } else if (error instanceof Error) {
+    toast.error(customMessage || error.message);
+  } else {
+    toast.error(customMessage || 'Beklenmeyen bir veritabanı hatası oluştu');
   }
 };
 
