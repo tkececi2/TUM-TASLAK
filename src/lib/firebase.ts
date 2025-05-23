@@ -58,19 +58,40 @@ try {
 
 // Firebase token yenileme işlevi - tüm uygulama için kullanılabilir
 export const refreshAuthToken = async (): Promise<boolean> => {
-  if (!auth.currentUser) {
-    console.error('Token yenilenemedi: Oturum açık değil');
-    return false;
-  }
-
   try {
-    await auth.currentUser.getIdToken(true);
+    // Kullanıcı giriş yapmamışsa işlem yapma
+    if (!auth.currentUser) {
+      console.error('Token yenileme hatası: Kullanıcı oturum açmamış');
+      return false;
+    }
 
-    // Başarılı token yenileme
+    console.log('Token yenileniyor...');
+
+    // Token yenileme denemesi - hata durumunda 3 kez deneyin
+    let success = false;
+    let attempts = 0;
+
+    while (!success && attempts < 3) {
+      try {
+        await auth.currentUser.getIdToken(true);
+        success = true;
+      } catch (err) {
+        attempts++;
+        console.warn(`Token yenileme denemesi ${attempts}/3 başarısız:`, err);
+        // Kısa bir bekleme süresi ekleyin
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    if (!success) {
+      console.error('Token 3 deneme sonrasında yenilenemedi');
+      return false;
+    }
+
     const idTokenResult = await auth.currentUser.getIdTokenResult();
-    console.log('Token başarıyla yenilendi:', new Date().toISOString());
+    console.log('Token yenilendi', idTokenResult.claims);
 
-    // LocalStorage'daki kullanıcı bilgilerini kontrol et
+    // LocalStorage'dan mevcut kullanıcı bilgilerini al
     const currentUserStr = localStorage.getItem('currentUser');
     if (currentUserStr) {
       try {
@@ -79,7 +100,8 @@ export const refreshAuthToken = async (): Promise<boolean> => {
         // Token claims'de rol yoksa, localStorage'dan al ve claims'e ekle
         if (!idTokenResult.claims.rol && currentUser.rol) {
           console.log('Rol bilgisi token claims\'de yok, localStorage\'dan alınıyor:', currentUser.rol);
-          // Bu noktada rol bilgisini manuel olarak ekleyemeyiz, ancak uygulama rolü kullanacaktır
+          // Bu noktada rol bilgisini claims'e ekleyemeyiz, ancak uygulama rolü kullanacaktır
+          // Cloud Functions ile rol senkronizasyonu yapılmalı
         }
       } catch (e) {
         console.error('localStorage kullanıcı bilgisi ayrıştırma hatası', e);

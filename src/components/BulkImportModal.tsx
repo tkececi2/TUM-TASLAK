@@ -366,6 +366,14 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
     URL.revokeObjectURL(link.href);
   };
 
+  // Yönetici, mühendis ve tekniker kontrolü 
+  useEffect(() => {
+    if (kullanici?.rol !== 'yonetici' && kullanici?.rol !== 'muhendis' && kullanici?.rol !== 'tekniker' && kullanici?.rol !== 'superadmin') {
+      toast.error('Bu işlem için yetkiniz bulunmamaktadır');
+      onClose();
+    }
+  }, [kullanici, onClose]);
+
   return (
     <div className="fixed inset-0 bg-neutral-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">

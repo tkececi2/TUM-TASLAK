@@ -30,24 +30,24 @@ export const UserInviteModal: React.FC<UserInviteModalProps> = ({ onClose }) => 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!kullanici || !currentCompany) {
       toast.error('Şirket bilgisi bulunamadı');
       return;
     }
-    
+
     if (!form.email) {
       toast.error('E-posta adresi gereklidir');
       return;
     }
-    
+
     setLoading(true);
-    
+
     try {
       // Calculate expiration date
       const now = new Date();
       const expiresAt = new Date(now.getTime() + (form.expiresIn * 24 * 60 * 60 * 1000));
-      
+
       // Create invitation document
       const inviteRef = await addDoc(collection(db, 'invitations'), {
         email: form.email,
@@ -59,14 +59,14 @@ export const UserInviteModal: React.FC<UserInviteModalProps> = ({ onClose }) => 
         createdBy: kullanici.id,
         used: false
       });
-      
+
       // Generate invite link
       const baseUrl = window.location.origin;
       const link = `${baseUrl}/invite/${inviteRef.id}`;
-      
+
       setInviteLink(link);
       toast.success('Davet başarıyla oluşturuldu');
-      
+
     } catch (error) {
       console.error('Error creating invitation:', error);
       toast.error('Davet oluşturulurken bir hata oluştu');
@@ -77,7 +77,7 @@ export const UserInviteModal: React.FC<UserInviteModalProps> = ({ onClose }) => 
 
   const handleCopyLink = () => {
     if (!inviteLink) return;
-    
+
     navigator.clipboard.writeText(inviteLink)
       .then(() => {
         setCopied(true);
@@ -122,7 +122,7 @@ export const UserInviteModal: React.FC<UserInviteModalProps> = ({ onClose }) => 
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Davet Linki
@@ -147,13 +147,13 @@ export const UserInviteModal: React.FC<UserInviteModalProps> = ({ onClose }) => 
                   </button>
                 </div>
               </div>
-              
+
               <div className="bg-blue-50 p-4 rounded-lg">
                 <p className="text-sm text-blue-700">
                   <span className="font-medium">Not:</span> Bu davet linki, kullanıcı tarafından kullanıldıktan sonra geçersiz olacaktır.
                 </p>
               </div>
-              
+
               <div className="flex justify-end">
                 <button
                   type="button"

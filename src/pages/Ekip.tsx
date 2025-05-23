@@ -28,14 +28,14 @@ export const Ekip: React.FC = () => {
       where('rol', 'in', ['tekniker', 'muhendis', 'yonetici']),
       orderBy('ad')
     );
-    
+
     const unsubscribe = onSnapshot(ekipQuery, (snapshot) => {
       const ekipListesi = snapshot.docs
         .map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Kullanici[];
-      
+
       setEkipUyeleri(ekipListesi);
       setYukleniyor(false);
     }, (error) => {
@@ -71,10 +71,14 @@ export const Ekip: React.FC = () => {
     }
   };
 
-  if (!isYonetici) {
+  // Ekip sayfasında rol kontrolü - Sadece yöneticiler ve superadmin ekip ekleme/silme yapabilir
+  if (kullanici?.rol !== 'yonetici' && kullanici?.rol !== 'superadmin') {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <p className="text-gray-500">Bu sayfaya erişim yetkiniz yok.</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded" role="alert">
+          <p className="font-bold">Kısıtlı Erişim</p>
+          <p>Ekip üyesi ekleme ve silme işlemleri sadece yöneticiler tarafından yapılabilmektedir.</p>
+        </div>
       </div>
     );
   }
@@ -186,3 +190,7 @@ export const Ekip: React.FC = () => {
     </div>
   );
 };
+```
+
+```text
+The component's role control logic for team management has been updated to restrict team member addition/deletion to administrators and superadmins only.
