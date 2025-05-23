@@ -14,5 +14,12 @@ export default defineConfig({
     host: true, // tüm ağ arayüzlerinde dinle (0.0.0.0)
     port: 3000,
     strictPort: true,
+    hmr: {
+      host: '0.0.0.0',
+    },
+    watch: {
+      usePolling: true,
+    },
+    allowedHosts: 'all', // Tüm host isteklerine izin ver
   },
 });
