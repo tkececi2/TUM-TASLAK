@@ -260,16 +260,16 @@ export const Sahalar: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {sahalar.map((saha) => {
           // Bu sahaya atanmış müşteriyi bul
           const atananMusteri = musteriler.find(m => m.sahalar && saha.id in m.sahalar);
           
           return (
-            <div key={saha.id} className="modern-card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-neutral-900">{saha.ad}</h3>
-                <MapPin className="h-6 w-6 text-primary-500" />
+            <div key={saha.id} className="modern-card p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-neutral-900 truncate max-w-[70%]">{saha.ad}</h3>
+                <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-primary-500 flex-shrink-0" />
               </div>
 
               <div className="space-y-3">
@@ -327,10 +327,10 @@ export const Sahalar: React.FC = () => {
       </div>
 
       {formAcik && (
-        <div className="fixed inset-0 bg-neutral-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium text-neutral-900">
+        <div className="fixed inset-0 bg-neutral-500 bg-opacity-75 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full p-4 sm:p-6 my-4 mx-2 sm:mx-auto">
+            <div className="flex justify-between items-center mb-3 sm:mb-4">
+              <h2 className="text-base sm:text-lg font-medium text-neutral-900">
                 {duzenlemeModu ? 'Saha Düzenle' : 'Yeni Saha Ekle'}
               </h2>
               <button
@@ -338,9 +338,10 @@ export const Sahalar: React.FC = () => {
                   setFormAcik(false);
                   setDuzenlemeModu(null);
                 }}
-                className="text-neutral-400 hover:text-neutral-500"
+                className="text-neutral-400 hover:text-neutral-500 p-1 mobile-touch-target"
+                aria-label="Kapat"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
 
