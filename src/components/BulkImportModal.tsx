@@ -206,6 +206,15 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
         return;
       }
 
+      // CompanyId kontrolü
+      if (!kullanici.companyId) {
+        toast.error('Şirket bilginiz bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
+        setYukleniyor(false);
+        return;
+      }
+
+      console.log('İçe aktarma başlatılıyor - Kullanıcı:', kullanici.rol, 'Şirket ID:', kullanici.companyId);
+
       // Santral bilgilerini getir (elektrik fiyatları için)
       const santralDoc = await getDoc(doc(db, 'santraller', santralId));
       const santralData = santralDoc.exists() ? santralDoc.data() : null;

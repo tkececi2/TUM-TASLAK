@@ -70,6 +70,23 @@ export const refreshAuthToken = async (): Promise<boolean> => {
     // Başarılı token yenileme
     const idTokenResult = await auth.currentUser.getIdTokenResult();
     console.log('Token başarıyla yenilendi:', new Date().toISOString());
+    
+    // LocalStorage'daki kullanıcı bilgilerini kontrol et
+    const currentUserStr = localStorage.getItem('currentUser');
+    if (currentUserStr) {
+      try {
+        const currentUser = JSON.parse(currentUserStr);
+        
+        // Token claims'de rol yoksa, localStorage'dan al ve claims'e ekle
+        if (!idTokenResult.claims.rol && currentUser.rol) {
+          console.log('Rol bilgisi token claims\'de yok, localStorage\'dan alınıyor:', currentUser.rol);
+          // Bu noktada rol bilgisini manuel olarak ekleyemeyiz, ancak uygulama rolü kullanacaktır
+        }
+      } catch (e) {
+        console.error('localStorage kullanıcı bilgisi ayrıştırma hatası', e);
+      }
+    }
+    
     return true;
   } catch (error) {
     console.error('Token yenileme hatası:', error);
@@ -238,7 +255,27 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
               await auth.currentUser.getIdToken(true);
               console.log(`Token yenileme başarılı (${attempts}. deneme)`);
               tokenRenewed = true;
-              toast.success('Yetkilendirme yenilendi. İşlemi tekrar deneyin.');
+              
+              // Kullanıcı bilgilerini kontrol et
+              const userSnapshot = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
+              if (userSnapshot.exists()) {
+                const userData = userSnapshot.data();
+                console.log('Firestore kullanıcı rolü:', userData.rol);
+                console.log('Firestore şirket ID:', userData.companyId);
+                
+                // LocalStorage'daki bilgileri güncelle
+                authService.setCurrentUser({
+                  ...userData,
+                  id: auth.currentUser.uid,
+                  email: auth.currentUser.email
+                });
+                
+                toast.success('Yetkilendirme yenilendi. İşlemi tekrar deneyin.');
+              } else {
+                console.error('Kullanıcı Firestore\'da bulunamadı:', auth.currentUser.uid);
+                toast.error('Kullanıcı bilgileriniz bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.');
+              }
+              
               // 1 saniye bekleyerek token güncellemesinin sistem genelinde yayılmasını sağla
               await new Promise(resolve => setTimeout(resolve, 1000));
               return; // Başarılı yenileme durumunda

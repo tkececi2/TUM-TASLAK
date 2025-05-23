@@ -144,10 +144,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      // Daha önce önbelleğe alınmış verileri temizle
+      try {
+        // Clear IndexedDB (Firebase offline data)
+        const databases = await window.indexedDB.databases();
+        for (const db of databases) {
+          if (db.name && db.name.includes('firestore')) {
+            window.indexedDB.deleteDatabase(db.name);
+          }
+        }
+      } catch (cleanupError) {
+        console.warn('Önbellek temizleme hatası:', cleanupError);
+      }
+
       const user = await signInUser(email, sifre);
       
-      // Force token refresh to get the latest custom claims
-      await user.getIdToken(true);
+      // Force token refresh to get the latest custom claims - 3 kez deneyelim
+      let tokenRefreshed = false;
+      let attempts = 0;
+      while (!tokenRefreshed && attempts < 3) {
+        try {
+          await user.getIdToken(true);
+          tokenRefreshed = true;
+        } catch (error) {
+          console.warn(`Token yenileme hatası (${attempts + 1}/3):`, error);
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 saniye bekle
+        }
+      }
       
       // Get the token result to check custom claims
       const idTokenResult = await user.getIdTokenResult();
