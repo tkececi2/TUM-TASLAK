@@ -187,7 +187,19 @@ export const Layout: React.FC = () => {
       // Mobil menüyü görünür yap
       const mobileMenuElement = document.querySelector('.mobile-menu-panel');
       if (mobileMenuElement) {
-        mobileMenuElement.classList.add('visible', 'transform-none');
+        mobileMenuElement.classList.add('visible');
+        mobileMenuElement.classList.add('transform-none');
+        mobileMenuElement.style.display = 'block';
+        mobileMenuElement.style.zIndex = '999';
+        mobileMenuElement.style.visibility = 'visible';
+        mobileMenuElement.style.transform = 'translateX(0)';
+      }
+      
+      // Overlayi görünür yap
+      const overlayElement = document.querySelector('.fixed.inset-0.bg-gray-600');
+      if (overlayElement) {
+        overlayElement.classList.add('visible');
+        (overlayElement as HTMLElement).style.zIndex = '998';
       }
     } else {
       document.body.style.overflow = 'unset';
@@ -196,7 +208,15 @@ export const Layout: React.FC = () => {
       // Mobil menüyü gizle
       const mobileMenuElement = document.querySelector('.mobile-menu-panel');
       if (mobileMenuElement) {
-        mobileMenuElement.classList.remove('visible', 'transform-none');
+        mobileMenuElement.classList.remove('visible');
+        mobileMenuElement.classList.remove('transform-none');
+        
+        // Animasyon bitiminde 300ms sonra tamamen gizle
+        setTimeout(() => {
+          if (!document.body.classList.contains('menu-open') && mobileMenuElement) {
+            (mobileMenuElement as HTMLElement).style.display = 'none';
+          }
+        }, 300);
       }
     }
     
@@ -537,7 +557,7 @@ export const Layout: React.FC = () => {
               className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden backdrop-blur-sm"
               onClick={() => setMobileMenuAcik(false)}
             />
-            <div className="fixed inset-y-0 left-0 z-[100] w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel translate-x-0 shadow-xl">
+            <div className="fixed inset-y-0 left-0 z-[999] w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel translate-x-0 shadow-xl visible">
               <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white shadow-md sticky top-0 z-10">
                 <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3">
                   <img 
