@@ -190,7 +190,3 @@ export const Ekip: React.FC = () => {
     </div>
   );
 };
-```
-
-```text
-The component's role control logic for team management has been updated to restrict team member addition/deletion to administrators and superadmins only.
