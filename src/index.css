@@ -216,8 +216,9 @@
 @media (max-width: 640px) {
   /* Header'ın daha yüksek z-index ile görünmesini sağla */
   header.bg-white {
-    z-index: 20;
-    position: relative;
+    z-index: 40;
+    position: sticky;
+    top: 0;
   }
   
   /* Ana içerik içindeki kartların sol menüden daha üstte görünmesini sağla */
@@ -226,11 +227,31 @@
   .tremor-Card-root {
     position: relative;
     z-index: 30;
+    margin-bottom: 1rem;
   }
   
-  /* Ana içerik için daha geniş boşluk */
+  /* Ana içerik için daha iyi boşluk */
   main {
-    padding-left: 36px !important;
+    padding: 1rem !important;
+  }
+  
+  /* Mobil için daha iyi kart düzeni */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  /* Mobil için daha iyi tablo düzeni */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+  }
+  
+  /* Mobil menü butonuna basıldığında efekt */
+  button:active {
+    transform: scale(0.95);
   }
 }
 
@@ -262,13 +283,30 @@
     z-index: 40;
   }
   
+  .mobile-menu-panel {
+    box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3);
+    animation: slideInMenu 0.3s ease-out;
+  }
+  
+  @keyframes slideInMenu {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
   body.menu-open {
     overflow: hidden;
   }
   
   /* Mobil ekran ana içerik kenar boşluğu */
   main {
-    padding-left: 32px !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
   }
   
   /* Kapalı sol menü için minimal genişlik */
@@ -293,6 +331,11 @@
   .flex-1.flex.flex-col.overflow-hidden {
     position: relative;
     z-index: 10;
+  }
+  
+  /* Mobil menü buton efektleri */
+  header button {
+    @apply hover:bg-gray-100 rounded-lg transition-colors active:scale-95;
   }
 }
 

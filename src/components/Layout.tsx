@@ -431,28 +431,30 @@ export const Layout: React.FC = () => {
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top Navigation Bar */}
-          <header className="bg-white shadow-sm h-16 flex items-center px-4">
+          <header className="bg-white shadow-sm h-16 flex items-center px-4 sticky top-0 z-30">
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuAcik(!mobileMenuAcik)}
-              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none"
+              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none transition-all active:scale-95"
+              aria-label="Menü"
             >
               <Menu className="h-6 w-6" />
             </button>
             
             <div className="flex-1 flex justify-between items-center">
               <div className="ml-4 lg:ml-0">
-                <h1 className="text-lg font-semibold text-gray-900">{pageTitle}</h1>
+                <h1 className="text-lg font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-xs">{pageTitle}</h1>
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 <BildirimMenusu />
                 
                 {/* User Profile */}
                 <div className="relative">
                   <button
                     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                    className="flex items-center space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    className="flex items-center space-x-1 sm:space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors active:scale-95"
+                    aria-label="Kullanıcı menüsü"
                   >
                     <img
                       className="h-8 w-8 rounded-full object-cover border-2 border-primary-200"
@@ -468,7 +470,7 @@ export const Layout: React.FC = () => {
                   
                   {/* Dropdown Menu */}
                   {profileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5 animate-fade-in">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5 animate-fade-in">
                       <div className="px-4 py-2 border-b border-gray-100 md:hidden">
                         <p className="text-sm font-medium text-gray-900">{kullanici?.ad}</p>
                         <p className="text-xs text-gray-500 capitalize">{kullanici?.rol}</p>
@@ -519,11 +521,11 @@ export const Layout: React.FC = () => {
         {mobileMenuAcik && (
           <>
             <div 
-              className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
+              className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden backdrop-blur-sm"
               onClick={() => setMobileMenuAcik(false)}
             />
-            <div className="fixed inset-y-0 left-0 z-50 w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto">
-              <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white">
+            <div className="fixed inset-y-0 left-0 z-50 w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel">
+              <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white shadow-md">
                 <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3">
                   <img 
                     src={sirketBilgileri.logoURL} 
@@ -541,7 +543,7 @@ export const Layout: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setMobileMenuAcik(false)}
-                  className="ml-auto p-2 text-white"
+                  className="ml-auto p-2 text-white hover:bg-blue-800 rounded-full transition-colors"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -557,9 +559,9 @@ export const Layout: React.FC = () => {
                         <div key={item.name} className="mb-1">
                           <button
                             onClick={() => toggleMenu(item.name)}
-                            className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md ${
+                            className={`w-full flex items-center justify-between px-3 py-3 text-sm font-medium rounded-lg ${
                               isActive ? 'bg-[#1a3a6c] text-white' : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                            }`}
+                            } transition-colors`}
                           >
                             <div className="flex items-center">
                               <item.icon className="h-5 w-5 mr-3" />
@@ -572,16 +574,16 @@ export const Layout: React.FC = () => {
                             )}
                           </button>
                           
-                          <div className={`mt-1 space-y-1 ${isExpanded ? 'block' : 'hidden'}`}>
+                          <div className={`mt-1 space-y-1 ${isExpanded ? 'block animate-fade-in' : 'hidden'}`}>
                             {item.children.map(child => (
                               <Link
                                 key={child.name}
                                 to={child.href}
-                                className={`pl-10 pr-3 py-2 text-sm font-medium rounded-md flex items-center ${
+                                className={`pl-10 pr-3 py-2.5 text-sm font-medium rounded-lg flex items-center ${
                                   location.pathname === child.href
                                     ? 'bg-[#1a3a6c] text-white'
                                     : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                                }`}
+                                } transition-colors`}
                                 onClick={() => setMobileMenuAcik(false)}
                               >
                                 <child.icon className="h-4 w-4 mr-2" />
@@ -597,11 +599,11 @@ export const Layout: React.FC = () => {
                       <Link
                         key={item.name}
                         to={item.href}
-                        className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
+                        className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg ${
                           location.pathname === item.href
                             ? 'bg-[#1a3a6c] text-white'
                             : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                        }`}
+                        } transition-colors`}
                         onClick={() => setMobileMenuAcik(false)}
                       >
                         <item.icon className="h-5 w-5 mr-3" />
