@@ -506,7 +506,9 @@ export const Layout: React.FC = () => {
           </header>
 
           {/* Page Content */}
-          <main className={`flex-1 overflow-auto bg-gray-50 p-6 transition-all duration-300`}>
+          <main className={`flex-1 overflow-auto bg-gray-50 p-6 transition-all duration-300 ${
+            !menuAcik ? 'lg:pl-24' : 'lg:pl-6'
+          } pl-20 sm:pl-24`}>
             <div className="max-w-7xl mx-auto">
               <Outlet />
             </div>

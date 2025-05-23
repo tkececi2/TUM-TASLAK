@@ -243,6 +243,28 @@
   body.menu-open {
     overflow: hidden;
   }
+  
+  /* Mobil ekran ana içerik kenar boşluğu */
+  main {
+    padding-left: 24px !important;
+  }
+  
+  /* Kapalı sol menü için minimal genişlik */
+  .w-20 {
+    width: 4rem !important;
+    z-index: 10;
+  }
+}
+
+/* Tablet ve mobil cihazlar için ek düzenlemeler */
+@media (max-width: 1024px) {
+  .w-20 {
+    z-index: 30;
+  }
+  
+  main {
+    z-index: 10;
+  }
 }
 
 .heading-1 {
