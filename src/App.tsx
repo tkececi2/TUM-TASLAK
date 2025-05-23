@@ -29,6 +29,7 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { CompanySettings } from './pages/CompanySettings';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { InviteUser } from './pages/InviteUser';
+import HomePage from './pages/HomePage';
 
 function App() {
   const { loading } = useAuth();
@@ -40,8 +41,6 @@ function App() {
       </div>
     );
   }
-
-  import HomePage from './pages/HomePage';
 
 return (
     <Routes>
