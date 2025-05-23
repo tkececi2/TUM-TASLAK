@@ -1,0 +1,25 @@
+Toplu veri içe aktarma öncesi token yenilendi (1. deneme)
+Token yenilendi
+İçe aktarma başlatılıyor - Kullanıcı: yonetici Şirket ID: TIn42MlJRbW2RZxGwg3P
+Toplu içe aktarma hatası: 
+_FirebaseError {code: "permission-denied", customData: undefined, name: "FirebaseError", toString: ƒ}
+
+at t.value (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Firebase hatası: 
+_FirebaseError {code: "permission-denied", customData: undefined, name: "FirebaseError", toString: ƒ}
+
+at t.value (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Token yenileme başarılı (1. deneme)
+Token yenileme hatası (1. deneme): 
+ReferenceError {}
+
+at t.value (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
