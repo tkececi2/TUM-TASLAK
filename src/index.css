@@ -246,13 +246,20 @@
   
   /* Mobil ekran ana içerik kenar boşluğu */
   main {
-    padding-left: 24px !important;
+    padding-left: 28px !important;
   }
   
   /* Kapalı sol menü için minimal genişlik */
   .w-20 {
     width: 4rem !important;
     z-index: 10;
+    position: fixed;
+  }
+  
+  /* İçeriğin sol menüden daha önde görünmesi için */
+  .max-w-7xl {
+    position: relative;
+    z-index: 15;
   }
 }
 
