@@ -194,6 +194,7 @@ export const UretimVerileri: React.FC = () => {
         setYillikUretimVerileri(veriler);
       } catch (error) {
         console.error('Yıllık üretim verileri getirilemedi:', error);
+        toast.error('Yıllık üretim verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
       } finally {
         setYillikVerilerYukleniyor(false);
       }
@@ -230,16 +231,43 @@ export const UretimVerileri: React.FC = () => {
           orderBy('tarih', 'asc')
         );
         
-        const snapshot = await getDocs(uretimQuery);
-        const veriler = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as UretimVerisi[];
-        
-        setUretimVerileri(veriler);
+        try {
+          const snapshot = await getDocs(uretimQuery);
+          const veriler = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as UretimVerisi[];
+          
+          setUretimVerileri(veriler);
+        } catch (queryError) {
+          console.error('Üretim verileri sorgu hatası:', queryError);
+          
+          // Fallback: Daha basit bir sorgu ile veri getirmeyi dene
+          const fallbackQuery = query(
+            collection(db, 'uretimVerileri'),
+            where('santralId', '==', secilenSantral),
+            orderBy('tarih', 'asc')
+          );
+          
+          const fallbackSnapshot = await getDocs(fallbackQuery);
+          const allVeriler = fallbackSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as UretimVerisi[];
+          
+          // Tarih filtresini JavaScript ile uygula
+          const filteredVeriler = allVeriler.filter(veri => {
+            const veriTarih = veri.tarih.toDate();
+            return veriTarih >= ayBaslangic && veriTarih <= ayBitis;
+          });
+          
+          setUretimVerileri(filteredVeriler);
+          toast.warning('Veriler kısıtlı modda yüklendi. Tüm filtreler uygulanamadı.');
+        }
       } catch (error) {
         console.error('Üretim verileri getirilemedi:', error);
-        toast.error('Üretim verileri yüklenirken bir hata oluştu');
+        toast.error('Üretim verileri yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.');
+        setUretimVerileri([]);
       } finally {
         setYukleniyor(false);
       }

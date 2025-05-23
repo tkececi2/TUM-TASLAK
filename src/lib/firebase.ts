@@ -45,7 +45,9 @@ if (process.env.NODE_ENV === 'development') {
 */
 
 try {
-  enableIndexedDbPersistence(db).catch((err) => {
+  enableIndexedDbPersistence(db, {
+    synchronizeTabs: true  // Enable multi-tab synchronization
+  }).catch((err) => {
     if (err.code === 'failed-precondition') {
       console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
     } else if (err.code === 'unimplemented') {
