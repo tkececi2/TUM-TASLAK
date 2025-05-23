@@ -41,8 +41,11 @@ function App() {
     );
   }
 
-  return (
+  import HomePage from './pages/HomePage';
+
+return (
     <Routes>
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/invite/:inviteId" element={<InviteUser />} />

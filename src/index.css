@@ -222,7 +222,7 @@
     width: 100%;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   }
-  
+
   /* Ana içerik içindeki kartların sol menüden daha üstte görünmesini sağla */
   .modern-card, 
   .stats-card, 
@@ -232,7 +232,7 @@
     margin-bottom: 1rem;
     width: 100%;
   }
-  
+
   /* Ana içerik için daha iyi boşluk */
   main {
     padding: 0.75rem !important;
@@ -243,7 +243,7 @@
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
   }
-  
+
   /* Mobil için daha iyi kart düzeni */
   .grid {
     display: grid;
@@ -252,7 +252,7 @@
     width: 100%;
     padding: 0 !important;
   }
-  
+
   /* Mobil görünümde grid öğelerinin genişliğini ayarla */
   .grid > * {
     width: 100% !important;
@@ -260,12 +260,12 @@
     min-width: 100% !important;
     grid-column: span 1 !important;
   }
-  
+
   /* Grid içindeki karmaşık yapıları düzelt */
   .grid-cols-1, .grid-cols-2, .grid-cols-3, .grid-cols-4 {
     grid-template-columns: 1fr !important;
   }
-  
+
   /* Mobil için daha iyi tablo düzeni */
   table {
     display: block;
@@ -273,18 +273,18 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Tablo içerik genişliklerini ayarla */
   table td, table th {
     white-space: nowrap;
     padding: 0.5rem 0.75rem !important;
   }
-  
+
   /* Mobil menü butonuna basıldığında efekt */
   button:active {
     transform: scale(0.95);
   }
-  
+
   /* Mobil menü açıldığında gövde kaydırmayı devre dışı bırak */
   body.menu-open {
     overflow: hidden;
@@ -292,23 +292,23 @@
     width: 100%;
     height: 100%;
   }
-  
+
   /* Sol sabit menüyü mobil görünümde gizle */
   .fixed.inset-y-0.left-0.z-50 {
     display: none !important;
   }
-  
+
   /* Mobil ekranda sol kenar boşluğu bırakma */
   .lg\:translate-x-0 {
     display: none !important;
   }
-  
+
   /* Ana içerik için tam genişlik kullan */
   .flex-1.flex.flex-col.overflow-hidden {
     margin-left: 0 !important;
     width: 100% !important;
   }
-  
+
   /* Mobil menü paneli stilini iyileştir */
   .mobile-menu-panel {
     height: 100vh !important;
@@ -317,31 +317,31 @@
     max-width: 300px !important;
     z-index: 100 !important;
   }
-  
+
   /* Form elemanlarını mobil için düzenle */
   input, select, textarea {
     font-size: 16px !important; /* iOS'ta yakınlaştırmayı önler */
     max-width: 100% !important;
   }
-  
+
   /* Butonları mobil için optimize et */
   button {
     touch-action: manipulation;
   }
-  
+
   /* İstatistik kartlarını mobil için düzenle */
   .stats-card {
     flex-direction: column !important;
     align-items: flex-start !important;
     padding: 1rem !important;
   }
-  
+
   /* Grafikleri responsive yap */
   canvas, .tremor-BarChart-root, .tremor-DonutChart-root {
     max-width: 100% !important;
     height: auto !important;
   }
-  
+
   /* Modal içeriklerinin taşmasını önle */
   .modern-modal-content {
     max-height: 85vh;
@@ -349,12 +349,12 @@
     width: 90% !important;
     margin: 0 auto;
   }
-  
+
   /* Mobil görünümde flex kolonları dikey düzene çevir */
   .flex.flex-row {
     flex-direction: column !important;
   }
-  
+
   /* Flex öğelerin arasında uygun boşluk bırak */
   .flex.flex-row > * {
     margin-bottom: 0.5rem;
@@ -382,14 +382,14 @@
     height: 100vh;
     overflow-y: auto;
   }
-  
+
   .mobile-menu-overlay {
     position: fixed;
     inset: 0;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 40;
   }
-  
+
   .mobile-menu-panel {
     box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3);
     animation: slideInMenu 0.3s ease-out;
@@ -402,7 +402,7 @@
     bottom: 0 !important;
     left: 0 !important;
   }
-  
+
   @keyframes slideInMenu {
     from {
       transform: translateX(-100%);
@@ -413,11 +413,11 @@
       opacity: 1;
     }
   }
-  
+
   body.menu-open {
     overflow: hidden;
   }
-  
+
   /* Mobil ekran ana içerik kenar boşluğu */
   main {
     padding: 1rem !important;
@@ -426,7 +426,7 @@
     padding-right: 1rem !important;
     width: 100% !important;
   }
-  
+
   /* Kapalı sol menü için minimal genişlik */
   .w-20 {
     width: 0 !important;
@@ -434,21 +434,21 @@
     position: fixed;
     overflow: hidden;
   }
-  
+
   /* İçeriğin sol menüden daha önde görünmesi için */
   .max-w-7xl {
     position: relative;
     z-index: 30;
     width: 100%;
   }
-  
+
   /* Sol kenar çubuğu için konteyner */
   .fixed.inset-y-0.left-0 {
     z-index: 5 !important;
     width: 0 !important;
     overflow: hidden;
   }
-  
+
   /* Mobil menü en üstte */
   body.menu-open .fixed.inset-y-0.left-0.z-50.w-\[85\%\],
   body.menu-open .mobile-menu-panel,
@@ -460,13 +460,13 @@
     visibility: visible !important;
     position: fixed !important;
   }
-  
+
   body.menu-open .fixed.inset-0.bg-gray-600 {
     z-index: 998 !important;
     display: block !important;
     visibility: visible !important;
   }
-  
+
   /* Ana içerik için daha yüksek z-index */
   .flex-1.flex.flex-col.overflow-hidden {
     position: relative;
@@ -474,40 +474,40 @@
     width: 100% !important;
     margin-left: 0 !important;
   }
-  
+
   /* Mobil menü buton efektleri */
   header button {
     @apply hover:bg-gray-100 rounded-lg transition-colors active:scale-95;
   }
-  
+
   /* Mobil görünümde sola doğru kenar boşluğunu kaldır */
   .lg\:pl-24, .lg\:pl-6, .pl-24, .sm\:pl-28, .md\:pl-32 {
     padding-left: 1rem !important;
   }
-  
+
   /* Mobil görünümde içeriğin tam genişlikte olması */
   .flex.h-screen.bg-gray-50 {
     position: relative;
   }
-  
+
   /* Karmaşık layout'ları düzeltme */
   .tremor-Card-root {
     padding: 1rem !important;
   }
-  
+
   /* Dropdown ve menüleri düzgün görüntüle */
   .absolute.right-0, .absolute.top-full {
     width: auto !important;
     min-width: 200px !important;
     max-width: 90vw !important;
   }
-  
+
   /* Form grupları mobil için optimize edilmiş */
   .form-group {
     margin-bottom: 1rem !important;
     width: 100% !important;
   }
-  
+
   /* Responsive tablo için horizontal scroll */
   .table-container {
     overflow-x: auto;
@@ -515,14 +515,14 @@
     max-width: 100%;
     margin-bottom: 1rem;
   }
-  
+
   /* Profil menüsü düzgün görünsün */
   .absolute.right-0.mt-2.w-56 {
     right: 0 !important;
     left: auto !important;
     max-width: 250px !important;
   }
-  
+
   /* Sol menü toggle düğmesini gizle */
   .absolute.right-0.top-16 {
     display: none !important;
@@ -534,16 +534,16 @@
   main {
     padding: 1.5rem !important;
   }
-  
+
   .grid {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;
   }
-  
+
   /* Tablet modunda sidebar küçült */
   .w-64 {
     width: 14rem !important;
   }
-  
+
   /* Tablet modunda içeriği ayarla */
   .lg\:pl-24 {
     padding-left: 16rem !important;
@@ -555,7 +555,7 @@
   .w-20 {
     z-index: 30;
   }
-  
+
   main {
     z-index: 10;
   }
@@ -586,61 +586,61 @@
   .form-container {
     padding: 1rem !important;
   }
-  
+
   form {
     display: flex;
     flex-direction: column;
     width: 100%;
   }
-  
+
   .form-row {
     flex-direction: column !important;
     width: 100% !important;
   }
-  
+
   .form-row > * {
     width: 100% !important;
     margin-right: 0 !important;
     margin-bottom: 1rem !important;
   }
-  
+
   /* Mobil cihazlar için buton ve kontrol grupları */
   .button-group {
     display: flex;
     flex-direction: column;
     width: 100%;
   }
-  
+
   .button-group > * {
     width: 100% !important;
     margin-bottom: 0.5rem !important;
     margin-right: 0 !important;
   }
-  
+
   /* Mobil görünümde iki kolon yanyana olan yerler için düzenleme */
   .two-column-layout {
     flex-direction: column !important;
   }
-  
+
   .two-column-layout > * {
     width: 100% !important;
     margin-right: 0 !important;
     margin-bottom: 1rem !important;
   }
-  
+
   /* Mobil görünümde çoklu sütun içeren kartlar */
   .card-columns {
     column-count: 1 !important;
     column-gap: 0 !important;
   }
-  
+
   /* Dashboard kart düzeni */
   .dashboard-grid, .stats-grid {
     display: grid;
     grid-template-columns: 1fr !important;
     gap: 1rem;
   }
-  
+
   /* Mobil görünümde tablo içeren bölümler için responsive düzenleme */
   .table-responsive-container {
     overflow-x: auto;
@@ -648,11 +648,36 @@
     width: 100%;
     margin-bottom: 1rem;
   }
-  
+
   /* Grafik içeren bölümler için responsive düzenleme */
   .chart-container {
     height: auto !important;
     min-height: 300px;
     width: 100% !important;
   }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
