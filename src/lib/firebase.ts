@@ -51,28 +51,31 @@ try {
   // Bu, Replit WebView ile daha uyumlu çalışacaktır
   console.warn('Hafıza tabanlı önbellek kullanılacak.');
   
-  // IndexedDB persistence'ı devre dışı bırakıyoruz ve yalnızca bellek önbelleğini kullanıyoruz
-  // Bu, permission-denied ve failed-precondition hatalarını azaltacaktır
-  
-  // Gerekirse ileride etkinleştirmek için kod burada kalıyor (ancak şu an devre dışı)
-  /*
-  enableIndexedDbPersistence(db, {
-    synchronizeTabs: true  // Bu, çoklu sekme desteğini etkinleştirir
-  }).catch((err) => {
-    // Hata durumlarını daha iyi yönetiyoruz
-    if (err.code === 'failed-precondition') {
-      console.warn('IndexedDB persistence etkinleştirilemedi: Muhtemelen birden fazla sekme açık. Uygulama hafıza önbelleğini kullanacak.');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Bu tarayıcı IndexedDB persistence desteklemiyor. Uygulama hafıza önbelleğini kullanacak.');
-    } else {
-      console.error('Persistence hatası:', err);
-    }
-  });
-  */
+  // Persistence devre dışı, yalnızca bellek önbelleği aktif
 } catch (error) {
   console.error('Persistence yapılandırma hatası:', error);
   console.warn('Hafıza tabanlı önbellek kullanılacak.');
 }
+
+// Firebase token yenileme işlevi - tüm uygulama için kullanılabilir
+export const refreshAuthToken = async (): Promise<boolean> => {
+  if (!auth.currentUser) {
+    console.error('Token yenilenemedi: Oturum açık değil');
+    return false;
+  }
+  
+  try {
+    await auth.currentUser.getIdToken(true);
+    
+    // Başarılı token yenileme
+    const idTokenResult = await auth.currentUser.getIdTokenResult();
+    console.log('Token başarıyla yenilendi:', new Date().toISOString());
+    return true;
+  } catch (error) {
+    console.error('Token yenileme hatası:', error);
+    return false;
+  }
+};
 
 // Bağlantı kontrolü - WebContainer ortamları için basitleştirilmiş
 const checkConnection = async () => {
@@ -224,23 +227,58 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
         toast.error('Çok fazla istek gönderildi. Lütfen daha sonra tekrar deneyin.');
         break;
       case 'permission-denied':
-        // İzin hatası durumunda token'ı yenilemeyi dene
+        // İzin hatası durumunda token'ı 3 kez yenilemeyi dene
         if (auth.currentUser) {
-          try {
-            await auth.currentUser.getIdToken(true);
-            toast.warning('Yetkilendirme yenilendi. Lütfen işlemi tekrar deneyin.');
-          } catch (tokenError) {
-            console.error('Token yenileme hatası:', tokenError);
-            toast.error('Yetki sorunu. Lütfen sayfayı yenileyip tekrar giriş yapın.');
+          let tokenRenewed = false;
+          let attempts = 0;
+          
+          while (!tokenRenewed && attempts < 3) {
+            attempts++;
+            try {
+              await auth.currentUser.getIdToken(true);
+              console.log(`Token yenileme başarılı (${attempts}. deneme)`);
+              tokenRenewed = true;
+              toast.success('Yetkilendirme yenilendi. İşlemi tekrar deneyin.');
+              // 1 saniye bekleyerek token güncellemesinin sistem genelinde yayılmasını sağla
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              return; // Başarılı yenileme durumunda
+            } catch (tokenError) {
+              console.error(`Token yenileme hatası (${attempts}. deneme):`, tokenError);
+            }
+          }
+          
+          if (!tokenRenewed) {
+            // Tüm yenileme denemeleri başarısız oldu
+            await authService.clearUserData(); // Önce kullanıcı verilerini temizle
+            toast.error('Yetki sorunu. Lütfen tekrar giriş yapmanız gerekiyor.');
+            
+            // IndexedDB temizliği
+            try {
+              const databases = await window.indexedDB.databases();
+              for (const db of databases) {
+                if (db.name) {
+                  window.indexedDB.deleteDatabase(db.name);
+                }
+              }
+            } catch (dbError) {
+              console.error('IndexedDB temizleme hatası:', dbError);
+            }
+            
             // Kullanıcıyı login sayfasına yönlendir
             if (window.location.pathname !== '/login') {
               setTimeout(() => {
                 window.location.href = '/login';
-              }, 2000);
+              }, 1500);
             }
           }
         } else {
-          toast.error('Bu işlem için yetkiniz bulunmuyor veya oturumunuz sona ermiş.');
+          toast.error('Bu işlem için yetkiniz bulunmuyor. Lütfen giriş yapın.');
+          // Kullanıcıyı login sayfasına yönlendir
+          if (window.location.pathname !== '/login') {
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 1500);
+          }
         }
         break;
       case 'unauthenticated':

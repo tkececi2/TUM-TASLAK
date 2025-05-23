@@ -201,35 +201,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const cikisYap = async () => {
     try {
+      // Önce dinleyiciyi kapat
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
       }
 
-      await signOut(auth);
+      // Kullanıcı durumunu güncelle
       authService.clearUserData();
       setKullanici(null);
-
-      // Clear IndexedDB
-      const databases = await window.indexedDB.databases();
-      for (const db of databases) {
-        if (db.name) {
-          window.indexedDB.deleteDatabase(db.name);
+      
+      // Önbellek verileri temizle
+      try {
+        // Clear localStorage (token ve oturum bilgilerini temizle)
+        localStorage.clear();
+        
+        // Clear IndexedDB (Firebase offline data)
+        const databases = await window.indexedDB.databases();
+        for (const db of databases) {
+          if (db.name) {
+            window.indexedDB.deleteDatabase(db.name);
+          }
         }
-      }
-
-      // Unregister service workers
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        for (const registration of registrations) {
-          await registration.unregister();
+        
+        // Clear Cache API
+        if ('caches' in window) {
+          const cacheKeys = await caches.keys();
+          await Promise.all(cacheKeys.map(key => caches.delete(key)));
         }
+        
+        // Unregister service workers
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(registration => registration.unregister()));
+        }
+      } catch (cleanupError) {
+        console.error('Önbellek temizleme hatası:', cleanupError);
       }
+      
+      // Son olarak Firebase'den çıkış yap - bu işlemi en sona bırakıyoruz
+      await signOut(auth);
 
       toast.success('Başarıyla çıkış yapıldı');
-      window.location.href = '/login';
+      
+      // Sayfayı yeniden yükle (login sayfasına yönlendirilecek)
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 500);
     } catch (error) {
       console.error('Çıkış yapılırken hata:', error);
-      toast.error('Çıkış yapılırken bir hata oluştu');
+      toast.error('Çıkış yapılırken bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.');
+      
+      // Hata durumunda da login sayfasına yönlendir
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
     }
   };
 

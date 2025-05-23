@@ -264,10 +264,17 @@ export const UretimVerileri: React.FC = () => {
         // Token yenileme - Firestore izin sorunlarını önlemek için
         if (auth.currentUser) {
           try {
-            await auth.currentUser.getIdToken(true);
-            console.log('Veri getirme öncesi token yenilendi');
+            // Yeni token yenileme fonksiyonunu kullan
+            const tokenYenilendi = await refreshAuthToken();
+            if (tokenYenilendi) {
+              console.log('Veri getirme öncesi token başarıyla yenilendi');
+            } else {
+              console.warn('Veri getirme öncesi token yenilenemedi');
+              // Token yenilenemezse kullanıcıyı bilgilendir
+              toast.warning('Oturum bilgileriniz güncellenemedi. Veriler kısıtlı görünebilir.');
+            }
           } catch (tokenError) {
-            console.warn('Token yenileme yapılamadı:', tokenError);
+            console.warn('Token yenileme sırasında hata:', tokenError);
           }
         }
         

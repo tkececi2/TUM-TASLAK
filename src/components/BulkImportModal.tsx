@@ -158,15 +158,30 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
     setStep('importing');
     setYukleniyor(true);
 
-      // Token yenileme - Firestore yetki sorunlarını önlemek için
-      if (auth.currentUser) {
+      // Token yenileme - geliştirilmiş yöntem
+    if (auth.currentUser) {
+      let tokenRenewed = false;
+      let attempts = 0;
+
+      while (!tokenRenewed && attempts < 2) {
+        attempts++;
         try {
           await auth.currentUser.getIdToken(true);
-          console.log('Toplu veri içe aktarma öncesi token yenilendi');
-        } catch (tokenError) {
-          console.warn('Token yenileme hatası:', tokenError);
+          console.log(`Toplu veri içe aktarma öncesi token yenilendi (${attempts}. deneme)`);
+          tokenRenewed = true;
+          // Yenilenen token'ın sistem genelinde yayılması için kısa bir bekleme
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`Token yenileme hatası (${attempts}. deneme):`, error);
         }
       }
+
+      if (!tokenRenewed) {
+        setYukleniyor(false);
+        toast.error('Oturum bilgileri güncellenemedi. Lütfen sayfayı yenileyip tekrar deneyin.');
+        return; // İşlemi durdur
+      }
+    }
 
     setProgress(0);
 
