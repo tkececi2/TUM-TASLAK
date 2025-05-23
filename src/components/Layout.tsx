@@ -524,7 +524,7 @@ export const Layout: React.FC = () => {
               className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden backdrop-blur-sm"
               onClick={() => setMobileMenuAcik(false)}
             />
-            <div className="fixed inset-y-0 left-0 z-50 w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel">
+            <div className="fixed inset-y-0 left-0 z-50 w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel translate-x-0">
               <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white shadow-md">
                 <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3">
                   <img 

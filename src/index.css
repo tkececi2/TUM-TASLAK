@@ -308,7 +308,7 @@
     position: fixed;
     width: 85%;
     max-width: 300px;
-    z-index: 50;
+    z-index: 100;
     height: 100vh;
     overflow-y: auto;
   }
@@ -323,7 +323,10 @@
   .mobile-menu-panel {
     box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3);
     animation: slideInMenu 0.3s ease-out;
-    transform: none !important;
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    display: block !important;
+    z-index: 100 !important;
   }
   
   @keyframes slideInMenu {
@@ -370,6 +373,15 @@
     z-index: 5 !important;
     width: 0 !important;
     overflow: hidden;
+  }
+  
+  /* Mobil menü en üstte */
+  body.menu-open .fixed.inset-y-0.left-0.z-50.w-\[85\%\] {
+    display: block !important;
+    z-index: 100 !important;
+    width: 85% !important;
+    max-width: 300px !important;
+    visibility: visible !important;
   }
   
   /* Ana içerik için daha yüksek z-index */
