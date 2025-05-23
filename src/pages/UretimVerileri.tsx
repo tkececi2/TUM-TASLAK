@@ -261,6 +261,16 @@ export const UretimVerileri: React.FC = () => {
       try {
         setYukleniyor(true);
         
+        // Token yenileme - Firestore izin sorunlarını önlemek için
+        if (auth.currentUser) {
+          try {
+            await auth.currentUser.getIdToken(true);
+            console.log('Veri getirme öncesi token yenilendi');
+          } catch (tokenError) {
+            console.warn('Token yenileme yapılamadı:', tokenError);
+          }
+        }
+        
         // Seçilen yıl ve ay için tarih aralığı
         const ayBaslangic = new Date(secilenYil, secilenAy, 1);
         const ayBitis = endOfMonth(ayBaslangic);
@@ -733,8 +743,10 @@ export const UretimVerileri: React.FC = () => {
       </div>
 
       {yukleniyor ? (
-        <div className="flex justify-center items-center min-h-[200px]">
+        <div className="flex flex-col justify-center items-center min-h-[200px]">
           <LoadingSpinner size="lg" />
+          <p className="text-gray-500 mt-4">Üretim verileri yükleniyor...</p>
+          <p className="text-xs text-gray-400 mt-1">Uzun sürerse, sayfayı yenileyip tekrar giriş yapabilirsiniz</p>
         </div>
       ) : (
         <>

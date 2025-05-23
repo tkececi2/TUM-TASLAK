@@ -201,7 +201,7 @@ export const handleAuthError = (error: unknown) => {
 };
 
 // Kimlik doğrulama olmayan Firebase hataları için genel işleyici
-export const handleFirebaseError = (error: unknown, customMessage?: string) => {
+export const handleFirebaseError = async (error: unknown, customMessage?: string) => {
   console.error('Firebase hatası:', error);
   
   if (error instanceof FirebaseError) {
@@ -216,10 +216,33 @@ export const handleFirebaseError = (error: unknown, customMessage?: string) => {
         toast.error('Çok fazla istek gönderildi. Lütfen daha sonra tekrar deneyin.');
         break;
       case 'permission-denied':
-        toast.error('Bu işlem için yetkiniz bulunmuyor.');
+        // İzin hatası durumunda token'ı yenilemeyi dene
+        if (auth.currentUser) {
+          try {
+            await auth.currentUser.getIdToken(true);
+            toast.warning('Yetkilendirme yenilendi. Lütfen işlemi tekrar deneyin.');
+          } catch (tokenError) {
+            console.error('Token yenileme hatası:', tokenError);
+            toast.error('Yetki sorunu. Lütfen sayfayı yenileyip tekrar giriş yapın.');
+            // Kullanıcıyı login sayfasına yönlendir
+            if (window.location.pathname !== '/login') {
+              setTimeout(() => {
+                window.location.href = '/login';
+              }, 2000);
+            }
+          }
+        } else {
+          toast.error('Bu işlem için yetkiniz bulunmuyor veya oturumunuz sona ermiş.');
+        }
         break;
       case 'unauthenticated':
         toast.error('Oturum süreniz doldu. Lütfen tekrar giriş yapın.');
+        // Kullanıcıyı login sayfasına yönlendir
+        if (window.location.pathname !== '/login') {
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1500);
+        }
         break;
       default:
         toast.error(customMessage || `Veritabanı hatası: ${error.code}`);

@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { collection, addDoc, Timestamp, writeBatch, doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth, handleFirebaseError } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format, isValid, parse } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { X, Upload, AlertTriangle, CheckCircle, Download } from 'lucide-react';
+import { X, Upload, AlertTriangle, CheckCircle, Download, ShieldAlert } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import Papa from 'papaparse';
 import toast from 'react-hot-toast';
@@ -160,6 +160,26 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
     setProgress(0);
 
     try {
+      // Önce token'ı yenile - izin sorunlarını önlemek için
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.getIdToken(true);
+          console.log('Token yenilendi');
+        } catch (tokenError) {
+          console.error('Token yenileme hatası:', tokenError);
+          toast.error('Yetkilendirme hatası. Lütfen sayfayı yenileyip tekrar giriş yapın.');
+          setYukleniyor(false);
+          return;
+        }
+      }
+
+      // Yetki kontrolü
+      if (!kullanici.rol || !['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol)) {
+        toast.error('Bu işlem için yetkiniz bulunmuyor. Sadece yöneticiler ve teknik personel veri ekleyebilir.');
+        setYukleniyor(false);
+        return;
+      }
+      
       // Santral bilgilerini getir (elektrik fiyatları için)
       const santralDoc = await getDoc(doc(db, 'santraller', santralId));
       const santralData = santralDoc.exists() ? santralDoc.data() : null;
