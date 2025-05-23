@@ -44,7 +44,7 @@ interface SirketBilgileri {
 }
 
 const SirketContext = React.createContext<SirketBilgileri>({
-  sirketAdi: 'Solar Takip',
+  sirketAdi: 'SolarVeyo',
   slogan: 'Güneş Enerjisi Yönetimi',
   logoURL: '/solar-logo.png'
 });
@@ -55,7 +55,7 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { kullanici } = useAuth();
   const { currentCompany } = useCompany();
   const [sirketBilgileri, setSirketBilgileri] = useState<SirketBilgileri>({
-    sirketAdi: 'Solar Takip',
+    sirketAdi: 'SolarVeyo',
     slogan: 'Güneş Enerjisi Yönetimi',
     logoURL: '/solar-logo.png'
   });
@@ -65,36 +65,36 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const sirketBilgileriniGetir = async () => {
       // Only attempt to fetch if user is authenticated
       if (!kullanici) return;
-      
+
       // Prevent fetching too frequently (at most once every 5 seconds)
       const now = Date.now();
       if (now - lastFetchTime.current < 5000) return;
-      
+
       lastFetchTime.current = now;
-      
+
       try {
         // If we have company data from context, use it
         if (currentCompany) {
           // Add a cache-busting parameter to the logo URL to prevent caching
           const logoURL = currentCompany.logo ? `${currentCompany.logo}?t=${now}` : '/solar-logo.png';
-          
+
           setSirketBilgileri({
-            sirketAdi: currentCompany.name || 'Solar Takip',
+            sirketAdi: currentCompany.name || 'SolarVeyo',
             slogan: currentCompany.slogan || 'Güneş Enerjisi Yönetimi',
             logoURL: logoURL
           });
           return;
         }
-        
+
         // Fallback to ayarlar/sirket if needed
         const sirketDoc = await getDoc(doc(db, 'ayarlar', 'sirket'));
         if (sirketDoc.exists()) {
           const data = sirketDoc.data();
           // Add a cache-busting parameter to the logo URL to prevent caching
           const logoURL = data.logoURL ? `${data.logoURL}?t=${now}` : '/solar-logo.png';
-          
+
           setSirketBilgileri({
-            sirketAdi: data.sirketAdi || 'Solar Takip',
+            sirketAdi: data.sirketAdi || 'SolarVeyo',
             slogan: data.slogan || 'Güneş Enerjisi Yönetimi',
             logoURL: logoURL
           });
@@ -106,10 +106,10 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     sirketBilgileriniGetir();
-    
+
     // Set up an interval to refresh company info every 30 seconds
     const intervalId = setInterval(sirketBilgileriniGetir, 30000);
-    
+
     return () => clearInterval(intervalId);
   }, [kullanici, currentCompany]); // Add kullanici as dependency to re-fetch when auth state changes
 
@@ -147,7 +147,7 @@ export const Layout: React.FC = () => {
 
     // Add event listener
     window.addEventListener('resize', handleResize);
-    
+
     // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -155,7 +155,7 @@ export const Layout: React.FC = () => {
   useEffect(() => {
     setMobileMenuAcik(false);
     setProfileMenuOpen(false);
-    
+
     // Set page title based on current path
     const currentPath = location.pathname.split('/')[1];
     if (currentPath) {
@@ -163,7 +163,7 @@ export const Layout: React.FC = () => {
         item.href === `/${currentPath}` || 
         (item.children && item.children.some(child => child.href === `/${currentPath}`))
       );
-      
+
       if (navItem) {
         if (navItem.href) {
           setPageTitle(navItem.name);
@@ -183,7 +183,7 @@ export const Layout: React.FC = () => {
     if (mobileMenuAcik) {
       document.body.style.overflow = 'hidden';
       document.body.classList.add('menu-open');
-      
+
       // Mobil menüyü görünür yap
       const mobileMenuElement = document.querySelector('.mobile-menu-panel');
       if (mobileMenuElement) {
@@ -194,7 +194,7 @@ export const Layout: React.FC = () => {
         mobileMenuElement.style.visibility = 'visible';
         mobileMenuElement.style.transform = 'translateX(0)';
       }
-      
+
       // Overlayi görünür yap
       const overlayElement = document.querySelector('.fixed.inset-0.bg-gray-600');
       if (overlayElement) {
@@ -204,13 +204,13 @@ export const Layout: React.FC = () => {
     } else {
       document.body.style.overflow = 'unset';
       document.body.classList.remove('menu-open');
-      
+
       // Mobil menüyü gizle
       const mobileMenuElement = document.querySelector('.mobile-menu-panel');
       if (mobileMenuElement) {
         mobileMenuElement.classList.remove('visible');
         mobileMenuElement.classList.remove('transform-none');
-        
+
         // Animasyon bitiminde 300ms sonra tamamen gizle
         setTimeout(() => {
           if (!document.body.classList.contains('menu-open') && mobileMenuElement) {
@@ -219,7 +219,7 @@ export const Layout: React.FC = () => {
         }, 300);
       }
     }
-    
+
     return () => {
       document.body.style.overflow = 'unset';
       document.body.classList.remove('menu-open');
@@ -254,18 +254,18 @@ export const Layout: React.FC = () => {
 
   // Define navigation items based on user role
   let navigation = [];
-  
+
   // Basic navigation for all users
   const baseNavigation = [
     { name: 'Anasayfa', href: '/anasayfa', icon: Home },
   ];
-  
+
   // Navigation for bekci role
   const bekciNavigation = [
     ...baseNavigation,
     { name: 'Nöbet Kontrol', href: '/nobet-kontrol', icon: Shield }
   ];
-  
+
   // Navigation for regular users (tekniker, muhendis, yonetici, musteri)
   const regularNavigation = [
     ...baseNavigation,
@@ -293,53 +293,53 @@ export const Layout: React.FC = () => {
     { name: 'Sahalar', href: '/sahalar', icon: Building },
     { name: 'İstatistikler', href: '/istatistikler', icon: BarChart2 },
   ];
-  
+
   // Additional items for non-customer roles
   const nonCustomerItems = [
     { name: 'Performans', href: '/performans', icon: TrendingUp }
   ];
-  
+
   // Additional items for managers and engineers
   const managerEngineerItems = [
     { name: 'Aylık Kapsamlı Rapor', href: '/aylik-kapsamli-rapor', icon: FileBarChart }
   ];
-  
+
   // Additional items for managers
   const managerItems = [
     { name: 'Müşteriler', href: '/musteriler', icon: Users },
     { name: 'Ekip', href: '/ekip', icon: Users },
     { name: 'Şirket Ayarları', href: '/company-settings', icon: Building },
   ];
-  
+
   // Additional items for superadmin
   const superadminItems = [
     { name: 'Admin Paneli', href: '/admin', icon: Shield },
   ];
-  
+
   // Determine navigation based on role
   if (kullanici?.rol === 'bekci') {
     navigation = bekciNavigation;
   } else {
     navigation = [...regularNavigation];
-    
+
     // Add role-specific items
     if (kullanici?.rol !== 'musteri') {
       navigation.push(...nonCustomerItems);
     }
-    
+
     if (kullanici?.rol === 'yonetici' || kullanici?.rol === 'muhendis') {
       navigation.push(...managerEngineerItems);
     }
-    
+
     if (kullanici?.rol === 'yonetici') {
       navigation.push(...managerItems);
     }
-    
+
     if (kullanici?.rol === 'superadmin') {
       navigation.push(...superadminItems);
     }
   }
-  
+
   // Add settings to all navigations
   navigation.push({ name: 'Ayarlar', href: '/ayarlar', icon: Settings });
 
@@ -388,7 +388,7 @@ export const Layout: React.FC = () => {
                 if (item.children) {
                   const isActive = item.children.some(child => child.href === location.pathname);
                   const isExpanded = expandedMenus[item.name] || isActive;
-                  
+
                   return (
                     <div key={item.name} className="mb-1">
                       <button
@@ -409,7 +409,7 @@ export const Layout: React.FC = () => {
                           )
                         )}
                       </button>
-                      
+
                       <div className={`mt-1 space-y-1 ${isExpanded ? 'block' : 'hidden'}`}>
                         {item.children.map(child => (
                           <Link
@@ -429,7 +429,7 @@ export const Layout: React.FC = () => {
                     </div>
                   );
                 }
-                
+
                 return (
                   <Link
                     key={item.name}
@@ -473,15 +473,15 @@ export const Layout: React.FC = () => {
             >
               <Menu className="h-6 w-6" />
             </button>
-            
+
             <div className="flex-1 flex justify-between items-center">
               <div className="ml-4 lg:ml-0">
                 <h1 className="text-lg font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-xs">{pageTitle}</h1>
               </div>
-              
+
               <div className="flex items-center space-x-2 sm:space-x-4">
                 <BildirimMenusu />
-                
+
                 {/* User Profile */}
                 <div className="relative">
                   <button
@@ -500,7 +500,7 @@ export const Layout: React.FC = () => {
                     </div>
                     <ChevronDown className="h-4 w-4 text-gray-400" />
                   </button>
-                  
+
                   {/* Dropdown Menu */}
                   {profileMenuOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5 animate-fade-in">
@@ -587,7 +587,7 @@ export const Layout: React.FC = () => {
                     if (item.children) {
                       const isActive = item.children.some(child => child.href === location.pathname);
                       const isExpanded = expandedMenus[item.name] || isActive;
-                      
+
                       return (
                         <div key={item.name} className="mb-1">
                           <button
@@ -606,7 +606,7 @@ export const Layout: React.FC = () => {
                               <ChevronRight className="h-4 w-4" />
                             )}
                           </button>
-                          
+
                           <div className={`mt-1 space-y-1 ${isExpanded ? 'block animate-fade-in' : 'hidden'}`}>
                             {item.children.map(child => (
                               <Link
@@ -627,7 +627,7 @@ export const Layout: React.FC = () => {
                         </div>
                       );
                     }
-                    
+
                     return (
                       <Link
                         key={item.name}
@@ -646,7 +646,7 @@ export const Layout: React.FC = () => {
                   })}
                 </div>
               </div>
-              
+
               {/* Mobil menü alt kısmında çıkış butonu */}
               <div className="fixed bottom-0 w-full bg-[#071a3e] p-3 border-t border-gray-700">
                 <button

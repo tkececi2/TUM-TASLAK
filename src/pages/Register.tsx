@@ -26,18 +26,18 @@ export const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (form.password !== form.confirmPassword) {
       toast.error('Şifreler eşleşmiyor');
       return;
     }
-    
+
     if (form.password.length < 6) {
       toast.error('Şifre en az 6 karakter olmalıdır');
       return;
     }
-    
+
     if (!form.companyName.trim()) {
       toast.error('Şirket adı gereklidir');
       return;
@@ -60,9 +60,9 @@ export const Register = () => {
         form.email, 
         form.password
       );
-      
+
       const user = userCredential.user;
-      
+
       try {
         // 2. Create company in Firestore
         const companyRef = await addDoc(collection(db, 'companies'), {
@@ -72,7 +72,7 @@ export const Register = () => {
           email: form.email,
           phone: form.phone || null
         });
-        
+
         // 3. Create user profile in Firestore
         await setDoc(doc(db, 'kullanicilar', user.uid), {
           ad: form.fullName,
@@ -83,7 +83,7 @@ export const Register = () => {
           olusturmaTarihi: Timestamp.now(),
           companyId: companyRef.id // Link user to company
         });
-        
+
         // 4. Create default company settings
         await setDoc(doc(db, 'ayarlar', companyRef.id), {
           sirketAdi: form.companyName,
@@ -106,7 +106,7 @@ export const Register = () => {
     } catch (error: any) {
       console.error('Kayıt hatası:', error);
       let errorMessage = 'Kayıt sırasında bir hata oluştu';
-      
+
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Bu e-posta adresi zaten kullanımda';
         navigate('/login', { state: { email: form.email } });
@@ -117,7 +117,7 @@ export const Register = () => {
       } else if (error.code === 'permission-denied') {
         errorMessage = 'İşlem için yeterli izniniz yok. Lütfen sistem yöneticisi ile iletişime geçin.';
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -128,17 +128,17 @@ export const Register = () => {
     <div className="min-h-screen">
       {/* Arkaplan deseni */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-      
+
       <div className="relative flex min-h-screen">
         {/* Sol Bölüm - Tanıtım */}
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-50 to-primary-100 p-12 flex-col justify-between relative overflow-hidden">
           <div className="absolute inset-0 bg-primary-500/5 backdrop-blur-[1px]"></div>
-          
+
           <div className="relative">
             <div className="flex items-center space-x-3">
               <Sun className="h-12 w-12 text-primary-500" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Solar Takip</h1>
+                <h1 className="text-2xl font-bold text-gray-900">SolarVeyo</h1>
                 <p className="text-sm text-gray-600">Güneş Enerjisi Yönetimi</p>
               </div>
             </div>
@@ -180,7 +180,7 @@ export const Register = () => {
 
           <div className="relative">
             <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} Solar Takip. Tüm hakları saklıdır.
+              © {new Date().getFullYear()} SolarVeyo. Tüm hakları saklıdır.
             </p>
           </div>
         </div>
@@ -217,7 +217,7 @@ export const Register = () => {
                       value={form.companyName}
                       onChange={handleChange}
                       className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Şirketinizin adı"
+                      placeholder="SolarVeyo"
                     />
                   </div>
                 </div>
