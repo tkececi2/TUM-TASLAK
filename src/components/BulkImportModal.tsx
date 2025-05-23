@@ -58,7 +58,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
       encoding: "UTF-8", // Türkçe karakter desteği için
       complete: (results) => {
         const parsedData: ImportRow[] = [];
-        
+
         results.data.forEach((row: any) => {
           // Tarih ve üretim değerlerini kontrol et
           const tarihStr = row.TARİH || row.TARIH || row.Tarih || row.tarih || row.Date || row.date || '';
@@ -157,6 +157,17 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
     setStep('importing');
     setYukleniyor(true);
+
+      // Token yenileme - Firestore yetki sorunlarını önlemek için
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.getIdToken(true);
+          console.log('Toplu veri içe aktarma öncesi token yenilendi');
+        } catch (tokenError) {
+          console.warn('Token yenileme hatası:', tokenError);
+        }
+      }
+
     setProgress(0);
 
     try {
@@ -179,58 +190,58 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
         setYukleniyor(false);
         return;
       }
-      
+
       // Santral bilgilerini getir (elektrik fiyatları için)
       const santralDoc = await getDoc(doc(db, 'santraller', santralId));
       const santralData = santralDoc.exists() ? santralDoc.data() : null;
-      
+
       // Batch işlemi başlat (Firestore bir batch'te en fazla 500 işlem yapabilir)
       const batchSize = 450;
       const batches = [];
-      
+
       for (let i = 0; i < validData.length; i += batchSize) {
         const currentBatch = writeBatch(db);
         batches.push(currentBatch);
       }
 
       let processedCount = 0;
-      
+
       for (let i = 0; i < validData.length; i++) {
         const row = validData[i];
         const batchIndex = Math.floor(i / batchSize);
         const batch = batches[batchIndex];
-        
+
         // Tarih bilgisinden yıl ve ay bilgisini çıkar
         const tarihObj = new Date(row.tarih);
         const yil = tarihObj.getFullYear();
         const ayIndex = tarihObj.getMonth();
         const aylar = ['ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran', 'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'];
         const ay = aylar[ayIndex];
-        
+
         // Elektrik fiyatı ve dağıtım bedeli bilgilerini al
         let birimFiyat = 2.5; // Varsayılan değer
         let dagitimBedeliOrani = 0.2; // Varsayılan değer
-        
+
         if (santralData?.elektrikFiyatlari?.[yil]?.[ay]) {
           birimFiyat = santralData.elektrikFiyatlari[yil][ay].birimFiyat || birimFiyat;
           dagitimBedeliOrani = santralData.elektrikFiyatlari[yil][ay].dagitimBedeli || dagitimBedeliOrani;
         }
-        
+
         // Gelir hesaplama
         const gelir = row.gunlukUretim * birimFiyat;
-        
+
         // Dağıtım bedeli hesaplama
         const dagitimBedeli = gelir * dagitimBedeliOrani;
-        
+
         // Net gelir
         const netGelir = gelir - dagitimBedeli;
-        
+
         // CO2 tasarrufu hesaplama (yaklaşık değer: 0.5 kg CO2/kWh)
         const co2Tasarrufu = row.gunlukUretim * 0.5;
 
         // Kapasite faktörü hesaplama (24 saat üzerinden)
         let kapasiteFaktoru = 0;
-        
+
         if (santralKapasite > 0) {
           // Teorik maksimum günlük üretim (24 saat tam kapasite çalışma)
           const teorikMaksimum = santralKapasite * 24;
@@ -239,7 +250,7 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
         // Yeni doküman referansı oluştur
         const docRef = doc(collection(db, 'uretimVerileri'));
-        
+
         // Batch'e ekle
         batch.set(docRef, {
           santralId: santralId,
@@ -276,7 +287,14 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Toplu içe aktarma hatası:', error);
-      toast.error('Veriler içe aktarılırken bir hata oluştu');
+
+      // Firebase hata yönetimini kullan
+      await handleFirebaseError(error, 'Veriler içe aktarılırken bir hata oluştu');
+
+      // Yetki hatası durumunda özel mesaj göster
+      if (error.code === 'permission-denied') {
+        toast.error('Bu işlem için yetkiniz bulunmuyor veya oturumunuz sona ermiş. Lütfen sayfayı yenileyip tekrar deneyin.');
+      }
     } finally {
       setYukleniyor(false);
     }
@@ -285,11 +303,11 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
   const downloadTemplate = () => {
     // Türk standartlarına uygun CSV şablonu - sütunlar ayrı ayrı
     const csvContent = "TARİH,Günlük Üretim (kWh)\n01.01.2024,1925\n02.01.2024,1830\n03.01.2024,1756";
-    
+
     // UTF-8 BOM ekleyerek Türkçe karakter desteğini sağla
     const BOM = "\uFEFF";
     const csvContentWithBOM = BOM + csvContent;
-    
+
     const blob = new Blob([csvContentWithBOM], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -412,25 +430,25 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
                       // Tarih bilgisinden yıl ve ay bilgisini çıkar
                       let birimFiyat = 2.5; // Varsayılan değer
                       let dagitimBedeliOrani = 0.2; // Varsayılan değer
-                      
+
                       if (row.valid) {
                         const tarihObj = new Date(row.tarih);
                         const yil = tarihObj.getFullYear();
                         const ayIndex = tarihObj.getMonth();
                         const aylar = ['ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran', 'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'];
                         const ay = aylar[ayIndex];
-                        
+
                         // Elektrik fiyatı ve dağıtım bedeli bilgilerini al
                         if (secilenSantral?.elektrikFiyatlari?.[yil]?.[ay]) {
                           birimFiyat = secilenSantral.elektrikFiyatlari[yil][ay].birimFiyat || birimFiyat;
                           dagitimBedeliOrani = secilenSantral.elektrikFiyatlari[yil][ay].dagitimBedeli || dagitimBedeliOrani;
                         }
                       }
-                      
+
                       // Gelir hesaplama
                       const gelir = row.gunlukUretim * birimFiyat;
                       const netGelir = gelir * (1 - dagitimBedeliOrani);
-                      
+
                       return (
                         <tr key={index} className={row.valid ? '' : 'bg-red-50'}>
                           <td className="px-6 py-4 whitespace-nowrap">

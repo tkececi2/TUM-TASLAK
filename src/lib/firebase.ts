@@ -47,7 +47,15 @@ if (process.env.NODE_ENV === 'development') {
 
 // Düzeltilmiş persistence konfigürasyonu
 try {
-  // Uygulamanın yenilenmesine veya diğer sekmelerde de çalışmasına izin veriyoruz
+  // Web içinde IndexedDB sorunlarını önlemek için bellek tabanlı cache kullanma
+  // Bu, Replit WebView ile daha uyumlu çalışacaktır
+  console.warn('Hafıza tabanlı önbellek kullanılacak.');
+  
+  // IndexedDB persistence'ı devre dışı bırakıyoruz ve yalnızca bellek önbelleğini kullanıyoruz
+  // Bu, permission-denied ve failed-precondition hatalarını azaltacaktır
+  
+  // Gerekirse ileride etkinleştirmek için kod burada kalıyor (ancak şu an devre dışı)
+  /*
   enableIndexedDbPersistence(db, {
     synchronizeTabs: true  // Bu, çoklu sekme desteğini etkinleştirir
   }).catch((err) => {
@@ -59,8 +67,8 @@ try {
     } else {
       console.error('Persistence hatası:', err);
     }
-    // Bu durumda Firebase otomatik olarak bellek önbelleğine düşecektir
   });
+  */
 } catch (error) {
   console.error('Persistence yapılandırma hatası:', error);
   console.warn('Hafıza tabanlı önbellek kullanılacak.');

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format, parseISO, startOfMonth, endOfMonth, subMonths, addMonths, getYear, getMonth, startOfYear, endOfYear } from 'date-fns';
 import { tr } from 'date-fns/locale';
