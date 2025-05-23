@@ -209,6 +209,8 @@
 }
 
 .bg-gradient-light {
+  @apply bg-gradient-to-br from-gray-50 to-gray-100;
+}
 
 /* Ekstra mobil düzenlemeler */
 @media (max-width: 640px) {
@@ -230,9 +232,6 @@
   main {
     padding-left: 36px !important;
   }
-}
-
-  @apply bg-gradient-to-br from-gray-50 to-gray-100;
 }
 
 /* Özel Kenarlıklar */
