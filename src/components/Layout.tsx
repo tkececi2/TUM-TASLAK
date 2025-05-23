@@ -510,7 +510,7 @@ export const Layout: React.FC = () => {
           {/* Page Content */}
           <main className={`flex-1 overflow-auto bg-gray-50 p-6 transition-all duration-300 ${
             !menuAcik ? 'lg:pl-24' : 'lg:pl-6'
-          } pl-24 sm:pl-28 md:pl-32 relative z-20`}>
+          } relative z-20`}>
             <div className="max-w-7xl mx-auto relative">
               <Outlet />
             </div>
@@ -612,6 +612,17 @@ export const Layout: React.FC = () => {
                     );
                   })}
                 </div>
+              </div>
+              
+              {/* Mobil menü alt kısmında çıkış butonu */}
+              <div className="fixed bottom-0 w-full bg-[#071a3e] p-3 border-t border-gray-700">
+                <button
+                  onClick={handleCikis}
+                  className="w-full flex items-center justify-center py-3 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  <span>Çıkış Yap</span>
+                </button>
               </div>
             </div>
           </>
