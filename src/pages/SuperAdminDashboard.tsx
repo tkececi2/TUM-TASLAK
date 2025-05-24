@@ -19,6 +19,9 @@ export const SuperAdminDashboard: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [stats, setStats] = useState({
     totalCompanies: 0,
     totalUsers: 0,
@@ -87,6 +90,42 @@ export const SuperAdminDashboard: React.FC = () => {
   const handleRefresh = () => {
     setRefreshing(true);
     fetchCompanies();
+  };
+
+  const handleViewCompany = (company: Company) => {
+    setSelectedCompany(company);
+    setIsViewModalOpen(true);
+  };
+
+  const handleEditCompany = (company: Company) => {
+    setSelectedCompany(company);
+    setIsEditModalOpen(true);
+  };
+  
+  const handleUpdateCompany = async (companyData: Partial<Company>) => {
+    if (!selectedCompany) return;
+    
+    try {
+      setLoading(true);
+      
+      await updateDoc(doc(db, 'companies', selectedCompany.id), {
+        ...companyData,
+        updatedAt: new Date(),
+        updatedBy: kullanici?.id
+      });
+      
+      toast.success('Şirket bilgileri başarıyla güncellendi');
+      
+      // Refresh the list
+      setIsEditModalOpen(false);
+      fetchCompanies();
+      
+    } catch (error) {
+      console.error('Error updating company:', error);
+      toast.error('Şirket güncellenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteCompany = async (companyId: string) => {
@@ -281,12 +320,14 @@ export const SuperAdminDashboard: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <button
+                          onClick={() => handleViewCompany(company)}
                           className="text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded"
                           title="Görüntüle"
                         >
                           <Eye className="h-5 w-5" />
                         </button>
                         <button
+                          onClick={() => handleEditCompany(company)}
                           className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded"
                           title="Düzenle"
                         >
@@ -317,6 +358,204 @@ export const SuperAdminDashboard: React.FC = () => {
           mesaj="Bu şirketi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve şirkete ait tüm veriler silinecektir."
           baslik="Şirket Silme Onayı"
         />
+      )}
+
+      {/* View Company Modal */}
+      {isViewModalOpen && selectedCompany && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center">
+          <div className="relative mx-auto p-5 border w-full max-w-2xl bg-white rounded-md shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Şirket Detayları</h3>
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-center mb-6">
+                {selectedCompany.logo ? (
+                  <img 
+                    src={selectedCompany.logo} 
+                    alt={selectedCompany.name} 
+                    className="h-20 w-20 rounded-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/solar-logo.png';
+                    }}
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
+                    <Building className="h-10 w-10 text-gray-500" />
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Şirket Adı</p>
+                  <p className="text-base">{selectedCompany.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Slogan</p>
+                  <p className="text-base">{selectedCompany.slogan || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">E-posta</p>
+                  <p className="text-base">{selectedCompany.email || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Telefon</p>
+                  <p className="text-base">{selectedCompany.phone || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Web Sitesi</p>
+                  <p className="text-base">{selectedCompany.website || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Adres</p>
+                  <p className="text-base">{selectedCompany.address || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Oluşturulma Tarihi</p>
+                  <p className="text-base">
+                    {format(selectedCompany.createdAt.toDate(), 'dd MMMM yyyy, HH:mm', { locale: tr })}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setIsViewModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Company Modal */}
+      {isEditModalOpen && selectedCompany && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center">
+          <div className="relative mx-auto p-5 border w-full max-w-2xl bg-white rounded-md shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Şirket Düzenle</h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const companyData = {
+                name: formData.get('name') as string,
+                slogan: formData.get('slogan') as string,
+                email: formData.get('email') as string,
+                phone: formData.get('phone') as string,
+                website: formData.get('website') as string,
+                address: formData.get('address') as string,
+              };
+              handleUpdateCompany(companyData);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Şirket Adı *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    defaultValue={selectedCompany.name}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="slogan" className="block text-sm font-medium text-gray-700">
+                    Slogan
+                  </label>
+                  <input
+                    type="text"
+                    name="slogan"
+                    id="slogan"
+                    defaultValue={selectedCompany.slogan || ""}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    E-posta
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    id="email"
+                    defaultValue={selectedCompany.email || ""}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                    Telefon
+                  </label>
+                  <input
+                    type="text"
+                    name="phone"
+                    id="phone"
+                    defaultValue={selectedCompany.phone || ""}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="website" className="block text-sm font-medium text-gray-700">
+                    Web Sitesi
+                  </label>
+                  <input
+                    type="text"
+                    name="website"
+                    id="website"
+                    defaultValue={selectedCompany.website || ""}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                    Adres
+                  </label>
+                  <textarea
+                    name="address"
+                    id="address"
+                    rows={3}
+                    defaultValue={selectedCompany.address || ""}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Kaydet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
