@@ -141,6 +141,168 @@ export const sendArizaUpdateToWebhook = functions.firestore
       });
       
       if (!response.ok) {
+        throw new Error(`Webhook Error: ${response.status} ${response.statusText}`);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending webhook:', error);
+      return { error: error.message };
+    }
+  });
+
+// E-posta bildirimleri gönderme fonksiyonu
+export const sendArizaEmailNotifications = functions.firestore
+  .document('arizalar/{arizaId}')
+  .onWrite(async (change, context) => {
+    try {
+      const arizaId = context.params.arizaId;
+      
+      // Belge silindiyse işlem yapma
+      if (!change.after.exists) {
+        return null;
+      }
+      
+      const arizaData = change.after.data();
+      
+      // Bildirim zaten gönderildiyse çık
+      if (arizaData.bildirimGonderildi === true) {
+        return null;
+      }
+      
+      // Bildirim tipi yoksa işlem yapma
+      if (!arizaData.bildirimTipi) {
+        return null;
+      }
+      
+      // Arıza bilgilerini al
+      const baslik = arizaData.baslik;
+      const aciklama = arizaData.aciklama;
+      const konum = arizaData.konum;
+      const durum = arizaData.durum;
+      const oncelik = arizaData.oncelik;
+      const companyId = arizaData.companyId;
+      
+      // Saha bilgilerini al
+      let sahaAdi = 'Bilinmeyen Saha';
+      if (arizaData.saha) {
+        const sahaDoc = await admin.firestore().doc(`sahalar/${arizaData.saha}`).get();
+        if (sahaDoc.exists) {
+          sahaAdi = sahaDoc.data()?.ad || 'Bilinmeyen Saha';
+        }
+      }
+      
+      // Bildirimi göndereceğimiz kişileri belirle
+      let aliciIdleri: string[] = [];
+      let aliciEmailleri: string[] = [];
+      
+      if (arizaData.bildirimTipi === 'ariza_olusturuldu') {
+        // Yöneticileri ve arıza atanan kişiyi bul
+        const yoneticiQuery = await admin.firestore()
+          .collection('kullanicilar')
+          .where('rol', '==', 'yonetici')
+          .where('companyId', '==', companyId)
+          .get();
+        
+        aliciIdleri = yoneticiQuery.docs.map(doc => doc.id);
+        
+        // Atanan kişi varsa ekle
+        if (arizaData.atananKisi) {
+          aliciIdleri.push(arizaData.atananKisi);
+        }
+      } else if (arizaData.bildirimTipi === 'ariza_cozuldu') {
+        // Arızayı oluşturan kişi ve yöneticileri bul
+        if (arizaData.olusturanKisi) {
+          aliciIdleri.push(arizaData.olusturanKisi);
+        }
+        
+        const yoneticiQuery = await admin.firestore()
+          .collection('kullanicilar')
+          .where('rol', '==', 'yonetici')
+          .where('companyId', '==', companyId)
+          .get();
+        
+        yoneticiQuery.docs.forEach(doc => {
+          if (!aliciIdleri.includes(doc.id)) {
+            aliciIdleri.push(doc.id);
+          }
+        });
+      }
+      
+      // Alıcı e-posta adreslerini topla
+      if (aliciIdleri.length > 0) {
+        const aliciVerileri = await Promise.all(
+          aliciIdleri.map(id => 
+            admin.firestore().doc(`kullanicilar/${id}`).get()
+          )
+        );
+        
+        aliciEmailleri = aliciVerileri
+          .filter(doc => doc.exists && doc.data()?.email)
+          .map(doc => doc.data()?.email);
+      }
+      
+      // E-posta gönder
+      if (aliciEmailleri.length > 0) {
+        const mailOptions = {
+          from: '"GES Yönetim Sistemi" <noreply@gesyonetim.com>',
+          to: aliciEmailleri.join(','),
+          subject: arizaData.bildirimTipi === 'ariza_olusturuldu' 
+            ? `Yeni Arıza Bildirimi: ${baslik}` 
+            : `Arıza Çözüldü: ${baslik}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background-color: ${arizaData.bildirimTipi === 'ariza_olusturuldu' ? '#f97316' : '#22c55e'}; padding: 20px; text-align: center; color: white;">
+                <h1>${arizaData.bildirimTipi === 'ariza_olusturuldu' ? 'Yeni Arıza Bildirimi' : 'Arıza Çözüldü'}</h1>
+              </div>
+              <div style="padding: 20px; border: 1px solid #e5e7eb; border-top: none;">
+                <h2 style="color: #374151;">${baslik}</h2>
+                <p style="color: #4b5563;"><strong>Açıklama:</strong> ${aciklama}</p>
+                <p style="color: #4b5563;"><strong>Konum:</strong> ${konum}</p>
+                <p style="color: #4b5563;"><strong>Saha:</strong> ${sahaAdi}</p>
+                <p style="color: #4b5563;"><strong>Durum:</strong> ${durum.charAt(0).toUpperCase() + durum.slice(1).replace('-', ' ')}</p>
+                <p style="color: #4b5563;"><strong>Öncelik:</strong> ${oncelik.charAt(0).toUpperCase() + oncelik.slice(1)}</p>
+                <div style="margin-top: 30px; text-align: center;">
+                  <a href="${process.env.APP_URL || 'https://gesyonetim.com'}/arizalar/${arizaId}" 
+                     style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+                    Arıza Detaylarını Görüntüle
+                  </a>
+                </div>
+              </div>
+              <div style="background-color: #f3f4f6; padding: 10px; text-align: center; font-size: 12px; color: #6b7280;">
+                <p>Bu e-posta GES Yönetim Sistemi tarafından otomatik olarak gönderilmiştir.</p>
+              </div>
+            </div>
+          `
+        };
+        
+        // Burada gerçek e-posta gönderme işlemi yapılacak
+        // Firebase Extensions > Trigger Email kullanabilirsiniz
+        // Veya nodemailer ile SMTP üzerinden e-posta gönderebilirsiniz
+        
+        console.log('E-posta gönderilecek:', mailOptions);
+        
+        // Extensions'a email gönderme isteği ekle
+        await admin.firestore().collection('mail').add({
+          to: aliciEmailleri,
+          message: {
+            subject: mailOptions.subject,
+            html: mailOptions.html
+          }
+        });
+      }
+      
+      // Bildirimi gönderildi olarak işaretle
+      await admin.firestore().doc(`arizalar/${arizaId}`).update({
+        bildirimGonderildi: true
+      });
+      
+      return { success: true, recipientCount: aliciEmailleri.length };
+    } catch (error) {
+      console.error('E-posta gönderme hatası:', error);
+      return { error: error.message };
+    }
+  });se.ok) {
         throw new Error(`Webhook error: ${response.status} ${response.statusText}`);
       }
       
