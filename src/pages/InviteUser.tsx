@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { Sun, Mail, Lock, User, Building, Check, X } from 'lucide-react';
+import { Sun, Mail, Lock, User, Building, Check } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -40,22 +40,22 @@ export const InviteUser: React.FC = () => {
       try {
         setLoading(true);
         const inviteDoc = await getDoc(doc(db, 'invitations', inviteId));
-        
+
         if (!inviteDoc.exists()) {
           toast.error('Davet bulunamadı veya geçersiz');
           navigate('/login');
           return;
         }
-        
+
         const inviteData = inviteDoc.data() as Invitation;
-        
+
         // Check if invitation is already used
         if (inviteData.used) {
           toast.error('Bu davet daha önce kullanılmış');
           navigate('/login');
           return;
         }
-        
+
         // Check if invitation is expired
         const now = new Date();
         if (inviteData.expiresAt.toDate() < now) {
@@ -63,7 +63,7 @@ export const InviteUser: React.FC = () => {
           setInvitation(inviteData);
           return;
         }
-        
+
         setInvitation(inviteData);
       } catch (error) {
         console.error('Error fetching invitation:', error);
@@ -84,20 +84,20 @@ export const InviteUser: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!invitation) return;
-    
+
     // Validate form
     if (form.password !== form.confirmPassword) {
       toast.error('Şifreler eşleşmiyor');
       return;
     }
-    
+
     if (form.password.length < 6) {
       toast.error('Şifre en az 6 karakter olmalıdır');
       return;
     }
-    
+
     if (!form.fullName.trim()) {
       toast.error('Ad Soyad gereklidir');
       return;
@@ -112,9 +112,9 @@ export const InviteUser: React.FC = () => {
         invitation.email, 
         form.password
       );
-      
+
       const user = userCredential.user;
-      
+
       // 2. Create user profile in Firestore
       await setDoc(doc(db, 'kullanicilar', user.uid), {
         ad: form.fullName,
@@ -124,7 +124,7 @@ export const InviteUser: React.FC = () => {
         fotoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.fullName)}&background=random`,
         olusturmaTarihi: Timestamp.now()
       });
-      
+
       // 3. Mark invitation as used
       await updateDoc(doc(db, 'invitations', inviteId!), {
         used: true,
@@ -137,11 +137,11 @@ export const InviteUser: React.FC = () => {
     } catch (error: any) {
       console.error('Kayıt hatası:', error);
       let errorMessage = 'Kayıt sırasında bir hata oluştu';
-      
+
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'Bu e-posta adresi zaten kullanımda. Lütfen giriş yapın.';
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -162,7 +162,7 @@ export const InviteUser: React.FC = () => {
         <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-              <X className="h-6 w-6 text-red-600" />
+              <div className="h-6 w-6 text-red-600">✕</div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Davet Süresi Dolmuş</h2>
             <p className="text-gray-600 mb-6">
@@ -186,7 +186,7 @@ export const InviteUser: React.FC = () => {
         <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
           <div className="text-center">
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-              <X className="h-6 w-6 text-red-600" />
+              <div className="h-6 w-6 text-red-600">✕</div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Geçersiz Davet</h2>
             <p className="text-gray-600 mb-6">
