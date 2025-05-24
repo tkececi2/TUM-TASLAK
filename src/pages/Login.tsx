@@ -41,6 +41,12 @@ export const Login = () => {
       return;
     }
     
+    // Form validasyonu
+    if (!email || !password) {
+      toast.error('Lütfen e-posta ve şifre alanlarını doldurun');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -51,7 +57,11 @@ export const Login = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      // Error handling is done in girisYap function
+      // Özel hata mesajı göster
+      if (error instanceof TypeError) {
+        toast.error('Giriş işlemi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+      }
+      // Diğer hatalar AuthContext içindeki girisYap fonksiyonunda ele alınıyor
     } finally {
       setLoading(false);
     }

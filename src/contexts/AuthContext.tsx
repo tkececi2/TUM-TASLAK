@@ -35,15 +35,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const normalizeUserData = (userData: any): Kullanici => {
     // Sahalar dizisini kontrol et
     let sahalar = userData.sahalar || [];
-    
+
     // Eğer sahalar bir dizi değilse, dizi haline getir
     if (sahalar && !Array.isArray(sahalar)) {
       sahalar = Object.keys(sahalar);
     }
-    
+
     // Ensure companyId exists (default to empty string if not present)
     const companyId = userData.companyId || '';
-    
+
     return {
       ...userData,
       sahalar,
@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userDoc = await getDoc(doc(db, 'kullanicilar', userId));
       if (!userDoc.exists()) return null;
-      
+
       const userData = userDoc.data();
       return normalizeUserData({ id: userId, ...userData });
     } catch (error) {
@@ -87,14 +87,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           // Force token refresh to get the latest custom claims
           await user.getIdToken(true);
-          
+
           // Get the token result to check custom claims
           const idTokenResult = await user.getIdTokenResult();
           console.log('User token claims:', idTokenResult.claims);
-          
+
           // Kullanıcı profili bilgilerini getir
           const userData = await fetchUserProfile(user.uid);
-          
+
           if (userData) {
             // Add the role from custom claims if it exists
             if (idTokenResult.claims.rol) {
@@ -103,10 +103,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else {
               console.log('No role in custom claims, using role from Firestore:', userData.rol);
             }
-            
+
             setKullanici(userData);
             authService.setCurrentUser(userData);
-            
+
             console.log('User authenticated with role:', userData.rol);
           } else {
             await signOut(auth);
@@ -158,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const user = await signInUser(email, sifre);
-      
+
       // Force token refresh to get the latest custom claims - 3 kez deneyelim
       let tokenRefreshed = false;
       let attempts = 0;
@@ -172,14 +172,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await new Promise(resolve => setTimeout(resolve, 1000)); // 1 saniye bekle
         }
       }
-      
+
       // Get the token result to check custom claims
       const idTokenResult = await user.getIdTokenResult();
       console.log('Login token claims:', idTokenResult.claims);
-      
+
       // Kullanıcı profili bilgilerini getir
       const userData = await fetchUserProfile(user.uid);
-      
+
       if (userData) {
         // Add the role from custom claims if it exists
         if (idTokenResult.claims.rol) {
@@ -188,7 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           console.log('No role in custom claims after login, using role from Firestore:', userData.rol);
         }
-        
+
         // Süper admin ise deneme süresi kontrolü yapmadan devam et
         if (userData.rol === 'superadmin') {
           setKullanici(userData);
@@ -197,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast.success('Giriş başarılı');
           return true;
         }
-        
+
         // Deneme süresi kontrolü
         if (userData.odemeDurumu === 'surebitti') {
           toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
@@ -206,21 +206,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setKullanici(null);
           return false;
         }
-        
+
         // Deneme süresi kontrolü - süre dolmuş mu?
         if (userData.odemeDurumu === 'deneme' && userData.denemeSuresiBitis) {
           const simdikiZaman = new Date().getTime();
           const bitisTarihi = userData.denemeSuresiBitis.toDate ? 
                                userData.denemeSuresiBitis.toDate().getTime() : 
                                new Date(userData.denemeSuresiBitis).getTime();
-          
+
           if (simdikiZaman > bitisTarihi) {
             // Deneme süresi bitmiş, kullanıcı bilgisini güncelle
             try {
               await updateDoc(doc(db, 'kullanicilar', userData.id), {
                 odemeDurumu: 'surebitti'
               });
-              
+
               toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
               await signOut(auth);
               authService.clearUserData();
@@ -237,14 +237,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
           }
         }
-        
+
         setKullanici(userData);
         authService.setCurrentUser(userData);
         console.log('User logged in with role:', userData.rol);
         toast.success('Giriş başarılı');
         return true;
       }
-      
+
       toast.error('Kullanıcı profili bulunamadı');
       await signOut(auth);
       authService.clearUserData();
@@ -252,7 +252,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } catch (error: any) {
       console.error('Giriş hatası:', error);
-      
+
       // Hata mesajını belirle
       let errorMessage = 'Giriş yapılırken bir hata oluştu';
       if (error.code === 'auth/invalid-credential') {
@@ -266,7 +266,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (error.code === 'auth/network-request-failed') {
         errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin ve tekrar deneyin';
       }
-      
+
       toast.error(errorMessage);
       return false;
     }
@@ -282,12 +282,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Kullanıcı durumunu güncelle
       authService.clearUserData();
       setKullanici(null);
-      
+
       // Önbellek verileri temizle
       try {
         // Clear localStorage (token ve oturum bilgilerini temizle)
         localStorage.clear();
-        
+
         // Clear IndexedDB (Firebase offline data)
         const databases = await window.indexedDB.databases();
         for (const db of databases) {
@@ -295,13 +295,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             window.indexedDB.deleteDatabase(db.name);
           }
         }
-        
+
         // Clear Cache API
         if ('caches' in window) {
           const cacheKeys = await caches.keys();
           await Promise.all(cacheKeys.map(key => caches.delete(key)));
         }
-        
+
         // Unregister service workers
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
@@ -310,12 +310,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (cleanupError) {
         console.error('Önbellek temizleme hatası:', cleanupError);
       }
-      
+
       // Son olarak Firebase'den çıkış yap - bu işlemi en sona bırakıyoruz
       await signOut(auth);
 
       toast.success('Başarıyla çıkış yapıldı');
-      
+
       // Sayfayı yeniden yükle (login sayfasına yönlendirilecek)
       setTimeout(() => {
         window.location.href = '/login';
@@ -323,7 +323,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Çıkış yapılırken hata:', error);
       toast.error('Çıkış yapılırken bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.');
-      
+
       // Hata durumunda da login sayfasına yönlendir
       setTimeout(() => {
         window.location.href = '/login';
