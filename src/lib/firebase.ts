@@ -53,13 +53,17 @@ const initializeFirestore = async () => {
     await cleanupFirestoreDBs();
     
     // Firestore önbellek yapılandırması
-    const firestoreSettings = {
-      cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-      ignoreUndefinedProperties: true
-    };
-    
-    // Ayarları uygula
-    db.settings(firestoreSettings);
+    try {
+      // Ayarları uygula
+      const firestoreDb = getFirestore(app);
+      firestoreDb.settings({
+        cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+        ignoreUndefinedProperties: true
+      });
+    } catch (settingsError) {
+      console.error('Firestore settings error:', settingsError);
+      // Temel ayarlar ile devam et
+    }
     
     // Ağ bağlantısını etkinleştir
     try {
