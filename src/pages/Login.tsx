@@ -21,7 +21,7 @@ export const Login = () => {
   useEffect(() => {
     const isLoggedOut = sessionStorage.getItem('isLoggedOut') === 'true' || 
                        localStorage.getItem('isLoggedOut') === 'true';
-    
+
     if (isLoggedOut) {
       return;
     }
@@ -34,40 +34,80 @@ export const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check if the browser is online
-    if (!navigator.onLine) {
-      toast.error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.');
-      return;
-    }
-    
-    // Form validasyonu
-    if (!email || !password) {
-      toast.error('Lütfen e-posta ve şifre alanlarını doldurun');
-      return;
-    }
-    
     setLoading(true);
 
     try {
+      console.log('Giriş yapılıyor:', email);
+
+      // Önce tarayıcının çevrimiçi olup olmadığını kontrol et
+      if (!navigator.onLine) {
+        toast.error('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edin ve tekrar deneyin.');
+        throw new Error('İnternet bağlantısı yok');
+      }
+
+      // Önbellek temizliği deneyin
+      try {
+        localStorage.removeItem('firebase:previous_websocket_failure');
+
+        // IndexedDB temizliği
+        const databases = await window.indexedDB.databases();
+        for (const db of databases) {
+          if (db.name && db.name.includes('firestore')) {
+            window.indexedDB.deleteDatabase(db.name);
+          }
+        }
+      } catch (cleanupError) {
+        console.warn('Önbellek temizleme hatası:', cleanupError);
+      }
+
       const success = await girisYap(email, password);
+      console.log('Giriş sonucu:', success);
+
       if (success) {
         const from = (location.state as any)?.from?.pathname || '/anasayfa';
+        console.log('Yönlendiriliyor:', from);
         navigate(from, { replace: true });
+      } else {
+        console.log('Giriş başarısız, girisYap false döndü');
       }
     } catch (error: any) {
-      // Hata detaylarını düzgün bir şekilde logla
-      console.error('Login error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2) || 'Bilinmeyen hata');
-      
+      console.error('Login error:', error);
+
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      } else {
+        console.error('Non-Error object thrown:', typeof error, JSON.stringify(error));
+      }
+
       // Güvenli bir şekilde hata mesajı göster
       let errorMessage = 'Giriş işlemi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.';
-      
+
       // Daha spesifik hata mesajları için kontrol
       if (error) {
         if (typeof error === 'object') {
           if (error.code) {
-            // Firebase hata kodları için kontrol - AuthContext'te zaten işleniyor
+            // Firebase hata kodları için kontrol
             console.log('Firebase hata kodu:', error.code);
+            switch (error.code) {
+              case 'auth/invalid-credential':
+                errorMessage = 'E-posta adresi veya şifre hatalı';
+                break;
+              case 'auth/user-not-found':
+                errorMessage = 'Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı';
+                break;
+              case 'auth/wrong-password':
+                errorMessage = 'Şifre hatalı';
+                break;
+              case 'auth/too-many-requests':
+                errorMessage = 'Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin.';
+                break;
+              default:
+                errorMessage = `Giriş hatası: ${error.code}`;
+            }
           } else if (error.message) {
             errorMessage = error.message;
           } else if (error instanceof TypeError) {
@@ -77,7 +117,7 @@ export const Login = () => {
           errorMessage = error;
         }
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -105,7 +145,7 @@ export const Login = () => {
     } catch (error: any) {
       console.error('Password reset error:', error);
       let errorMessage = 'Şifre sıfırlama bağlantısı gönderilemedi';
-      
+
       if (error.code === 'auth/user-not-found') {
         errorMessage = 'Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı';
       } else if (error.code === 'auth/invalid-email') {
@@ -115,7 +155,7 @@ export const Login = () => {
       } else if (error.code === 'auth/network-request-failed') {
         errorMessage = 'Ağ bağlantısı hatası. İnternet bağlantınızı kontrol edin';
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -144,12 +184,12 @@ export const Login = () => {
     <div className="min-h-screen">
       {/* Arkaplan deseni */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
-      
+
       <div className="relative flex min-h-screen">
         {/* Sol Bölüm - Tanıtım */}
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-50 to-primary-100 p-12 flex-col justify-between relative overflow-hidden">
           <div className="absolute inset-0 bg-primary-500/5 backdrop-blur-[1px]"></div>
-          
+
           <div className="relative">
             <div className="flex items-center space-x-3">
               <Sun className="h-12 w-12 text-primary-500" />

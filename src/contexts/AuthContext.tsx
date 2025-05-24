@@ -223,43 +223,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Deneme süresi kontrolü
-        if (userData.odemeDurumu === 'surebitti') {
-          toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
-          await signOut(auth);
-          authService.clearUserData();
-          setKullanici(null);
-          return false;
-        }
+        try {
+          console.log('Ödeme durumu kontrolü:', userData.odemeDurumu);
+          
+          if (userData.odemeDurumu === 'surebitti') {
+            console.log('Ödeme durumu: süre bitti');
+            toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
+            await signOut(auth);
+            authService.clearUserData();
+            setKullanici(null);
+            return false;
+          }
 
-        // Deneme süresi kontrolü - süre dolmuş mu?
-        if (userData.odemeDurumu === 'deneme' && userData.denemeSuresiBitis) {
-          const simdikiZaman = new Date().getTime();
-          const bitisTarihi = userData.denemeSuresiBitis.toDate ? 
-                               userData.denemeSuresiBitis.toDate().getTime() : 
-                               new Date(userData.denemeSuresiBitis).getTime();
+          // Deneme süresi kontrolü - süre dolmuş mu?
+          if (userData.odemeDurumu === 'deneme' && userData.denemeSuresiBitis) {
+            console.log('Deneme süresi bitiş tarihi:', userData.denemeSuresiBitis);
+            
+            const simdikiZaman = new Date().getTime();
+            let bitisTarihi;
+            
+            // Firestore Timestamp ve diğer tarih tipleri için güvenli dönüşüm
+            if (userData.denemeSuresiBitis.toDate) {
+              // Firestore Timestamp
+              bitisTarihi = userData.denemeSuresiBitis.toDate().getTime();
+              console.log('Bitiş tarihi (Timestamp):', new Date(bitisTarihi));
+            } else if (userData.denemeSuresiBitis.seconds) {
+              // Firestore Timestamp (farklı format)
+              bitisTarihi = new Date(userData.denemeSuresiBitis.seconds * 1000).getTime();
+              console.log('Bitiş tarihi (seconds):', new Date(bitisTarihi));
+            } else if (userData.denemeSuresiBitis instanceof Date) {
+              // JavaScript Date nesnesi
+              bitisTarihi = userData.denemeSuresiBitis.getTime();
+              console.log('Bitiş tarihi (Date):', new Date(bitisTarihi));
+            } else {
+              // String veya number olabilir
+              bitisTarihi = new Date(userData.denemeSuresiBitis).getTime();
+              console.log('Bitiş tarihi (string/number):', new Date(bitisTarihi));
+            }
 
-          if (simdikiZaman > bitisTarihi) {
-            // Deneme süresi bitmiş, kullanıcı bilgisini güncelle
-            try {
-              await updateDoc(doc(db, 'kullanicilar', userData.id), {
-                odemeDurumu: 'surebitti'
+            console.log('Şimdiki zaman:', new Date(simdikiZaman));
+            console.log('Bitiş tarihi:', new Date(bitisTarihi));
+            console.log('Süre doldu mu:', simdikiZaman > bitisTarihi);
+
+            if (simdikiZaman > bitisTarihi) {
+              // Deneme süresi bitmiş, kullanıcı bilgisini güncelle
+              try {
+                console.log('Deneme süresi bitti, kullanıcı durumu güncelleniyor');
+                const userRef = doc(db, 'kullanicilar', userData.id);
+                await updateDoc(userRef, {
+                  odemeDurumu: 'surebitti'
+                });
+
+                toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
+                await signOut(auth);
+                authService.clearUserData();
+                setKullanici(null);
+                return false;
+              } catch (error) {
+                console.error('Kullanıcı durumu güncelleme hatası:', error);
+              }
+            } else {
+              // Deneme süresi devam ediyor, kalan süreyi hesapla ve göster
+              const kalanGun = Math.ceil((bitisTarihi - simdikiZaman) / (1000 * 60 * 60 * 24));
+              console.log('Kalan gün sayısı:', kalanGun);
+              toast.info(`Deneme sürenizin bitmesine ${kalanGun} gün kaldı.`, {
+                duration: 5000,
               });
-
-              toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
-              await signOut(auth);
-              authService.clearUserData();
-              setKullanici(null);
-              return false;
-            } catch (error) {
-              console.error('Kullanıcı durumu güncelleme hatası:', error);
             }
           } else {
-            // Deneme süresi devam ediyor, kalan süreyi hesapla ve göster
-            const kalanGun = Math.ceil((bitisTarihi - simdikiZaman) / (1000 * 60 * 60 * 24));
-            toast.info(`Deneme sürenizin bitmesine ${kalanGun} gün kaldı.`, {
-              duration: 5000,
-            });
+            console.log('Deneme süresi bilgisi eksik veya format uygun değil');
           }
+        } catch (denemeSuresiHatasi) {
+          console.error('Deneme süresi kontrolü hatası:', denemeSuresiHatasi);
+          // Hata durumunda kullanıcıyı engellemiyoruz, sadece logluyoruz
         }
 
         setKullanici(userData);

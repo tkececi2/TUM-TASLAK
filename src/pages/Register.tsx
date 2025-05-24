@@ -74,11 +74,12 @@ export const Register = () => {
         });
 
         // 3. Create user profile in Firestore
-         // Deneme süresi başlangıç ve bitiş tarihlerini hesapla (5 gün)
+        // Deneme süresi başlangıç ve bitiş tarihlerini hesapla (30 gün)
         const baslangicTarihi = Timestamp.now();
-        const bitisTarihi = Timestamp.fromDate(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)); // 5 gün ekle
-
-        await setDoc(doc(db, 'kullanicilar', user.uid), {
+        const bitisTarihi = new Date();
+        bitisTarihi.setDate(bitisTarihi.getDate() + 30); // 30 gün ekle
+        
+        const kullaniciData = {
           ad: form.fullName,
           email: form.email,
           telefon: form.phone || '',
@@ -87,9 +88,14 @@ export const Register = () => {
           olusturmaTarihi: Timestamp.now(),
           companyId: companyRef.id, // Link user to company
           denemeSuresiBaslangic: baslangicTarihi,
-          denemeSuresiBitis: bitisTarihi,
-          odemeDurumu: 'deneme'
-        });
+          denemeSuresiBitis: Timestamp.fromDate(bitisTarihi),
+          odemeDurumu: 'deneme',
+          sahalar: [] // Boş sahalar dizisi ekle
+        };
+        
+        console.log('Kullanıcı oluşturuluyor:', kullaniciData);
+        
+        await setDoc(doc(db, 'kullanicilar', user.uid), kullaniciData);
 
         // 4. Create default company settings
         await setDoc(doc(db, 'ayarlar', companyRef.id), {
