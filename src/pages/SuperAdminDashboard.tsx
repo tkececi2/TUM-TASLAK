@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where, Timestamp, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Building, Users, Calendar, Trash2, Edit2, Eye, Plus, Search, Filter, RefreshCw, X, Clock, CreditCard } from 'lucide-react';
@@ -179,11 +179,15 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  // Kullanıcı deneme süresini uzat
+  // Kullanıcı abonelik süresini yönet
   const handleExtendTrial = async (userId: string, days: number) => {
     try {
+      setLoading(true);
+      
       // Kullanıcı bilgilerini al
-      const userDoc = await getDoc(doc(db, 'kullanicilar', userId));
+      const userRef = doc(db, 'kullanicilar', userId);
+      const userDoc = await getDoc(userRef);
+      
       if (!userDoc.exists()) {
         toast.error('Kullanıcı bulunamadı');
         return;
@@ -191,54 +195,189 @@ export const SuperAdminDashboard: React.FC = () => {
 
       const userData = userDoc.data();
       let bitisTarihi;
+      let oncekiBitisTarihi = null;
+      let islemTipi = 'yeni';
 
       // Mevcut bitiş tarihi varsa, ona gün ekle
       if (userData.denemeSuresiBitis) {
         const mevcutBitisTarihi = userData.denemeSuresiBitis.toDate();
-        bitisTarihi = new Date(mevcutBitisTarihi.getTime() + days * 24 * 60 * 60 * 1000);
+        oncekiBitisTarihi = mevcutBitisTarihi;
+        
+        // Süre bittiyse, şimdiden itibaren yeni süre ekle
+        const simdikiZaman = new Date();
+        if (mevcutBitisTarihi < simdikiZaman) {
+          bitisTarihi = new Date(simdikiZaman.getTime() + days * 24 * 60 * 60 * 1000);
+          islemTipi = 'yenileme';
+        } else {
+          bitisTarihi = new Date(mevcutBitisTarihi.getTime() + days * 24 * 60 * 60 * 1000);
+          islemTipi = 'uzatma';
+        }
       } else {
         // Yoksa şimdiki tarihe gün ekle
         bitisTarihi = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        islemTipi = 'yeni';
       }
 
       // Kullanıcı bilgilerini güncelle
-      await updateDoc(doc(db, 'kullanicilar', userId), {
+      await updateDoc(userRef, {
         denemeSuresiBitis: Timestamp.fromDate(bitisTarihi),
-        odemeDurumu: 'deneme'
+        odemeDurumu: 'deneme',
+        sonGuncelleme: Timestamp.now(),
+        guncelleyenId: kullanici?.id || 'system'
+      });
+
+      // Abonelik geçmişi koleksiyonuna kayıt ekle
+      const abonelikRef = collection(db, 'abonelikGecmisi');
+      await addDoc(abonelikRef, {
+        kullaniciId: userId,
+        kullaniciEmail: userData.email,
+        islemTipi: islemTipi,
+        eklenenGun: days,
+        oncekiBitisTarihi: oncekiBitisTarihi ? Timestamp.fromDate(oncekiBitisTarihi) : null,
+        yeniBitisTarihi: Timestamp.fromDate(bitisTarihi),
+        islemTarihi: Timestamp.now(),
+        islemYapan: {
+          id: kullanici?.id || 'system',
+          email: kullanici?.email || 'system',
+          rol: kullanici?.rol || 'system'
+        }
+      });
+
+      // Kullanıcı bildirim koleksiyonuna bildirim ekle
+      const bildirimRef = collection(db, 'bildirimler');
+      await addDoc(bildirimRef, {
+        aliciId: userId,
+        baslik: 'Abonelik Süresi Güncellendi',
+        icerik: `Abonelik süreniz ${days} gün uzatıldı. Yeni bitiş tarihiniz: ${format(bitisTarihi, 'dd MMMM yyyy', { locale: tr })}`,
+        tarih: Timestamp.now(),
+        okundu: false,
+        tur: 'abonelik'
       });
 
       // Kullanıcıları yeniden getir
       fetchUsers();
 
-      toast.success(`Deneme süresi ${days} gün uzatıldı`);
+      // İşlem tipine göre farklı mesaj göster
+      if (islemTipi === 'yeni') {
+        toast.success(`${days} günlük yeni abonelik oluşturuldu. Bitiş: ${format(bitisTarihi, 'dd MMMM yyyy', { locale: tr })}`);
+      } else if (islemTipi === 'uzatma') {
+        toast.success(`Abonelik süresi ${days} gün uzatıldı. Yeni bitiş: ${format(bitisTarihi, 'dd MMMM yyyy', { locale: tr })}`);
+      } else {
+        toast.success(`Süresi bitmiş abonelik ${days} gün ile yenilendi. Bitiş: ${format(bitisTarihi, 'dd MMMM yyyy', { locale: tr })}`);
+      }
     } catch (error) {
-      console.error('Deneme süresi uzatma hatası:', error);
-      toast.error('Deneme süresi uzatılırken bir hata oluştu');
+      console.error('Abonelik süresi güncelleme hatası:', error);
+      toast.error('Abonelik süresi güncellenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
     }
   };
 
   // Kullanıcı ödeme durumunu güncelle
   const handleUpdatePaymentStatus = async (userId: string, status: 'deneme' | 'odendi' | 'beklemede' | 'surebitti') => {
     try {
-      // Ödendi durumuna geçiş yapılıyorsa, son ödeme tarihi ekle
+      setLoading(true);
+      
+      // Kullanıcı bilgilerini al
+      const userRef = doc(db, 'kullanicilar', userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        toast.error('Kullanıcı bulunamadı');
+        return;
+      }
+      
+      const userData = userDoc.data();
+      const oncekiDurum = userData.odemeDurumu || 'belirtilmemiş';
+      
+      // Durum güncellemesi için veri hazırla
       const updateData: any = {
-        odemeDurumu: status
+        odemeDurumu: status,
+        sonGuncelleme: Timestamp.now(),
+        guncelleyenId: kullanici?.id || 'system'
       };
 
+      // Durum tipine göre ek bilgiler ekle
       if (status === 'odendi') {
+        // Ödeme tarihi ve süresi ekle
         updateData.sonOdemeTarihi = Timestamp.now();
+        
+        // Varsayılan olarak 1 yıllık abonelik süresi ekle (opsiyonel)
+        const birYilSonra = new Date();
+        birYilSonra.setFullYear(birYilSonra.getFullYear() + 1);
+        updateData.abonelikBitisTarihi = Timestamp.fromDate(birYilSonra);
+      } else if (status === 'surebitti') {
+        // Süre bitti olarak işaretlendiğinde erişimi kısıtla
+        updateData.erisimKisitlandi = true;
+      } else if (status === 'beklemede') {
+        // Beklemede ise 7 günlük geçici süre tanımla
+        const yediGunSonra = new Date();
+        yediGunSonra.setDate(yediGunSonra.getDate() + 7);
+        updateData.odemeIstekTarihi = Timestamp.now();
+        updateData.odemeDeadline = Timestamp.fromDate(yediGunSonra);
       }
 
       // Kullanıcı bilgilerini güncelle
-      await updateDoc(doc(db, 'kullanicilar', userId), updateData);
+      await updateDoc(userRef, updateData);
+
+      // Ödeme geçmişi koleksiyonuna kayıt ekle
+      const odemeGecmisiRef = collection(db, 'odemeGecmisi');
+      await addDoc(odemeGecmisiRef, {
+        kullaniciId: userId,
+        kullaniciEmail: userData.email,
+        oncekiDurum: oncekiDurum,
+        yeniDurum: status,
+        islemTarihi: Timestamp.now(),
+        islemYapan: {
+          id: kullanici?.id || 'system',
+          email: kullanici?.email || 'system',
+          rol: kullanici?.rol || 'system'
+        },
+        notlar: `Durumu ${oncekiDurum}'dan ${status}'a güncelledim.`
+      });
+
+      // Kullanıcı bildirim koleksiyonuna bildirim ekle
+      const bildirimRef = collection(db, 'bildirimler');
+      let bildirimBaslik = 'Ödeme Durumu Güncellendi';
+      let bildirimIcerik = `Ödeme durumunuz "${status}" olarak güncellendi.`;
+      
+      if (status === 'odendi') {
+        bildirimBaslik = 'Ödemeniz Alındı';
+        bildirimIcerik = 'Ödemeniz başarıyla alındı. Teşekkür ederiz!';
+      } else if (status === 'surebitti') {
+        bildirimBaslik = 'Abonelik Süresi Sona Erdi';
+        bildirimIcerik = 'Abonelik süreniz sona erdi. Hizmetlerimize devam etmek için lütfen ödeme yapın.';
+      } else if (status === 'beklemede') {
+        bildirimBaslik = 'Ödeme Bekleniyor';
+        bildirimIcerik = 'Ödemenizi bekliyoruz. Lütfen 7 gün içinde ödemenizi tamamlayın.';
+      }
+      
+      await addDoc(bildirimRef, {
+        aliciId: userId,
+        baslik: bildirimBaslik,
+        icerik: bildirimIcerik,
+        tarih: Timestamp.now(),
+        okundu: false,
+        tur: 'odeme'
+      });
 
       // Kullanıcıları yeniden getir
       fetchUsers();
 
-      toast.success('Ödeme durumu güncellendi');
+      // Durum tipine göre farklı mesaj göster
+      const durumAdlari: Record<string, string> = {
+        'deneme': 'Deneme',
+        'odendi': 'Ödendi',
+        'beklemede': 'Ödeme Bekliyor',
+        'surebitti': 'Süre Bitti'
+      };
+      
+      toast.success(`Kullanıcının ödeme durumu "${durumAdlari[status]}" olarak güncellendi`);
     } catch (error) {
       console.error('Ödeme durumu güncelleme hatası:', error);
       toast.error('Ödeme durumu güncellenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -601,25 +740,71 @@ export const SuperAdminDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                            ${user.odemeDurumu === 'deneme' ? 'bg-blue-100 text-blue-800' :
-                            user.odemeDurumu === 'odendi' ? 'bg-green-100 text-green-800' :
-                              user.odemeDurumu === 'beklemede' ? 'bg-amber-100 text-amber-800' :
-                                user.odemeDurumu === 'surebitti' ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'}`}>
-                          {user.odemeDurumu === 'deneme' ? 'Deneme' :
-                            user.odemeDurumu === 'odendi' ? 'Ödendi' :
-                              user.odemeDurumu === 'beklemede' ? 'Beklemede' :
-                                user.odemeDurumu === 'surebitti' ? 'Süre Bitti' : 'Belirtilmedi'}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${user.odemeDurumu === 'deneme' ? 'bg-blue-100 text-blue-800' :
+                              user.odemeDurumu === 'odendi' ? 'bg-green-100 text-green-800' :
+                                user.odemeDurumu === 'beklemede' ? 'bg-amber-100 text-amber-800' :
+                                  user.odemeDurumu === 'surebitti' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'}`}>
+                            {user.odemeDurumu === 'deneme' ? 'Deneme' :
+                              user.odemeDurumu === 'odendi' ? 'Ödendi' :
+                                user.odemeDurumu === 'beklemede' ? 'Beklemede' :
+                                  user.odemeDurumu === 'surebitti' ? 'Süre Bitti' : 'Belirtilmedi'}
+                          </span>
+                          {user.sonOdemeTarihi && (
+                            <span className="text-xs text-gray-500 mt-1">
+                              Son ödeme: {format(user.sonOdemeTarihi.toDate(), 'dd.MM.yyyy', { locale: tr })}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {user.denemeSuresiBitis ? (
-                          <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1 text-gray-500" />
-                            <span className="text-sm text-gray-900">
-                              {format(user.denemeSuresiBitis.toDate(), 'dd MMM yyyy', { locale: tr })}
-                            </span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-1 text-gray-500" />
+                              <span className="text-sm font-medium">
+                                {format(user.denemeSuresiBitis.toDate(), 'dd MMM yyyy', { locale: tr })}
+                              </span>
+                            </div>
+                            {(() => {
+                              // Kalan süreyi hesapla
+                              const simdikiZaman = new Date().getTime();
+                              const bitisTarihi = user.denemeSuresiBitis.toDate().getTime();
+                              const kalanMilisaniye = bitisTarihi - simdikiZaman;
+                              const kalanGun = Math.ceil(kalanMilisaniye / (1000 * 60 * 60 * 24));
+                              
+                              if (kalanMilisaniye <= 0) {
+                                return (
+                                  <span className="text-xs text-red-600 mt-1 flex items-center">
+                                    <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                                    Süresi doldu
+                                  </span>
+                                );
+                              } else if (kalanGun <= 3) {
+                                return (
+                                  <span className="text-xs text-red-600 mt-1 flex items-center">
+                                    <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                                    {kalanGun} gün kaldı
+                                  </span>
+                                );
+                              } else if (kalanGun <= 7) {
+                                return (
+                                  <span className="text-xs text-amber-600 mt-1 flex items-center">
+                                    <span className="w-2 h-2 bg-amber-500 rounded-full mr-1"></span>
+                                    {kalanGun} gün kaldı
+                                  </span>
+                                );
+                              } else {
+                                return (
+                                  <span className="text-xs text-green-600 mt-1 flex items-center">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                                    {kalanGun} gün kaldı
+                                  </span>
+                                );
+                              }
+                            })()}
                           </div>
                         ) : (
                           <span className="text-sm text-gray-500">Belirtilmedi</span>
@@ -627,72 +812,138 @@ export const SuperAdminDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
-                          {/* Deneme süresini uzat */}
-                          <div className="relative group">
-                            <button
-                              className="text-amber-600 hover:text-amber-900 p-1 hover:bg-amber-50 rounded"
-                              title="Deneme süresini uzat"
-                            >
-                              <Calendar className="h-5 w-5" />
-                            </button>
-                            <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 hidden group-hover:block">
-                              <div className="py-1">
-                                <button
-                                  onClick={() => handleExtendTrial(user.id, 5)}
-                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                >
-                                  5 gün uzat
-                                </button>
-                                <button
-                                  onClick={() => handleExtendTrial(user.id, 10)}
-                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                >
-                                  10 gün uzat
-                                </button>
-                                <button
-                                  onClick={() => handleExtendTrial(user.id, 30)}
-                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                >
-                                  30 gün uzat
-                                </button>
+                          {/* Kullanıcı Abonelik Yönetimi - İyileştirilmiş UI */}
+                          <div className="flex justify-end space-x-2">
+                            {/* Deneme süresini yönet - geliştirilmiş dropdown */}
+                            <div className="relative group">
+                              <button
+                                className="text-amber-600 hover:text-amber-900 p-1 hover:bg-amber-50 rounded flex items-center"
+                                title="Abonelik süresini yönet"
+                              >
+                                <Calendar className="h-5 w-5" />
+                              </button>
+                              <div className="dropdown-menu absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 hidden group-hover:block border border-gray-200">
+                                <div className="p-3 border-b border-gray-200">
+                                  <h3 className="text-sm font-medium text-gray-700">Abonelik Süresi Yönetimi</h3>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {user.denemeSuresiBitis ? 
+                                      `Mevcut bitiş: ${format(user.denemeSuresiBitis.toDate(), 'dd MMM yyyy', { locale: tr })}` : 
+                                      'Deneme süresi henüz ayarlanmamış'}
+                                  </p>
+                                </div>
+                                <div className="py-2">
+                                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">Önceden Tanımlı Süreler</div>
+                                  <button
+                                    onClick={() => handleExtendTrial(user.id, 7)}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
+                                  >
+                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">7</span>
+                                    Bir hafta ekle
+                                  </button>
+                                  <button
+                                    onClick={() => handleExtendTrial(user.id, 14)}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
+                                  >
+                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">14</span>
+                                    İki hafta ekle
+                                  </button>
+                                  <button
+                                    onClick={() => handleExtendTrial(user.id, 30)}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
+                                  >
+                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">30</span>
+                                    Bir ay ekle
+                                  </button>
+                                  <button
+                                    onClick={() => handleExtendTrial(user.id, 90)}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
+                                  >
+                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">90</span>
+                                    Üç ay ekle
+                                  </button>
+                                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50 mt-1">Özel Süre</div>
+                                  <div className="px-4 py-2 flex items-center space-x-2">
+                                    <input 
+                                      type="number" 
+                                      min="1" 
+                                      max="365"
+                                      placeholder="Gün"
+                                      className="w-20 text-sm border border-gray-300 rounded p-1"
+                                      id={`custom-days-${user.id}`}
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        const input = document.getElementById(`custom-days-${user.id}`) as HTMLInputElement;
+                                        const days = parseInt(input.value);
+                                        if (days > 0) {
+                                          handleExtendTrial(user.id, days);
+                                          input.value = '';
+                                        }
+                                      }}
+                                      className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded"
+                                    >
+                                      Ekle
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Ödeme durumunu değiştir */}
-                          <div className="relative group">
-                            <button
-                              className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
-                              title="Ödeme durumunu değiştir"
-                            >
-                              <CreditCard className="h-5 w-5" />
-                            </button>
-                            <div className="dropdown-menu absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 hidden group-hover:block">
-                              <div className="py-1">
-                                <button
-                                  onClick={() => handleUpdatePaymentStatus(user.id, 'deneme')}
-                                  className="block w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-100"
-                                >
-                                  Deneme
-                                </button>
-                                <button
-                                  onClick={() => handleUpdatePaymentStatus(user.id, 'odendi')}
-                                  className="block w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-100"
-                                >
-                                  Ödendi
-                                </button>
-                                <button
-                                  onClick={() => handleUpdatePaymentStatus(user.id, 'beklemede')}
-                                  className="block w-full text-left px-4 py-2 text-sm text-amber-700 hover:bg-amber-100"
-                                >
-                                  Beklemede
-                                </button>
-                                <button
-                                  onClick={() => handleUpdatePaymentStatus(user.id, 'surebitti')}
-                                  className="block w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-red-100"
-                                >
-                                  Süre Bitti
-                                </button>
+                            {/* Ödeme durumunu değiştir - geliştirilmiş dropdown */}
+                            <div className="relative group">
+                              <button
+                                className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded flex items-center"
+                                title="Ödeme durumunu değiştir"
+                              >
+                                <CreditCard className="h-5 w-5" />
+                              </button>
+                              <div className="dropdown-menu absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 hidden group-hover:block border border-gray-200">
+                                <div className="p-3 border-b border-gray-200">
+                                  <h3 className="text-sm font-medium text-gray-700">Ödeme Durumu Değiştir</h3>
+                                  <p className="text-xs text-gray-500 mt-1">Kullanıcının ödeme durumunu güncelleyin</p>
+                                </div>
+                                <div className="py-2">
+                                  <button
+                                    onClick={() => handleUpdatePaymentStatus(user.id, 'deneme')}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-blue-50"
+                                  >
+                                    <span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                                    <div>
+                                      <div className="font-medium text-blue-700">Deneme</div>
+                                      <div className="text-xs text-gray-500">Deneme süresinde kullanım</div>
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdatePaymentStatus(user.id, 'odendi')}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-green-50"
+                                  >
+                                    <span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                                    <div>
+                                      <div className="font-medium text-green-700">Ödendi</div>
+                                      <div className="text-xs text-gray-500">Abonelik ücreti ödendi</div>
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdatePaymentStatus(user.id, 'beklemede')}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-amber-50"
+                                  >
+                                    <span className="w-3 h-3 rounded-full bg-amber-500 mr-2"></span>
+                                    <div>
+                                      <div className="font-medium text-amber-700">Beklemede</div>
+                                      <div className="text-xs text-gray-500">Ödeme bekliyor</div>
+                                    </div>
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdatePaymentStatus(user.id, 'surebitti')}
+                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-red-50"
+                                  >
+                                    <span className="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                                    <div>
+                                      <div className="font-medium text-red-700">Süre Bitti</div>
+                                      <div className="text-xs text-gray-500">Abonelik süresi doldu</div>
+                                    </div>
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
