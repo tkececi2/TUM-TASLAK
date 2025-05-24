@@ -74,6 +74,10 @@ export const Register = () => {
         });
 
         // 3. Create user profile in Firestore
+         // Deneme süresi başlangıç ve bitiş tarihlerini hesapla (5 gün)
+        const baslangicTarihi = Timestamp.now();
+        const bitisTarihi = Timestamp.fromDate(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)); // 5 gün ekle
+
         await setDoc(doc(db, 'kullanicilar', user.uid), {
           ad: form.fullName,
           email: form.email,
@@ -81,7 +85,10 @@ export const Register = () => {
           rol: 'yonetici', // Company creator is automatically an admin
           fotoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.fullName)}&background=random`,
           olusturmaTarihi: Timestamp.now(),
-          companyId: companyRef.id // Link user to company
+          companyId: companyRef.id, // Link user to company
+          denemeSuresiBaslangic: baslangicTarihi,
+          denemeSuresiBitis: bitisTarihi,
+          odemeDurumu: 'deneme'
         });
 
         // 4. Create default company settings

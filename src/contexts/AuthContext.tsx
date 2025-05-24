@@ -189,6 +189,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('No role in custom claims after login, using role from Firestore:', userData.rol);
         }
         
+        // Süper admin ise deneme süresi kontrolü yapmadan devam et
+        if (userData.rol === 'superadmin') {
+          setKullanici(userData);
+          authService.setCurrentUser(userData);
+          console.log('Süper admin giriş yaptı, deneme süresi kontrolü atlandı');
+          toast.success('Giriş başarılı');
+          return true;
+        }
+        
+        // Deneme süresi kontrolü
+        if (userData.odemeDurumu === 'surebitti') {
+          toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
+          await signOut(auth);
+          authService.clearUserData();
+          setKullanici(null);
+          return false;
+        }
+        
+        // Deneme süresi kontrolü - süre dolmuş mu?
+        if (userData.odemeDurumu === 'deneme' && userData.denemeSuresiBitis) {
+          const simdikiZaman = new Date().getTime();
+          const bitisTarihi = userData.denemeSuresiBitis.toDate ? 
+                               userData.denemeSuresiBitis.toDate().getTime() : 
+                               new Date(userData.denemeSuresiBitis).getTime();
+          
+          if (simdikiZaman > bitisTarihi) {
+            // Deneme süresi bitmiş, kullanıcı bilgisini güncelle
+            try {
+              await updateDoc(doc(db, 'kullanicilar', userData.id), {
+                odemeDurumu: 'surebitti'
+              });
+              
+              toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
+              await signOut(auth);
+              authService.clearUserData();
+              setKullanici(null);
+              return false;
+            } catch (error) {
+              console.error('Kullanıcı durumu güncelleme hatası:', error);
+            }
+          } else {
+            // Deneme süresi devam ediyor, kalan süreyi hesapla ve göster
+            const kalanGun = Math.ceil((bitisTarihi - simdikiZaman) / (1000 * 60 * 60 * 24));
+            toast.info(`Deneme sürenizin bitmesine ${kalanGun} gün kaldı.`, {
+              duration: 5000,
+            });
+          }
+        }
+        
         setKullanici(userData);
         authService.setCurrentUser(userData);
         console.log('User logged in with role:', userData.rol);

@@ -235,6 +235,10 @@ export interface Kullanici {
   adres?: string;
   saha?: string;
   companyId: string; // Şirket ID'si
+  denemeSuresiBaslangic?: any; // Timestamp - Deneme süresinin başlangıç tarihi
+  denemeSuresiBitis?: any; // Timestamp - Deneme süresinin bitiş tarihi
+  odemeDurumu?: 'deneme' | 'odendi' | 'beklemede' | 'surebitti'; // Ödeme durumu
+  sonOdemeTarihi?: any; // Timestamp - Son ödeme tarihi
 }
 
 export interface Bildirim {
