@@ -19,6 +19,16 @@ export const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Abonelik süresi bitmiş kullanıcıları engelle (süper admin hariç)
+  if (kullanici.rol !== 'superadmin' && kullanici.odemeDurumu === 'surebitti') {
+    // Kullanıcıyı çıkış sayfasına yönlendir
+    toast.error('Abonelik süreniz dolmuştur. Lütfen yöneticinizle iletişime geçin.', {
+      duration: 5000,
+      position: 'top-center',
+    });
+    return <Navigate to="/login" state={{ expired: true }} replace />;
+  }
+
   // Check if the user is accessing the admin page and is not a superadmin
   if (location.pathname === '/admin' && kullanici.rol !== 'superadmin') {
     return <Navigate to="/anasayfa" replace />;

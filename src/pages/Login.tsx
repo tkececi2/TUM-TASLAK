@@ -69,6 +69,23 @@ export const Login = () => {
         navigate(from, { replace: true });
       } else {
         console.log('Giriş başarısız, girisYap false döndü');
+        
+        // Süre bitimi ile ilgili ek kontrol
+        try {
+          const userEmail = email.trim().toLowerCase();
+          const userQuery = query(collection(db, "kullanicilar"), where("email", "==", userEmail));
+          const userDocs = await getDocs(userQuery);
+          
+          if (!userDocs.empty) {
+            const userData = userDocs.docs[0].data();
+            if (userData.odemeDurumu === 'surebitti') {
+              toast.error('Abonelik süreniz dolmuştur. Lütfen yöneticinizle iletişime geçin veya ödeme yapın.', 
+                { duration: 6000 });
+            }
+          }
+        } catch (error) {
+          console.error('Kullanıcı durumu kontrol hatası:', error);
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);

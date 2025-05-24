@@ -67,6 +67,13 @@ export class AuthService {
     if (!this.currentUser) {
       this.currentUser = storageService.getUser();
       
+      // Abonelik süresini kontrol et
+      if (this.currentUser?.odemeDurumu === 'surebitti') {
+        console.warn('Süresi bitmiş kullanıcı giriş yapmaya çalışıyor:', this.currentUser.email);
+        this.clearUserData();
+        return null;
+      }
+      
       // Sahalar dizisini kontrol et
       if (this.currentUser?.sahalar) {
         if (!Array.isArray(this.currentUser.sahalar)) {

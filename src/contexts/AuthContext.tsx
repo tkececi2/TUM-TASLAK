@@ -226,9 +226,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           console.log('Ödeme durumu kontrolü:', userData.odemeDurumu);
           
+          // Ödeme durumu süre bitti olarak işaretlenmişse giriş engellenir
           if (userData.odemeDurumu === 'surebitti') {
             console.log('Ödeme durumu: süre bitti');
-            toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
+            toast.error('Abonelik süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
             await signOut(auth);
             authService.clearUserData();
             setKullanici(null);
@@ -236,7 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
 
           // Deneme süresi kontrolü - süre dolmuş mu?
-          if (userData.odemeDurumu === 'deneme' && userData.denemeSuresiBitis) {
+          if ((userData.odemeDurumu === 'deneme' || userData.odemeDurumu === 'beklemede') && userData.denemeSuresiBitis) {
             console.log('Deneme süresi bitiş tarihi:', userData.denemeSuresiBitis);
             
             const simdikiZaman = new Date().getTime();
@@ -270,17 +271,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               try {
                 console.log('Deneme süresi bitti, kullanıcı durumu güncelleniyor');
                 const userRef = doc(db, 'kullanicilar', userData.id);
+                
+                // Firestore'da kullanıcı durumunu güncelle
                 await updateDoc(userRef, {
-                  odemeDurumu: 'surebitti'
+                  odemeDurumu: 'surebitti',
+                  sureBitimTarihi: new Date() // Sürenin bittiği tarih kaydedilir
                 });
 
-                toast.error('Deneme süreniz dolmuştur. Lütfen ödeme yapın veya yöneticinizle iletişime geçin.');
+                toast.error('Abonelik süreniz dolmuştur. Lütfen yöneticinizle iletişime geçin veya ödeme yapın.');
+                
+                // Kullanıcıyı çıkış yaptır
                 await signOut(auth);
                 authService.clearUserData();
                 setKullanici(null);
                 return false;
               } catch (error) {
                 console.error('Kullanıcı durumu güncelleme hatası:', error);
+                
+                // Hata olsa bile giriş yapılmasını engelle
+                toast.error('Abonelik süreniz dolmuştur. Sistem hatası nedeniyle durum güncellenemedi. Lütfen yöneticinizle iletişime geçin.');
+                await signOut(auth);
+                authService.clearUserData();
+                setKullanici(null);
+                return false;
               }
             } else {
               // Deneme süresi devam ediyor, kalan süreyi hesapla ve göster
