@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sun, Shield, Zap, CheckCircle, ArrowRight, Users, BarChart2, Globe, Mail, Phone, Clock, ChevronDown } from 'lucide-react';
@@ -37,43 +38,43 @@ const HomePage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Navigasyon */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <Sun className={`h-8 w-8 ${scrolled ? 'text-primary-600' : 'text-white'} mr-2`} />
+              <Sun className={`h-8 w-8 ${scrolled ? 'text-blue-600' : 'text-white'} mr-2`} />
               <span className={`font-bold text-xl ${scrolled ? 'text-gray-900' : 'text-white'}`}>SolarVeyo</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <button 
                 onClick={() => scrollToSection('home')} 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'home' ? 'text-primary-600' : (scrolled ? 'text-gray-700 hover:text-primary-600' : 'text-white hover:text-primary-100')} transition-colors`}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'home' ? 'text-blue-600' : (scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white hover:text-blue-100')} transition-colors`}
               >
                 Ana Sayfa
               </button>
               <button 
                 onClick={() => scrollToSection('features')} 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'features' ? 'text-primary-600' : (scrolled ? 'text-gray-700 hover:text-primary-600' : 'text-white hover:text-primary-100')} transition-colors`}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'features' ? 'text-blue-600' : (scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white hover:text-blue-100')} transition-colors`}
               >
                 Özellikler
               </button>
               <button 
                 onClick={() => scrollToSection('benefits')} 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'benefits' ? 'text-primary-600' : (scrolled ? 'text-gray-700 hover:text-primary-600' : 'text-white hover:text-primary-100')} transition-colors`}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'benefits' ? 'text-blue-600' : (scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white hover:text-blue-100')} transition-colors`}
               >
                 Avantajlar
               </button>
               <button 
                 onClick={() => scrollToSection('testimonials')} 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'testimonials' ? 'text-primary-600' : (scrolled ? 'text-gray-700 hover:text-primary-600' : 'text-white hover:text-primary-100')} transition-colors`}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'testimonials' ? 'text-blue-600' : (scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white hover:text-blue-100')} transition-colors`}
               >
                 Hakkımızda
               </button>
               <button 
                 onClick={() => scrollToSection('contact')} 
-                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'contact' ? 'text-primary-600' : (scrolled ? 'text-gray-700 hover:text-primary-600' : 'text-white hover:text-primary-100')} transition-colors`}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'contact' ? 'text-blue-600' : (scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white hover:text-blue-100')} transition-colors`}
               >
                 İletişim
               </button>
@@ -81,13 +82,13 @@ const HomePage: React.FC = () => {
             <div className="flex space-x-3">
               <Link
                 to="/login"
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${scrolled ? 'bg-primary-600 text-white hover:bg-primary-700' : 'bg-white text-primary-700 hover:bg-gray-100'} shadow-sm transition-all duration-300`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${scrolled ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-blue-700 hover:bg-gray-100'} shadow-sm transition-all duration-300`}
               >
                 Giriş Yap
               </Link>
               <Link
                 to="/register"
-                className={`px-4 py-2 rounded-lg text-sm font-medium ${scrolled ? 'border border-primary-600 text-primary-600 hover:bg-primary-50' : 'border border-white text-white hover:bg-white/10'} transition-all duration-300`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${scrolled ? 'border border-blue-600 text-blue-600 hover:bg-blue-50' : 'border border-white text-white hover:bg-white/10'} transition-all duration-300`}
               >
                 Kayıt Ol
               </Link>
@@ -97,7 +98,7 @@ const HomePage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <header id="home" className="bg-gradient-to-r from-primary-600 to-primary-800 relative pt-24 overflow-hidden">
+      <header id="home" className="bg-gradient-to-r from-blue-600 to-blue-800 relative pt-24 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-20"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 relative z-10">
           <div className="flex flex-col md:flex-row items-center justify-between">
@@ -114,7 +115,7 @@ const HomePage: React.FC = () => {
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/login"
-                  className="px-6 py-3 bg-white text-primary-700 font-medium rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-300 flex items-center transform hover:scale-105"
+                  className="px-6 py-3 bg-white text-blue-700 font-medium rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-300 flex items-center transform hover:scale-105"
                 >
                   Hemen Başlayın
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -144,7 +145,7 @@ const HomePage: React.FC = () => {
             </div>
             <div className="md:w-1/2 flex justify-center">
               <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur-3xl opacity-30 animate-pulse-slow"></div>
+                <div className="absolute -inset-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full blur-3xl opacity-30 animate-pulse-slow"></div>
                 <img
                   src="/solar-logo.png"
                   alt="Solar Panel"
@@ -159,7 +160,7 @@ const HomePage: React.FC = () => {
               onClick={() => scrollToSection('features')}
               className="bg-white rounded-full p-3 shadow-md mb-6 animate-bounceSoft"
             >
-              <ChevronDown className="h-6 w-6 text-primary-600" />
+              <ChevronDown className="h-6 w-6 text-blue-600" />
             </button>
           </div>
         </div>
@@ -170,19 +171,19 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             <div className="bg-gray-50 p-6 rounded-xl shadow-sm text-center">
-              <div className="font-bold text-3xl text-primary-600 mb-1">250+</div>
+              <div className="font-bold text-3xl text-blue-600 mb-1">250+</div>
               <div className="text-gray-600 text-sm">Aktif GES</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow-sm text-center">
-              <div className="font-bold text-3xl text-primary-600 mb-1">98%</div>
+              <div className="font-bold text-3xl text-blue-600 mb-1">98%</div>
               <div className="text-gray-600 text-sm">Müşteri Memnuniyeti</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow-sm text-center">
-              <div className="font-bold text-3xl text-primary-600 mb-1">15M+</div>
+              <div className="font-bold text-3xl text-blue-600 mb-1">15M+</div>
               <div className="text-gray-600 text-sm">kWh Üretim</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow-sm text-center">
-              <div className="font-bold text-3xl text-primary-600 mb-1">5.000+</div>
+              <div className="font-bold text-3xl text-blue-600 mb-1">5.000+</div>
               <div className="text-gray-600 text-sm">Önlenen Arıza</div>
             </div>
           </div>
@@ -193,7 +194,7 @@ const HomePage: React.FC = () => {
       <section id="features" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-primary-100 text-primary-800 rounded-full font-medium text-sm mb-4">
+            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
               ÖNE ÇIKAN ÖZELLİKLER
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -206,8 +207,8 @@ const HomePage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="p-4 bg-primary-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Shield className="h-8 w-8 text-primary-600" />
+              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Shield className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Akıllı Arıza Takibi</h3>
               <p className="text-gray-600 mb-4">
@@ -233,15 +234,15 @@ const HomePage: React.FC = () => {
               </ul>
               <button 
                 onClick={() => scrollToSection('contact')}
-                className="text-primary-600 font-medium text-sm flex items-center hover:text-primary-800"
+                className="text-blue-600 font-medium text-sm flex items-center hover:text-blue-800"
               >
                 Daha Fazla Bilgi <ArrowRight className="h-4 w-4 ml-1" />
               </button>
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="p-4 bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <BarChart2 className="h-8 w-8 text-green-600" />
+              <div className="p-4 bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <BarChart2 className="h-8 w-8 text-indigo-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Arıza Takibi</h3>
               <p className="text-gray-600 mb-4">
@@ -263,15 +264,15 @@ const HomePage: React.FC = () => {
               </ul>
               <button 
                 onClick={() => scrollToSection('contact')}
-                className="text-green-600 font-medium text-sm flex items-center hover:text-green-800"
+                className="text-indigo-600 font-medium text-sm flex items-center hover:text-indigo-800"
               >
                 Daha Fazla Bilgi <ArrowRight className="h-4 w-4 ml-1" />
               </button>
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="p-4 bg-amber-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Zap className="h-8 w-8 text-amber-600" />
+              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Zap className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Akıllı Bakım Yönetimi</h3>
               <p className="text-gray-600 mb-4">
@@ -293,7 +294,7 @@ const HomePage: React.FC = () => {
               </ul>
               <button 
                 onClick={() => scrollToSection('contact')}
-                className="text-amber-600 font-medium text-sm flex items-center hover:text-amber-800"
+                className="text-blue-600 font-medium text-sm flex items-center hover:text-blue-800"
               >
                 Daha Fazla Bilgi <ArrowRight className="h-4 w-4 ml-1" />
               </button>
@@ -306,7 +307,7 @@ const HomePage: React.FC = () => {
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-primary-100 text-primary-800 rounded-full font-medium text-sm mb-4">
+            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
               NASIL ÇALIŞIR
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -320,7 +321,7 @@ const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="flex flex-col items-center text-center">
               <div className="relative">
-                <div className="w-16 h-16 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">1</div>
+                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">1</div>
                 <div className="hidden md:block absolute top-8 left-full w-24 h-0.5 bg-gray-200"></div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Hesabınızı Oluşturun</h3>
@@ -331,7 +332,7 @@ const HomePage: React.FC = () => {
 
             <div className="flex flex-col items-center text-center">
               <div className="relative">
-                <div className="w-16 h-16 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">2</div>
+                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">2</div>
                 <div className="hidden md:block absolute top-8 left-full w-24 h-0.5 bg-gray-200"></div>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Santrallerinizi Ekleyin</h3>
@@ -341,7 +342,7 @@ const HomePage: React.FC = () => {
             </div>
 
             <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">3</div>
+              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">3</div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Anlık Takibe Başlayın</h3>
               <p className="text-gray-600">
                 Web veya mobil cihazlarınızdan santrallerinizi izleyin, arızaları kontrol edin ve bakım süreçlerinizi yönetin.
@@ -352,7 +353,7 @@ const HomePage: React.FC = () => {
           <div className="mt-16 text-center">
             <Link
               to="/register"
-              className="px-8 py-4 bg-primary-600 text-white font-medium rounded-lg shadow-lg hover:bg-primary-700 transition-all duration-300 inline-flex items-center transform hover:scale-105"
+              className="px-8 py-4 bg-blue-600 text-white font-medium rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 inline-flex items-center transform hover:scale-105"
             >
               Hemen Ücretsiz Deneyin
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -366,7 +367,7 @@ const HomePage: React.FC = () => {
       <section id="benefits" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-primary-100 text-primary-800 rounded-full font-medium text-sm mb-4">
+            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
               NEDEN BİZ
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -403,8 +404,8 @@ const HomePage: React.FC = () => {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="p-4 bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Zap className="h-8 w-8 text-green-600" />
+              <div className="p-4 bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Zap className="h-8 w-8 text-indigo-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Hızlı Müdahale Ekibi</h3>
               <p className="text-gray-600">
@@ -427,8 +428,8 @@ const HomePage: React.FC = () => {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="p-4 bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <BarChart2 className="h-8 w-8 text-purple-600" />
+              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <BarChart2 className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Kapsamlı Raporlama</h3>
               <p className="text-gray-600">
@@ -457,7 +458,7 @@ const HomePage: React.FC = () => {
       <section id="testimonials" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-primary-100 text-primary-800 rounded-full font-medium text-sm mb-4">
+            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
               MÜŞTERİ YORUMLARI
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -525,9 +526,8 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:```text
-sm:px-6 lg:px-8 text-center">
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Hemen Başlayın</h2>
           <p className="text-xl text-white/90 mb-10 max-w-3xl mx-auto">
             Solar Panel Arıza Takip Sistemimiz ile güneş enerjisi yatırımlarınızı daha verimli hale getirin. İlk 14 gün ücretsiz deneyin.
@@ -535,7 +535,7 @@ sm:px-6 lg:px-8 text-center">
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               to="/login"
-              className="px-8 py-4 bg-white text-primary-700 font-medium rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105"
+              className="px-8 py-4 bg-white text-blue-700 font-medium rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105"
             >
               Hemen Giriş Yap
             </Link>
@@ -554,7 +554,7 @@ sm:px-6 lg:px-8 text-center">
       <section id="contact" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-primary-100 text-primary-800 rounded-full font-medium text-sm mb-4">
+            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
               İLETİŞİM
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -567,40 +567,40 @@ sm:px-6 lg:px-8 text-center">
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-gray-50 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-center text-center">
-              <div className="p-4 bg-primary-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Phone className="h-8 w-8 text-primary-600" />
+              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Phone className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Bizi Arayın</h3>
               <p className="text-gray-600 mb-4">
                 Teknik destek ve satış ekibimiz size yardımcı olmak için hazır.
               </p>
-              <a href="tel:+902121234567" className="text-primary-600 font-bold">
+              <a href="tel:+902121234567" className="text-blue-600 font-bold">
                 +90 (212) 123 45 67
               </a>
             </div>
 
             <div className="bg-gray-50 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-center text-center">
-              <div className="p-4 bg-primary-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Mail className="h-8 w-8 text-primary-600" />
+              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Mail className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">E-posta Gönderin</h3>
               <p className="text-gray-600 mb-4">
                 Sorularınızı e-posta ile iletebilirsiniz, en kısa sürede dönüş yapacağız.
               </p>
-              <a href="mailto:info@edeonenerji.com" className="text-primary-600 font-bold">
+              <a href="mailto:info@edeonenerji.com" className="text-blue-600 font-bold">
                 info@solarveyo.com
               </a>
             </div>
 
             <div className="bg-gray-50 p-8 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex flex-col items-center text-center">
-              <div className="p-4 bg-primary-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Globe className="h-8 w-8 text-primary-600" />
+              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Globe className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Ofisimizi Ziyaret Edin</h3>
               <p className="text-gray-600 mb-4">
                 İstanbul'daki merkez ofisimizde sizleri ağırlamaktan mutluluk duyarız.
               </p>
-              <address className="text-primary-600 font-bold not-italic">
+              <address className="text-blue-600 font-bold not-italic">
                 Maslak, Büyükdere Cad. No:123, İstanbul
               </address>
             </div>
@@ -662,15 +662,15 @@ sm:px-6 lg:px-8 text-center">
               <h4 className="text-lg font-bold mb-4">İletişim</h4>
               <ul className="space-y-4">
                 <li className="flex items-start">
-                  <Phone className="h-5 w-5 text-primary-400 mr-2 mt-0.5" />
+                  <Phone className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
                   <span className="text-gray-400">+90 (212) 123 45 67</span>
                 </li>
                 <li className="flex items-start">
-                  <Mail className="h-5 w-5 text-primary-400 mr-2 mt-0.5" />
+                  <Mail className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
                   <span className="text-gray-400">info@solarveyo.com</span>
                 </li>
                 <li className="flex items-start">
-                  <Globe className="h-5 w-5 text-primary-400 mr-2 mt-0.5" />
+                  <Globe className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
                   <span className="text-gray-400">Maslak, Büyükdere Cad. No:123<br />İstanbul, Türkiye</span>
                 </li>
               </ul>
@@ -694,7 +694,7 @@ sm:px-6 lg:px-8 text-center">
       {scrolled && (
         <button 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
-          className="fixed bottom-6 right-6 bg-primary-600 text-white p-3 rounded-full shadow-lg hover:bg-primary-700 transition-all duration-300 z-50"
+          className="fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 z-50"
           aria-label="Yukarı çık"
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
