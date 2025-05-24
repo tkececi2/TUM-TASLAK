@@ -1,5 +1,6 @@
+
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { CompanyProvider } from './contexts/CompanyContext';
@@ -64,39 +65,33 @@ const App = () => {
   }
 
   return (
-    <Router>
-      <AuthProvider>
-        <CompanyProvider>
-          <NotificationProvider>
-            <Toaster 
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: {
-                  background: '#fff',
-                  color: '#333',
-                },
-              }}
-            />
-            <OfflineIndicator />
-            <Suspense fallback={
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="flex flex-col items-center">
-                  <LoadingSpinner />
-                  <p className="mt-4 text-gray-500">Sayfa yükleniyor...</p>
-                </div>
-              </div>
-            }>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                {/* Diğer rotalar buraya gelecek */}
-              </Routes>
-            </Suspense>
-          </NotificationProvider>
-        </CompanyProvider>
-      </AuthProvider>
-    </Router>
+    <>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#333',
+          },
+        }}
+      />
+      <OfflineIndicator />
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <LoadingSpinner />
+            <p className="mt-4 text-gray-500">Sayfa yükleniyor...</p>
+          </div>
+        </div>
+      }>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          {/* Diğer rotalar buraya gelecek */}
+        </Routes>
+      </Suspense>
+    </>
   );
 };
 
