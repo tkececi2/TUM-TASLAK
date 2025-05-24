@@ -102,6 +102,15 @@ export const SuperAdminDashboard: React.FC = () => {
     setIsEditModalOpen(true);
   };
   
+  const handleAccessCompanyData = (company: Company) => {
+    // Şirket ID'sini session storage'a kaydet
+    sessionStorage.setItem('superadmin_viewing_company', company.id);
+    sessionStorage.setItem('superadmin_viewing_company_name', company.name);
+    
+    // Anasayfaya yönlendir, buradan kullanıcı diğer sayfalara gidebilir
+    window.location.href = '/anasayfa';
+  };
+  
   const handleUpdateCompany = async (companyData: Partial<Company>) => {
     if (!selectedCompany) return;
     
@@ -339,6 +348,13 @@ export const SuperAdminDashboard: React.FC = () => {
                           title="Sil"
                         >
                           <Trash2 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleAccessCompanyData(company)}
+                          className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded"
+                          title="Şirket Verilerine Eriş"
+                        >
+                          <Users className="h-5 w-5" />
                         </button>
                       </div>
                     </td>

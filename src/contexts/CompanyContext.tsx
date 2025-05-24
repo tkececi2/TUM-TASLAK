@@ -51,9 +51,36 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
           toast.error('Bağlı olduğunuz şirket bulunamadı. Lütfen yöneticinizle iletişime geçin.');
         }
       } 
-      // For superadmin, we don't set a specific company
+      // Süper admin işlemleri
       else if (kullanici.rol === 'superadmin') {
-        setCurrentCompany(null);
+        // Eğer süper admin bir şirketin verilerine göz atıyorsa
+        const viewingCompanyId = sessionStorage.getItem('superadmin_viewing_company');
+        
+        if (viewingCompanyId) {
+          // Süper admin başka bir şirketin verilerine erişiyor
+          const companyDoc = await getDoc(doc(db, 'companies', viewingCompanyId));
+          
+          if (companyDoc.exists()) {
+            setCurrentCompany({
+              id: companyDoc.id,
+              ...companyDoc.data()
+            } as Company);
+            
+            // Bilgilendirme mesajı göster
+            const companyName = sessionStorage.getItem('superadmin_viewing_company_name') || 'Şirket';
+            toast.success(`${companyName} verilerine erişim sağlandı (Süper Admin modunda)`, {
+              duration: 4000,
+              position: 'top-right'
+            });
+          } else {
+            setCurrentCompany(null);
+            sessionStorage.removeItem('superadmin_viewing_company');
+            sessionStorage.removeItem('superadmin_viewing_company_name');
+          }
+        } else {
+          // Normal süper admin durumu - şirket yok
+          setCurrentCompany(null);
+        }
       } 
       // If no companyId but not superadmin, something is wrong
       else {
