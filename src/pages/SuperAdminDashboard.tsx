@@ -312,6 +312,24 @@ export const SuperAdminDashboard: React.FC = () => {
     );
   }
 
+  const handleCountSahaForCompany = async (companyId: string) => {
+    try {
+      const sahalarCollection = collection(db, 'sahalar');
+      const q = query(sahalarCollection, where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      const sahaSayisi = snapshot.size;
+
+      // Saha sayısını ilgili HTML elementine yazdır
+      const sahaCountElement = document.getElementById(`saha-count-${companyId}`);
+      if (sahaCountElement) {
+        sahaCountElement.textContent = sahaSayisi.toString();
+      }
+    } catch (error) {
+      console.error('Saha sayısı alınırken hata oluştu:', error);
+      toast.error('Saha sayısı alınırken bir hata oluştu');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -408,6 +426,9 @@ export const SuperAdminDashboard: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Kullanıcı Sayısı
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Saha Sayısı
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İşlemler
                   </th>
@@ -459,6 +480,20 @@ export const SuperAdminDashboard: React.FC = () => {
                         <div className="flex items-center">
                           <Users className="h-5 w-5 text-gray-400 mr-2" />
                           <span className="text-sm text-gray-900">12</span> {/* This would need to be calculated */}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Building className="h-5 w-5 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-900" id={`saha-count-${company.id}`}>
+                            <button 
+                              onClick={() => handleCountSahaForCompany(company.id)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                              title="Saha sayısını göster"
+                            >
+                              Yükle
+                            </button>
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -724,7 +759,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   <p className="text-base">{selectedCompany.slogan || "-"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">E-posta</p>
+                  This code integrates the functionality to display the number of sites (sahalar) for each company in the Super Admin Dashboard.                  <p className="text-sm font-medium text-gray-500">E-posta</p>
                   <p className="text-base">{selectedCompany.email || "-"}</p>
                 </div>
                 <div>
@@ -750,8 +785,7 @@ export const SuperAdminDashboard: React.FC = () => {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setIsViewModalOpen(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700```text
- rounded-md hover:bg-gray-200"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
               >
                 Kapat
               </button>
