@@ -114,12 +114,28 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                       const userDoc = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
                       if (userDoc.exists()) {
                         console.log('Kullanıcı bilgileri doğrulandı');
+                        
+                        // Kullanıcı verilerini localStorage'a kaydet
+                        const userData = userDoc.data();
+                        localStorage.setItem('currentUser', JSON.stringify({
+                          ...userData,
+                          id: auth.currentUser.uid,
+                          email: auth.currentUser.email
+                        }));
 
                         // Kısa bir uyarı göster
                         toast.success('Oturum yenilendi');
 
-                        // Sayfayı yenilemek yerine, kullanıcı bilgilerini güncelle
-                        // Burada AuthContext veya diğer bileşenlerin bilgilerini güncelleme işlemleri yapılabilir
+                        // Firestore'u yeniden başlat
+                        try {
+                          await db.disableNetwork();
+                          await new Promise(resolve => setTimeout(resolve, 500));
+                          await db.enableNetwork();
+                          console.log('Firestore ağı yeniden başlatıldı');
+                        } catch (networkErr) {
+                          console.warn('Firestore ağ yenileme hatası:', networkErr);
+                        }
+                        
                         break; // Başarılı olduk, döngüden çık
                       }
                     } catch (userDocErr) {

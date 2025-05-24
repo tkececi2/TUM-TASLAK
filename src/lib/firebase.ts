@@ -54,15 +54,27 @@ const initializeFirestore = async () => {
     
     // Firestore önbellek yapılandırması
     try {
-      // Ayarları uygula
-      const firestoreDb = getFirestore(app);
-      firestoreDb.settings({
+      // Önce temel ayarları doğrudan db üzerinde uygula
+      db.settings({
         cacheSizeBytes: CACHE_SIZE_UNLIMITED,
         ignoreUndefinedProperties: true
       });
+      console.log('Firestore ayarları başarıyla uygulandı');
     } catch (settingsError) {
       console.error('Firestore settings error:', settingsError);
-      // Temel ayarlar ile devam et
+      // Temel ayarlar ile devam et, daha sonra yeniden deneme yapılabilir
+      
+      // Yeniden deneme için kısa bir bekleme
+      setTimeout(() => {
+        try {
+          db.settings({
+            ignoreUndefinedProperties: true
+          });
+          console.log('Firestore basit ayarları uygulandı');
+        } catch (retryError) {
+          console.error('Basit ayarları uygulama hatası:', retryError);
+        }
+      }, 1000);
     }
     
     // Ağ bağlantısını etkinleştir
@@ -194,6 +206,19 @@ export const refreshAuthToken = async (): Promise<boolean> => {
     }
 
     console.log('Token yenileniyor...');
+    
+    // IndexedDB temizleme
+    try {
+      const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+      for (const database of databases) {
+        if (database.name && (database.name.includes('firestore') || database.name.includes('firebase'))) {
+          console.log(`IndexedDB temizleniyor: ${database.name}`);
+          window.indexedDB.deleteDatabase(database.name);
+        }
+      }
+    } catch (dbError) {
+      console.warn('IndexedDB temizleme hatası:', dbError);
+    }
 
     // Token yenileme denemesi - hata durumunda daha fazla deneme yap
     let success = false;

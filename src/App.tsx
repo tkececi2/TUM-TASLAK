@@ -84,12 +84,25 @@ const App = () => {
           </div>
         </div>
       }>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          {/* Diğer rotalar buraya gelecek */}
-        </Routes>
+        <AuthProvider>
+          <NotificationProvider>
+            <CompanyProvider>
+              <Routes>
+                <Route path="/" element={<Navigate to="/login" />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/anasayfa" element={
+                  <PrivateRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <lazy(() => import('./pages/Anasayfa'))/>
+                    </Suspense>
+                  </PrivateRoute>
+                } />
+                {/* Diğer rotalar buraya gelecek */}
+              </Routes>
+            </CompanyProvider>
+          </NotificationProvider>
+        </AuthProvider>
       </Suspense>
     </>
   );
