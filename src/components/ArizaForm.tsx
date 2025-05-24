@@ -131,11 +131,6 @@ export const ArizaForm: React.FC<Props> = ({ ariza, onClose }) => {
       if (ariza) {
         // Güncelleme
         const docRef = doc(db, 'arizalar', ariza.id);
-        
-        // Durum değişikliği var mı kontrol et (çözüldü durumu için)
-        const durumDegisti = ariza.durum !== form.durum;
-        const cozulduMu = form.durum === 'cozuldu';
-        
         await updateDoc(docRef, {
           ...arizaData,
           ...(ariza.cozum && form.cozumTarihi ? {
@@ -145,77 +140,14 @@ export const ArizaForm: React.FC<Props> = ({ ariza, onClose }) => {
             }
           } : {})
         });
-        
-        // Durum "çözüldü" olarak değiştiyse bildirim ekle
-        if (durumDegisti && cozulduMu) {
-          // Bildirim koleksiyonuna yeni bir bildirim ekle
-          await addDoc(collection(db, 'bildirimler'), {
-            baslik: 'Arıza Çözüldü',
-            icerik: `"${form.baslik}" başlıklı arıza çözüldü`,
-            tarih: Timestamp.now(),
-            okundu: false,
-            tip: 'ariza_cozuldu',
-            arizaId: ariza.id,
-            alicilar: [ariza.olusturanKisi],
-            companyId: kullanici.companyId
-          });
-          
-          // Email bildirimi için bilgiyi işaretle (Cloud Functions tarafından işlenecek)
-          await updateDoc(docRef, {
-            bildirimGonderildi: false,
-            bildirimTipi: 'ariza_cozuldu'
-          });
-        }
-        
         toast.success('Arıza kaydı güncellendi');
       } else {
         // Yeni kayıt
-        const arizaRef = await addDoc(collection(db, 'arizalar'), {
+        await addDoc(collection(db, 'arizalar'), {
           ...arizaData,
           olusturanKisi: kullanici.id,
-          yorumlar: [],
-          bildirimGonderildi: false,
-          bildirimTipi: 'ariza_olusturuldu'
+          yorumlar: []
         });
-        
-        // Yeni arıza için bildirim oluştur
-        if (form.atananKisi) {
-          await addDoc(collection(db, 'bildirimler'), {
-            baslik: 'Yeni Arıza Atandı',
-            icerik: `Size "${form.baslik}" başlıklı yeni bir arıza atandı`,
-            tarih: Timestamp.now(),
-            okundu: false,
-            tip: 'ariza_atandi',
-            arizaId: arizaRef.id,
-            alicilar: [form.atananKisi],
-            companyId: kullanici.companyId
-          });
-        }
-        
-        // Yöneticilere bildirim
-        // Şirketteki yöneticileri bul
-        const yoneticiQuery = query(
-          collection(db, 'kullanicilar'),
-          where('rol', '==', 'yonetici'),
-          where('companyId', '==', kullanici.companyId)
-        );
-        
-        const yoneticiSnapshot = await getDocs(yoneticiQuery);
-        const yoneticiIdleri = yoneticiSnapshot.docs.map(doc => doc.id);
-        
-        if (yoneticiIdleri.length > 0) {
-          await addDoc(collection(db, 'bildirimler'), {
-            baslik: 'Yeni Arıza Kaydı',
-            icerik: `Yeni bir arıza kaydı oluşturuldu: "${form.baslik}"`,
-            tarih: Timestamp.now(),
-            okundu: false,
-            tip: 'ariza_olusturuldu',
-            arizaId: arizaRef.id,
-            alicilar: yoneticiIdleri,
-            companyId: kullanici.companyId
-          });
-        }
-        
         toast.success('Arıza kaydı oluşturuldu');
       }
 

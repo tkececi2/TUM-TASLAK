@@ -1,136 +1,53 @@
-
 import React, { useState, useRef } from 'react';
 import { Bell } from 'lucide-react';
-import { useNotification } from '../contexts/NotificationContext';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
+import { useBildirimler } from '../contexts/BildirimContext';
+import { BildirimListesi } from './BildirimListesi';
 import { useOnClickOutside } from '../hooks/useOnClickOutside';
 
 export const BildirimMenusu: React.FC = () => {
   const [acik, setAcik] = useState(false);
-  const { bildirimler, okunmamisBildirimSayisi, bildirimOku, tumBildirimleriOku } = useNotification();
-  const navigate = useNavigate();
+  const { bildirimler, okunmamisSayisi, tumunuOku } = useBildirimler();
   const menuRef = useRef<HTMLDivElement>(null);
-  
+
   useOnClickOutside(menuRef, () => setAcik(false));
-  
-  const handleBildirimTiklama = async (bildirim: any) => {
-    // Bildirimi okundu olarak işaretle
-    await bildirimOku(bildirim.id);
-    
-    // Bildirim tipine göre yönlendirme yap
-    if (bildirim.tip.includes('ariza') && bildirim.arizaId) {
-      navigate(`/arizalar/${bildirim.arizaId}`);
-    }
-    
-    setAcik(false);
-  };
-  
-  const handleTumunuOku = async () => {
-    await tumBildirimleriOku();
-  };
-  
-  const getBildirimIcon = (tip: string) => {
-    switch (tip) {
-      case 'ariza_olusturuldu':
-        return '🔴';
-      case 'ariza_atandi':
-        return '📋';
-      case 'ariza_cozuldu':
-        return '✅';
-      default:
-        return '📬';
+
+  const handleAc = () => {
+    setAcik(!acik);
+    if (!acik) {
+      tumunuOku();
     }
   };
-  
-  const formatTarih = (tarih: any) => {
-    if (!tarih) return '';
-    
-    const date = tarih.toDate();
-    const simdi = new Date();
-    const fark = simdi.getTime() - date.getTime();
-    
-    // Son 24 saat içindeyse saat göster
-    if (fark < 24 * 60 * 60 * 1000) {
-      return format(date, 'HH:mm', { locale: tr });
-    }
-    
-    // Son 7 gün içindeyse gün adı göster
-    if (fark < 7 * 24 * 60 * 60 * 1000) {
-      return format(date, 'EEEE', { locale: tr });
-    }
-    
-    // Daha eskiyse tam tarih göster
-    return format(date, 'dd MMM yyyy', { locale: tr });
-  };
-  
+
   return (
-    <div className="relative" ref={menuRef}>
-      <button 
-        onClick={() => setAcik(!acik)} 
-        className="relative p-1 text-gray-600 hover:text-gray-900 focus:outline-none"
+    <div ref={menuRef} className="relative">
+      <button
+        onClick={handleAc}
+        className="relative p-2 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-200"
+        aria-label={`Bildirimleri ${acik ? 'kapat' : 'aç'}`}
       >
         <Bell className="h-6 w-6" />
-        {okunmamisBildirimSayisi > 0 && (
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-            {okunmamisBildirimSayisi}
+        {okunmamisSayisi > 0 && (
+          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 w-5 rounded-full bg-rose-500 text-xs font-medium text-white animate-pulse-slow">
+            {okunmamisSayisi}
           </span>
         )}
       </button>
-      
+
       {acik && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg overflow-hidden z-10 border border-gray-200">
-          <div className="py-2 px-4 bg-gray-100 flex justify-between items-center">
-            <h3 className="text-sm font-medium text-gray-900">Bildirimler</h3>
-            {okunmamisBildirimSayisi > 0 && (
-              <button 
-                onClick={handleTumunuOku}
-                className="text-xs text-blue-600 hover:text-blue-800"
+        <div className="fixed sm:absolute right-2 sm:right-0 left-2 sm:left-auto top-16 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white rounded-lg shadow-xl ring-1 ring-black ring-opacity-5 z-50 max-h-[calc(100vh-5rem)] sm:max-h-[80vh] flex flex-col transform origin-top transition-all duration-200 ease-out animate-fade-in">
+          <div className="p-4 border-b border-gray-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Bildirimler</h3>
+              <button
+                onClick={() => tumunuOku()}
+                className="text-sm text-primary-600 hover:text-primary-700"
               >
-                Tümünü okundu işaretle
+                Tümünü Okundu İşaretle
               </button>
-            )}
+            </div>
           </div>
-          
-          <div className="max-h-80 overflow-y-auto divide-y divide-gray-200">
-            {bildirimler.length === 0 ? (
-              <div className="py-4 px-4 text-sm text-gray-500 text-center">
-                Bildirim bulunmuyor
-              </div>
-            ) : (
-              bildirimler.map((bildirim) => (
-                <div
-                  key={bildirim.id}
-                  onClick={() => handleBildirimTiklama(bildirim)}
-                  className={`px-4 py-3 hover:bg-gray-50 cursor-pointer ${
-                    !bildirim.okundu ? 'bg-blue-50' : ''
-                  }`}
-                >
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0 mr-3 mt-1">
-                      <span className="text-lg">{getBildirimIcon(bildirim.tip)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${!bildirim.okundu ? 'text-gray-900' : 'text-gray-700'}`}>
-                        {bildirim.baslik}
-                      </p>
-                      <p className="text-sm text-gray-500 truncate">
-                        {bildirim.icerik}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {formatTarih(bildirim.tarih)}
-                      </p>
-                    </div>
-                    {!bildirim.okundu && (
-                      <div className="ml-2 flex-shrink-0">
-                        <span className="inline-block h-2 w-2 rounded-full bg-blue-600"></span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="flex-1 overflow-y-auto">
+            <BildirimListesi onClose={() => setAcik(false)} />
           </div>
         </div>
       )}

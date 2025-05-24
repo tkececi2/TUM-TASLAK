@@ -3,7 +3,7 @@ import { User, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { authService } from '../services/authService';
 import { signInUser } from '../lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import type { Kullanici } from '../types';
 import toast from 'react-hot-toast';
 
@@ -170,97 +170,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           typeof signInError === 'object' ? 
             JSON.stringify(signInError, Object.getOwnPropertyNames(signInError), 2) : 
             signInError);
-
+            
         if (signInError instanceof TypeError) {
           throw new Error('Sunucu bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.');
         }
-
+        
         // Hata mesajını daha net görebilmek için
         if (signInError?.code) {
           throw new Error(`Giriş hatası: ${signInError.code}`);
         }
-
+        
         throw signInError;
       }
 
-      // Geliştirilmiş token yenileme mekanizması
+      // Force token refresh to get the latest custom claims - 3 kez deneyelim
       let tokenRefreshed = false;
       let attempts = 0;
-      const maxAttempts = 5; // Maksimum deneme sayısını artır
-
-      while (!tokenRefreshed && attempts < maxAttempts) {
+      while (!tokenRefreshed && attempts < 3) {
         try {
-          if (attempts > 0) {
-            // İlk denemeden sonra IndexedDB'yi temizlemeyi dene
-            try {
-              const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
-              for (const database of databases) {
-                if (database.name && database.name.includes('firestore') || database.name.includes('firebase')) {
-                  console.log(`Token yenileme öncesi veritabanı temizleniyor: ${database.name}`);
-                  window.indexedDB.deleteDatabase(database.name);
-                }
-              }
-            } catch (dbCleanupErr) {
-              console.warn('Token yenileme öncesi veritabanı temizleme hatası:', dbCleanupErr);
-            }
-
-            // Tarayıcı önbelleğini temizlemeyi dene
-            if ('caches' in window) {
-              try {
-                const cacheKeys = await caches.keys();
-                for (const key of cacheKeys) {
-                  if (key.includes('firebase')) {
-                    await caches.delete(key);
-                    console.log(`Önbellek temizlendi: ${key}`);
-                  }
-                }
-              } catch (cacheErr) {
-                console.warn('Önbellek temizleme hatası:', cacheErr);
-              }
-            }
-
-            console.log(`Token yenileme denemesi (${attempts + 1}/${maxAttempts})...`);
-            // Artan bekleme süresi (exponential backoff)
-            const waitTime = Math.min(1000 * Math.pow(2, attempts), 10000); // max 10 saniye
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-          }
-
-          // Token yenile
           await user.getIdToken(true);
           tokenRefreshed = true;
-          console.log(`Token başarıyla yenilendi (${attempts + 1}. denemede)`);
         } catch (error) {
-          console.warn(`Token yenileme hatası (${attempts + 1}/${maxAttempts}):`, error);
+          console.warn(`Token yenileme hatası (${attempts + 1}/3):`, error);
           attempts++;
-        }
-      }
-
-      // Token yenilenemezse
-      if (!tokenRefreshed) {
-        console.error('Token yenileme başarısız oldu, alternatif yöntem deneniyor...');
-
-        // Alternatif yöntem: Oturumu yeniden doğrula
-        try {
-          // Kullanıcı bilgilerini lokalde sakla
-          const userEmail = user.email;
-
-          // Oturumu kapat
-          await signOut(auth);
-
-          // Kullanıcıya bilgi ver
-          toast.warning('Oturum yenileniyor, lütfen bekleyin...');
-
-          // 1 saniye bekle
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // Giriş sayfasına yönlendir ve email bilgisini ekle
-          window.location.href = `/login?email=${encodeURIComponent(userEmail || '')}`;
-          return false;
-        } catch (reAuthError) {
-          console.error('Alternatif oturum yenileme hatası:', reAuthError);
-          toast.error('Oturum yenilenemedi, lütfen manuel olarak tekrar giriş yapın');
-          window.location.href = '/login';
-          return false;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 saniye bekle
         }
       }
 
@@ -292,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Deneme süresi kontrolü
         try {
           console.log('Ödeme durumu kontrolü:', userData.odemeDurumu);
-
+          
           // Ödeme durumu süre bitti olarak işaretlenmişse giriş engellenir
           if (userData.odemeDurumu === 'surebitti') {
             console.log('Ödeme durumu: süre bitti');
@@ -306,10 +239,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Deneme süresi kontrolü - süre dolmuş mu?
           if ((userData.odemeDurumu === 'deneme' || userData.odemeDurumu === 'beklemede') && userData.denemeSuresiBitis) {
             console.log('Deneme süresi bitiş tarihi:', userData.denemeSuresiBitis);
-
+            
             const simdikiZaman = new Date().getTime();
             let bitisTarihi;
-
+            
             // Firestore Timestamp ve diğer tarih tipleri için güvenli dönüşüm
             if (userData.denemeSuresiBitis.toDate) {
               // Firestore Timestamp
@@ -338,7 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               try {
                 console.log('Deneme süresi bitti, kullanıcı durumu güncelleniyor');
                 const userRef = doc(db, 'kullanicilar', userData.id);
-
+                
                 // Firestore'da kullanıcı durumunu güncelle
                 await updateDoc(userRef, {
                   odemeDurumu: 'surebitti',
@@ -346,7 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 });
 
                 toast.error('Abonelik süreniz dolmuştur. Lütfen yöneticinizle iletişime geçin veya ödeme yapın.');
-
+                
                 // Kullanıcıyı çıkış yaptır
                 await signOut(auth);
                 authService.clearUserData();
@@ -354,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return false;
               } catch (error) {
                 console.error('Kullanıcı durumu güncelleme hatası:', error);
-
+                
                 // Hata olsa bile giriş yapılmasını engelle
                 toast.error('Abonelik süreniz dolmuştur. Sistem hatası nedeniyle durum güncellenemedi. Lütfen yöneticinizle iletişime geçin.');
                 await signOut(auth);

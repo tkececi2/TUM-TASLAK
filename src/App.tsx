@@ -1,111 +1,85 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
-import { CompanyProvider } from './contexts/CompanyContext';
-import { Toaster } from 'react-hot-toast';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import { useAuth } from './contexts/AuthContext';
+import { Layout } from './components/Layout';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Anasayfa } from './pages/Anasayfa';
+import { Arizalar } from './pages/Arizalar';
+import { ArizaDetay } from './pages/ArizaDetay';
+import { Ekip } from './pages/Ekip';
+import { Sahalar } from './pages/Sahalar';
+import { StokKontrol } from './pages/StokKontrol';
+import { Istatistikler } from './pages/Istatistikler';
+import { Performans } from './pages/Performans';
+import { Ayarlar } from './pages/Ayarlar';
+import { Musteriler } from './pages/Musteriler';
+import { NobetKontrol } from './pages/NobetKontrol';
+import { YapilanIsler } from './pages/YapilanIsler';
+import { ElektrikKesintileri } from './pages/ElektrikKesintileri';
+import { InvertorKontrol } from './pages/InvertorKontrol';
+import { MekanikBakim } from './pages/MekanikBakim';
+import { ElektrikBakim } from './pages/ElektrikBakim';
+import { GesYonetimi } from './pages/GesYonetimi';
+import { GesSahalari } from './pages/GesSahalari';
+import { UretimVerileri } from './pages/UretimVerileri';
 import { PrivateRoute } from './components/PrivateRoute';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { OfflineIndicator } from './components/OfflineIndicator';
+import { CompanySettings } from './pages/CompanySettings';
+import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
+import { InviteUser } from './pages/InviteUser';
+import HomePage from './pages/HomePage';
+import { RaporYonetimi } from './pages/RaporYonetimi';
+import { RaporTemplate } from './pages/RaporTemplate';
 
-const App = () => {
-  const [appLoaded, setAppLoaded] = useState(false);
+function App() {
+  const { loading } = useAuth();
 
-  // Uygulama yükleme durumu
-  useEffect(() => {
-    // Uygulama ilk yüklendiğinde kritik kaynakları önceden yükle
-    const preloadResources = async () => {
-      try {
-        // Burada önceden yüklenecek kaynaklar için işlemler yapılabilir
-        // Örneğin, sık kullanılan görselleri önbelleğe alma
-        const imagesToPreload = ['/solar-logo.png', '/edeon-logo.png'];
-
-        await Promise.all(
-          imagesToPreload.map((src) => {
-            return new Promise((resolve, reject) => {
-              const img = new Image();
-              img.src = src;
-              img.onload = resolve;
-              img.onerror = reject;
-            });
-          })
-        );
-
-        // Sayfa 250ms içinde yüklendiyse, minimum 500ms göster (ani değişimi önlemek için)
-        // Yavaş yüklendiyse, direkt geçiş yap
-        const minLoadTime = 500;
-        const startTime = performance.now();
-        const elapsedTime = performance.now() - startTime;
-
-        if (elapsedTime < minLoadTime) {
-          setTimeout(() => setAppLoaded(true), minLoadTime - elapsedTime);
-        } else {
-          setAppLoaded(true);
-        }
-      } catch (error) {
-        console.error('Kaynak önyükleme hatası:', error);
-        setAppLoaded(true); // Hata olsa bile uygulamayı yükle
-      }
-    };
-
-    preloadResources();
-  }, []);
-
-  if (!appLoaded) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-        <img src="/solar-logo.png" alt="EDEON Enerji" className="w-24 h-24 mb-8 animate-pulse" />
-        <LoadingSpinner />
-        <p className="mt-4 text-gray-600">Uygulama yükleniyor...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  return (
-    <>
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#fff',
-            color: '#333',
-          },
-        }}
-      />
-      <OfflineIndicator />
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="flex flex-col items-center">
-            <LoadingSpinner />
-            <p className="mt-4 text-gray-500">Sayfa yükleniyor...</p>
-          </div>
-        </div>
-      }>
-        <AuthProvider>
-          <NotificationProvider>
-            <CompanyProvider>
-              <Routes>
-                <Route path="/" element={<Navigate to="/login" />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/anasayfa" element={
-                  <PrivateRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      {React.createElement(lazy(() => import('./pages/Anasayfa')))}
-                    </Suspense>
-                  </PrivateRoute>
-                } />
-                {/* Diğer rotalar buraya gelecek */}
-              </Routes>
-            </CompanyProvider>
-          </NotificationProvider>
-        </AuthProvider>
-      </Suspense>
-    </>
+return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/invite/:inviteId" element={<InviteUser />} />
+
+      <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
+        <Route path="/anasayfa" element={<Anasayfa />} />
+        <Route path="/arizalar" element={<Arizalar />} />
+        <Route path="/arizalar/:id" element={<ArizaDetay />} />
+        <Route path="/sahalar" element={<Sahalar />} />
+        <Route path="/stok-kontrol" element={<StokKontrol />} />
+        <Route path="/ekip" element={<Ekip />} />
+        <Route path="/istatistikler" element={<Istatistikler />} />
+        <Route path="/performans" element={<Performans />} />
+        <Route path="/rapor-yonetimi" element={<RaporYonetimi />} />
+        <Route path="/rapor/:raporTuru" element={<RaporTemplate />} />
+        <Route path="/ayarlar" element={<Ayarlar />} />
+        <Route path="/musteriler" element={<Musteriler />} />
+        <Route path="/nobet-kontrol" element={<NobetKontrol />} />
+        <Route path="/yapilan-isler" element={<YapilanIsler />} />
+        <Route path="/elektrik-kesintileri" element={<ElektrikKesintileri />} />
+        <Route path="/invertor-kontrol" element={<InvertorKontrol />} />
+        <Route path="/mekanik-bakim" element={<MekanikBakim />} />
+        <Route path="/elektrik-bakim" element={<ElektrikBakim />} />
+        <Route path="/ges-yonetimi" element={<GesYonetimi />} />
+        <Route path="/ges-sahalari" element={<GesSahalari />} />
+        <Route path="/uretim-verileri" element={<UretimVerileri />} />
+        <Route path="/company-settings" element={<CompanySettings />} />
+        <Route path="/admin" element={<SuperAdminDashboard />} />
+      </Route>
+
+      <Route path="/" element={<Navigate to="/anasayfa" replace />} />
+      <Route path="*" element={<Navigate to="/anasayfa" replace />} />
+    </Routes>
   );
-};
+}
 
 export default App;
