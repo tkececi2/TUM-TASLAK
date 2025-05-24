@@ -49,8 +49,20 @@ try {
   // Web içinde IndexedDB sorunlarını önlemek için bellek tabanlı cache kullanma
   // Bu, Replit WebView ile daha uyumlu çalışacaktır
   console.warn('Hafıza tabanlı önbellek kullanılacak.');
-
-  // Persistence devre dışı, yalnızca bellek önbelleği aktif
+  
+  // Firestore önbellek yapılandırması
+  const firestoreSettings = {
+    cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+    ignoreUndefinedProperties: true
+  };
+  
+  db.settings(firestoreSettings);
+  
+  // Ağ bağlantısı olmasa bile veriler gösterilebilecek
+  db.enableNetwork().catch(err => {
+    console.warn('Firestore ağ bağlantısı sağlanamadı:', err);
+  });
+  
 } catch (error) {
   console.error('Persistence yapılandırma hatası:', error);
   console.warn('Hafıza tabanlı önbellek kullanılacak.');

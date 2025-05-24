@@ -350,7 +350,20 @@ export const UretimVerileri: React.FC = () => {
         }
       } catch (error) {
         console.error('Üretim verileri getirilemedi:', error);
-        toast.error('Üretim verileri yüklenirken bir hata oluştu. Tekrar deneyiniz.');
+        
+        // FirebaseError için özel işleme
+        if (error && error.code === 'failed-precondition') {
+          toast.error('Veritabanı bağlantısı kurulamadı. Sayfayı yenileyip tekrar deneyiniz.');
+          
+          // Otomatik yeniden deneme işlevi
+          setTimeout(() => {
+            console.log('Veritabanı bağlantısı yeniden deneniyor...');
+            window.location.reload();
+          }, 5000);
+        } else {
+          toast.error('Üretim verileri yüklenirken bir hata oluştu. Tekrar deneyiniz.');
+        }
+        
         setUretimVerileri([]);
       } finally {
         setYukleniyor(false);
