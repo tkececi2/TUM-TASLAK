@@ -183,17 +183,84 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw signInError;
       }
 
-      // Force token refresh to get the latest custom claims - 3 kez deneyelim
+      // Geliştirilmiş token yenileme mekanizması
       let tokenRefreshed = false;
       let attempts = 0;
-      while (!tokenRefreshed && attempts < 3) {
+      const maxAttempts = 5; // Maksimum deneme sayısını artır
+
+      while (!tokenRefreshed && attempts < maxAttempts) {
         try {
+          if (attempts > 0) {
+            // İlk denemeden sonra IndexedDB'yi temizlemeyi dene
+            try {
+              const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+              for (const database of databases) {
+                if (database.name && database.name.includes('firestore') || database.name.includes('firebase')) {
+                  console.log(`Token yenileme öncesi veritabanı temizleniyor: ${database.name}`);
+                  window.indexedDB.deleteDatabase(database.name);
+                }
+              }
+            } catch (dbCleanupErr) {
+              console.warn('Token yenileme öncesi veritabanı temizleme hatası:', dbCleanupErr);
+            }
+
+            // Tarayıcı önbelleğini temizlemeyi dene
+            if ('caches' in window) {
+              try {
+                const cacheKeys = await caches.keys();
+                for (const key of cacheKeys) {
+                  if (key.includes('firebase')) {
+                    await caches.delete(key);
+                    console.log(`Önbellek temizlendi: ${key}`);
+                  }
+                }
+              } catch (cacheErr) {
+                console.warn('Önbellek temizleme hatası:', cacheErr);
+              }
+            }
+
+            console.log(`Token yenileme denemesi (${attempts + 1}/${maxAttempts})...`);
+            // Artan bekleme süresi (exponential backoff)
+            const waitTime = Math.min(1000 * Math.pow(2, attempts), 10000); // max 10 saniye
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+
+          // Token yenile
           await user.getIdToken(true);
           tokenRefreshed = true;
+          console.log(`Token başarıyla yenilendi (${attempts + 1}. denemede)`);
         } catch (error) {
-          console.warn(`Token yenileme hatası (${attempts + 1}/3):`, error);
+          console.warn(`Token yenileme hatası (${attempts + 1}/${maxAttempts}):`, error);
           attempts++;
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 saniye bekle
+        }
+      }
+
+      // Token yenilenemezse
+      if (!tokenRefreshed) {
+        console.error('Token yenileme başarısız oldu, alternatif yöntem deneniyor...');
+
+        // Alternatif yöntem: Oturumu yeniden doğrula
+        try {
+          // Kullanıcı bilgilerini lokalde sakla
+          const userEmail = user.email;
+
+          // Oturumu kapat
+          await signOut(auth);
+
+          // Kullanıcıya bilgi ver
+          toast.warning('Oturum yenileniyor, lütfen bekleyin...');
+
+          // 1 saniye bekle
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Giriş sayfasına yönlendir ve email bilgisini ekle
+          window.location.href = `/login?email=${encodeURIComponent(userEmail || '')}`;
+          return false;
+        } catch (reAuthError) {
+          console.error('Alternatif oturum yenileme hatası:', reAuthError);
+          toast.error('Oturum yenilenemedi, lütfen manuel olarak tekrar giriş yapın');
+          window.location.href = '/login';
+          return false;
         }
       }
 

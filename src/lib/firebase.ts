@@ -44,53 +44,141 @@ if (process.env.NODE_ENV === 'development') {
 }
 */
 
-// Düzeltilmiş persistence konfigürasyonu
-try {
-  // Web içinde IndexedDB sorunlarını önlemek için bellek tabanlı cache kullanma
-  // Bu, Replit WebView ile daha uyumlu çalışacaktır
-  console.warn('Hafıza tabanlı önbellek kullanılacak.');
-  
-  // Firestore önbellek yapılandırması
-  const firestoreSettings = {
-    cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-    ignoreUndefinedProperties: true
-  };
-  
-  db.settings(firestoreSettings);
-  
-  // Önceki IndexedDB veritabanlarını temizlemeyi dene
+// Geliştirilmiş persistence konfigürasyonu
+const initializeFirestore = async () => {
+  try {
+    console.log('Firestore yapılandırması başlatılıyor...');
+    
+    // Önce eski veritabanlarını temizle
+    await cleanupFirestoreDBs();
+    
+    // Firestore önbellek yapılandırması
+    const firestoreSettings = {
+      cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+      ignoreUndefinedProperties: true
+    };
+    
+    // Ayarları uygula
+    db.settings(firestoreSettings);
+    
+    // Ağ bağlantısını etkinleştir
+    try {
+      await db.enableNetwork();
+      console.log('Firestore ağ bağlantısı kuruldu');
+      
+      // Bağlantıyı test et
+      const testQuery = query(collection(db, 'system_status'), limit(1));
+      await getDocs(testQuery);
+      console.log('Firestore bağlantı testi başarılı');
+    } catch (networkErr: any) {
+      console.warn('Firestore ağ bağlantısı sağlanamadı:', networkErr);
+      
+      // Ağ hatası durumunda çevrimdışı modu etkinleştir
+      if (networkErr && networkErr.code === 'unavailable') {
+        console.log('Çevrimdışı mod etkinleştiriliyor...');
+        try {
+          await db.disableNetwork();
+          console.log('Çevrimdışı mod etkin');
+        } catch (offlineErr) {
+          console.error('Çevrimdışı mod etkinleştirilemedi:', offlineErr);
+        }
+      }
+      
+      // IndexedDB erişim hatası
+      if (networkErr && networkErr.code === 'failed-precondition') {
+        console.warn('IndexedDB erişim hatası algılandı, oturum yenileniyor...');
+        await handleIndexedDBError();
+      }
+    }
+    
+    // Ağ durumu değişikliklerini dinle
+    window.addEventListener('online', async () => {
+      console.log('Ağ bağlantısı tespit edildi, Firestore ağını etkinleştirme deneniyor...');
+      try {
+        await db.enableNetwork();
+        console.log('Firestore ağ bağlantısı yeniden kuruldu');
+        // Kullanıcıya bilgi ver
+        toast.success('İnternet bağlantısı kuruldu');
+      } catch (err) {
+        console.error('Ağ yeniden bağlantı hatası:', err);
+      }
+    });
+    
+    window.addEventListener('offline', async () => {
+      console.log('Ağ bağlantısı kesildi, çevrimdışı moda geçiliyor...');
+      try {
+        await db.disableNetwork();
+        console.log('Firestore çevrimdışı moda geçti');
+        // Kullanıcıya bilgi ver
+        toast.warning('İnternet bağlantısı kesildi, çevrimdışı moddasınız');
+      } catch (err) {
+        console.error('Çevrimdışı moda geçiş hatası:', err);
+      }
+    });
+    
+  } catch (error) {
+    console.error('Firestore yapılandırma hatası:', error);
+    console.warn('Temel yapılandırma kullanılacak');
+    
+    // Temel yapılandırma
+    db.settings({
+      ignoreUndefinedProperties: true
+    });
+  }
+};
+
+// IndexedDB veritabanlarını temizle
+const cleanupFirestoreDBs = async () => {
   try {
     const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+    let cleanedCount = 0;
+    
     for (const database of databases) {
       if (database.name && database.name.includes('firestore')) {
-        console.log('Temizleniyor:', database.name);
+        console.log('IndexedDB temizleniyor:', database.name);
         window.indexedDB.deleteDatabase(database.name);
+        cleanedCount++;
       }
     }
+    
+    if (cleanedCount > 0) {
+      console.log(`${cleanedCount} IndexedDB veritabanı temizlendi`);
+    }
+    
+    return true;
   } catch (cleanupError) {
     console.warn('IndexedDB temizleme hatası:', cleanupError);
+    return false;
   }
-  
-  // Ağ bağlantısı olmasa bile veriler gösterilebilecek
-  db.enableNetwork().catch(err => {
-    console.warn('Firestore ağ bağlantısı sağlanamadı:', err);
-    
-    // Özel bir "failed-precondition" hata işleyicisi
-    if (err && err.code === 'failed-precondition') {
-      console.warn('IndexedDB erişim hatası algılandı, oturum yenileniyor...');
-      // Kullanıcı oturumunu yenilemeyi dene
-      if (auth.currentUser) {
-        auth.currentUser.getIdToken(true)
-          .then(() => console.log('Token yenilendi, sayfayı yenileyin'))
-          .catch(e => console.error('Token yenileme hatası:', e));
+};
+
+// IndexedDB hatası işleyicisi
+const handleIndexedDBError = async () => {
+  // Kullanıcı oturumunu yenilemeyi dene
+  if (auth.currentUser) {
+    try {
+      await cleanupFirestoreDBs();
+      await auth.currentUser.getIdToken(true);
+      console.log('Token yenilendi, Firestore bağlantısı yeniden denenecek');
+      
+      // Yeniden bağlanmayı dene
+      try {
+        await db.enableNetwork();
+        console.log('Firestore ağ bağlantısı yeniden kuruldu');
+        toast.success('Bağlantı yenilendi');
+      } catch (reconnectErr) {
+        console.error('Yeniden bağlantı hatası:', reconnectErr);
+        toast.error('Bağlantı sorunu devam ediyor, sayfayı yenilemeyi deneyin');
       }
+    } catch (tokenErr) {
+      console.error('Token yenileme hatası:', tokenErr);
+      toast.error('Oturum yenilenemedi, lütfen tekrar giriş yapın');
     }
-  });
-  
-} catch (error) {
-  console.error('Persistence yapılandırma hatası:', error);
-  console.warn('Hafıza tabanlı önbellek kullanılacak.');
-}
+  }
+};
+
+// Firestore'u başlat
+initializeFirestore();
 
 // Firebase token yenileme işlevi - tüm uygulama için kullanılabilir
 export const refreshAuthToken = async (): Promise<boolean> => {
@@ -103,45 +191,56 @@ export const refreshAuthToken = async (): Promise<boolean> => {
 
     console.log('Token yenileniyor...');
 
-    // Token yenileme denemesi - hata durumunda 3 kez deneyin
+    // Token yenileme denemesi - hata durumunda daha fazla deneme yap
     let success = false;
     let attempts = 0;
+    const maxAttempts = 5; // Deneme sayısını artır
+    
+    // Önce ağ bağlantısını kontrol et
+    if (!navigator.onLine) {
+      console.warn('İnternet bağlantısı yok, token yenileme atlanıyor');
+      return false;
+    }
 
-    while (!success && attempts < 3) {
+    while (!success && attempts < maxAttempts) {
       try {
+        // Her denemede temizlik işlemleri yap
+        if (attempts > 0) {
+          await cleanupTokenRenewalEnvironment(attempts);
+        }
+        
         // Mevcut token'ı geçersiz kıl ve yenisini al
         await auth.currentUser.getIdToken(true);
         success = true;
+        console.log(`Token başarıyla yenilendi (${attempts + 1}. denemede)`);
       } catch (err) {
         attempts++;
-        console.warn(`Token yenileme denemesi ${attempts}/3 başarısız:`, err);
+        console.warn(`Token yenileme denemesi ${attempts}/${maxAttempts} başarısız:`, err);
         
-        // Hata türüne göre işlem yap
-        if (err instanceof TypeError) {
-          console.warn('TypeError algılandı, tarayıcı önbelleği temizleniyor...');
-          
-          // Tarayıcı önbelleğini temizlemeyi dene
-          try {
-            // IndexedDB veritabanlarını temizle
-            const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
-            for (const database of databases) {
-              if (database.name && database.name.includes('firestore')) {
-                window.indexedDB.deleteDatabase(database.name);
-              }
-            }
-          } catch (cleanError) {
-            console.warn('Önbellek temizleme hatası:', cleanError);
-          }
-        }
+        // Hata türüne göre özel işlem
+        await handleTokenRenewalError(err, attempts);
         
-        // Kısa bir bekleme süresi ekleyin
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Exponential backoff - artan bekleme süresi
+        const waitTime = Math.min(1000 * Math.pow(1.5, attempts), 8000); // maksimum 8 saniye
+        console.log(`${waitTime}ms bekleniyor...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
 
     if (!success) {
-      console.error('Token 3 deneme sonrasında yenilenemedi');
+      console.error(`Token ${maxAttempts} deneme sonrasında yenilenemedi`);
+      toast.error('Oturum yenilenemedi. Lütfen tekrar giriş yapın.');
       return false;
+    }
+    
+    // Başarılı token yenileme sonrası Firestore ağını yenile
+    try {
+      await db.disableNetwork();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await db.enableNetwork();
+      console.log('Firestore ağ bağlantısı yenilendi');
+    } catch (networkError) {
+      console.warn('Firestore ağ yenileme hatası:', networkError);
     }
 
     try {
@@ -589,3 +688,94 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
 };
 
 export default app;
+
+// Token yenileme ortamını temizleme
+async function cleanupTokenRenewalEnvironment(attempt: number): Promise<void> {
+  console.log(`Token yenileme ortamı temizleniyor (${attempt}. deneme)...`);
+  
+  try {
+    // IndexedDB veritabanlarını temizle
+    const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+    for (const database of databases) {
+      if (database.name && (database.name.includes('firestore') || database.name.includes('firebase'))) {
+        console.log(`IndexedDB temizleniyor: ${database.name}`);
+        window.indexedDB.deleteDatabase(database.name);
+      }
+    }
+    
+    // localStorage'dan token bilgilerini temizle
+    const tokenKeys = ['firebase:authUser', 'firebase:token'];
+    tokenKeys.forEach(key => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const storageKey = localStorage.key(i);
+        if (storageKey && storageKey.includes(key)) {
+          console.log(`LocalStorage anahtarı temizleniyor: ${storageKey}`);
+          localStorage.removeItem(storageKey);
+        }
+      }
+    });
+    
+    // Servis çalışanlarını yenile
+    if ('serviceWorker' in navigator && attempt > 2) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        console.log('Servis çalışanı yenileniyor...');
+        await registration.update();
+      }
+    }
+    
+    // Cache temizleme (son çare)
+    if (attempt > 3 && 'caches' in window) {
+      const cacheKeys = await caches.keys();
+      for (const cacheKey of cacheKeys) {
+        if (cacheKey.includes('firebase')) {
+          console.log(`Cache temizleniyor: ${cacheKey}`);
+          await caches.delete(cacheKey);
+        }
+      }
+    }
+  } catch (cleanupError) {
+    console.warn('Ortam temizleme hatası:', cleanupError);
+  }
+}
+
+// Token yenileme hatasını işle
+async function handleTokenRenewalError(error: any, attempt: number): Promise<void> {
+  // TypeError özel durumu
+  if (error instanceof TypeError) {
+    console.warn('TypeError algılandı, tarayıcı önbelleği temizleniyor...');
+    
+    try {
+      // LocalStorage temizleme
+      localStorage.removeItem('firebase:previous_websocket_failure');
+      
+      // Tüm IndexedDB veritabanlarını temizle
+      const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+      for (const database of databases) {
+        if (database.name) {
+          window.indexedDB.deleteDatabase(database.name);
+        }
+      }
+    } catch (cleanError) {
+      console.warn('Önbellek temizleme hatası:', cleanError);
+    }
+  }
+  
+  // Network hatası
+  if (error.code === 'auth/network-request-failed') {
+    console.warn('Ağ hatası algılandı, bağlantı kontrol ediliyor...');
+    
+    // Bağlantı kontrolü
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      toast.warning('İnternet bağlantınız yok. Bağlantı kurulduğunda otomatik yenilenecek.');
+    } else {
+      toast.warning('Sunucu bağlantı sorunu. Yeniden deneniyor...');
+    }
+  }
+  
+  // Ciddi hata durumlarında (3. denemeden sonra) kullanıcıya bilgi ver
+  if (attempt >= 3) {
+    toast.error('Oturum yenilenirken sorun oluştu. Tekrar deneniyor...');
+  }
+}
