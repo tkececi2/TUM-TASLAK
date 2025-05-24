@@ -1,0 +1,99 @@
+[vite] Internal Server Error
+/home/runner/workspace/src/pages/SuperAdminDashboard.tsx: Identifier 'isEditModalOpen' has already been declared. (28:9)
+
+  26 |   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  27 |   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+> 28 |   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+     |          ^
+  29 |   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  30 |   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false);
+  31 |   const [stats, setStats] = useState({
+    at constructor (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:360:19)
+    at TypeScriptParserMixin.raise (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:3338:19)
+    at TypeScriptScopeHandler.checkRedeclarationInScope (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:1566:19)
+    at TypeScriptScopeHandler.declareName (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:1532:12)
+    at TypeScriptScopeHandler.declareName (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7066:11)
+    at TypeScriptParserMixin.declareNameFromIdentifier (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7494:16)
+    at TypeScriptParserMixin.checkIdentifier (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7490:12)
+    at TypeScriptParserMixin.checkLVal (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7431:12)
+    at TypeScriptParserMixin.checkLVal (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7467:16)
+    at TypeScriptParserMixin.parseVarId (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:13072:10)
+    at TypeScriptParserMixin.parseVarId (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9605:11)
+    at TypeScriptParserMixin.parseVar (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:13047:12)
+    at TypeScriptParserMixin.parseVarStatement (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12894:10)
+    at TypeScriptParserMixin.parseVarStatement (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9335:31)
+    at TypeScriptParserMixin.parseStatementContent (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12515:23)
+    at TypeScriptParserMixin.parseStatementContent (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9365:18)
+    at TypeScriptParserMixin.parseStatementLike (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12432:17)
+    at TypeScriptParserMixin.parseStatementListItem (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12412:17)
+    at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12980:61)
+    at TypeScriptParserMixin.parseBlockBody (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12973:10)
+    at TypeScriptParserMixin.parseBlock (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12961:10)
+    at TypeScriptParserMixin.parseFunctionBody (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11810:24)
+    at TypeScriptParserMixin.parseArrowExpression (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11785:10)
+    at TypeScriptParserMixin.parseParenAndDistinguishExpression (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11398:12)
+    at TypeScriptParserMixin.parseExprAtom (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11033:23)
+    at TypeScriptParserMixin.parseExprAtom (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:6950:20)
+    at TypeScriptParserMixin.parseExprSubscripts (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10785:23)
+    at TypeScriptParserMixin.parseUpdate (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10770:21)
+    at TypeScriptParserMixin.parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10750:23)
+    at TypeScriptParserMixin.parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9690:18)
+    at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10603:61)
+    at TypeScriptParserMixin.parseExprOps (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10608:23)
+    at TypeScriptParserMixin.parseMaybeConditional (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10585:23)
+    at TypeScriptParserMixin.parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10538:21)
+    at TypeScriptParserMixin.parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9639:20)
+    at /home/runner/workspace/node_modules/@babel/parser/lib/index.js:10507:39
+    at TypeScriptParserMixin.allowInAnd (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12121:16)
+    at…
+/home/runner/workspace/src/pages/SuperAdminDashboard.tsx: Identifier &#x27;isEditModalOpen&#x27; has already been declared. (28:9)
+
+26 | const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+27 | const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+&gt; 28 | const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+| ^
+29 | const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+30 | const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false);
+31 | const [stats, setStats] = useState({
+at constructor (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:360:19)
+at TypeScriptParserMixin.raise (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:3338:19)
+at TypeScriptScopeHandler.checkRedeclarationInScope (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:1566:19)
+at TypeScriptScopeHandler.declareName (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:1532:12)
+at TypeScriptScopeHandler.declareName (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7066:11)
+at TypeScriptParserMixin.declareNameFromIdentifier (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7494:16)
+at TypeScriptParserMixin.checkIdentifier (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7490:12)
+at TypeScriptParserMixin.checkLVal (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7431:12)
+at TypeScriptParserMixin.checkLVal (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:7467:16)
+at TypeScriptParserMixin.parseVarId (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:13072:10)
+at TypeScriptParserMixin.parseVarId (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9605:11)
+at TypeScriptParserMixin.parseVar (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:13047:12)
+at TypeScriptParserMixin.parseVarStatement (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12894:10)
+at TypeScriptParserMixin.parseVarStatement (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9335:31)
+at TypeScriptParserMixin.parseStatementContent (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12515:23)
+at TypeScriptParserMixin.parseStatementContent (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9365:18)
+at TypeScriptParserMixin.parseStatementLike (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12432:17)
+at TypeScriptParserMixin.parseStatementListItem (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12412:17)
+at TypeScriptParserMixin.parseBlockOrModuleBlockBody (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12980:61)
+at TypeScriptParserMixin.parseBlockBody (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12973:10)
+at TypeScriptParserMixin.parseBlock (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12961:10)
+at TypeScriptParserMixin.parseFunctionBody (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11810:24)
+at TypeScriptParserMixin.parseArrowExpression (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11785:10)
+at TypeScriptParserMixin.parseParenAndDistinguishExpression (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11398:12)
+at TypeScriptParserMixin.parseExprAtom (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:11033:23)
+at TypeScriptParserMixin.parseExprAtom (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:6950:20)
+at TypeScriptParserMixin.parseExprSubscripts (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10785:23)
+at TypeScriptParserMixin.parseUpdate (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10770:21)
+at TypeScriptParserMixin.parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10750:23)
+at TypeScriptParserMixin.parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9690:18)
+at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10603:61)
+at TypeScriptParserMixin.parseExprOps (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10608:23)
+at TypeScriptParserMixin.parseMaybeConditional (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10585:23)
+at TypeScriptParserMixin.parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:10538:21)
+at TypeScriptParserMixin.parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:9639:20)
+at /home/runner/workspace/node_modules/@babel/parser/lib/index.js:10507:39
+at TypeScriptParserMixin.allowInAnd (/home/runner/workspace/node_modules/@babel/parser/lib/index.js:12121:16)
+at…
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
