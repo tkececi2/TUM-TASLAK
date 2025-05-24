@@ -48,7 +48,7 @@ return (
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/invite/:inviteId" element={<InviteUser />} />
-      
+
       <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route path="/anasayfa" element={<Anasayfa />} />
         <Route path="/arizalar" element={<Arizalar />} />
@@ -73,7 +73,7 @@ return (
         <Route path="/company-settings" element={<CompanySettings />} />
         <Route path="/admin" element={<SuperAdminDashboard />} />
       </Route>
-      
+
       <Route path="/" element={<Navigate to="/anasayfa" replace />} />
       <Route path="*" element={<Navigate to="/anasayfa" replace />} />
     </Routes>

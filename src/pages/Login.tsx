@@ -199,8 +199,9 @@ export const Login = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Arkaplan deseni */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+      {/* Arkaplan deseni - Geliştirilmiş animasyonlu arka plan */}
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] animate-pulse-slow"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-50/30 via-transparent to-accent-50/30"></div>
 
       <div className="relative flex min-h-screen">
         {/* Sol Bölüm - Tanıtım */}

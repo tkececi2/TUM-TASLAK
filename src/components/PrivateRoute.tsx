@@ -3,6 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSpinner } from './LoadingSpinner';
 import toast from 'react-hot-toast'; // Added import statement
+import { AlertTriangle } from 'react-feather';
+import { ErrorAlert } from './ErrorAlert';
 
 export const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { kullanici, loading } = useAuth();
@@ -22,12 +24,28 @@ export const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Abonelik süresi bitmiş kullanıcıları engelle (süper admin hariç)
   if (kullanici.rol !== 'superadmin' && kullanici.odemeDurumu === 'surebitti') {
-    // Kullanıcıyı çıkış sayfasına yönlendir
-    toast.error('Abonelik süreniz dolmuştur. Lütfen yöneticinizle iletişime geçin.', {
-      duration: 5000,
-      position: 'top-center',
-    });
-    return <Navigate to="/login" state={{ expired: true }} replace />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full animate-fade-in">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-error-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-8 w-8 text-error-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Abonelik Süresi Dolmuş</h2>
+            <p className="text-gray-600">Sistemi kullanabilmek için aboneliğinizin yenilenmesi gerekiyor.</p>
+          </div>
+          <ErrorAlert message="Abonelik süreniz dolmuştur. Lütfen yöneticinizle iletişime geçin." />
+          <div className="mt-6 flex justify-center">
+            <button 
+              onClick={() => window.location.href = '/login'} 
+              className="modern-button-primary w-full"
+            >
+              Giriş Sayfasına Dön
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Check if the user is accessing the admin page and is not a superadmin
