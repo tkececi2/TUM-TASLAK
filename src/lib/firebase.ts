@@ -109,13 +109,33 @@ export const refreshAuthToken = async (): Promise<boolean> => {
 
     while (!success && attempts < 3) {
       try {
+        // Mevcut token'ı geçersiz kıl ve yenisini al
         await auth.currentUser.getIdToken(true);
         success = true;
       } catch (err) {
         attempts++;
         console.warn(`Token yenileme denemesi ${attempts}/3 başarısız:`, err);
+        
+        // Hata türüne göre işlem yap
+        if (err instanceof TypeError) {
+          console.warn('TypeError algılandı, tarayıcı önbelleği temizleniyor...');
+          
+          // Tarayıcı önbelleğini temizlemeyi dene
+          try {
+            // IndexedDB veritabanlarını temizle
+            const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+            for (const database of databases) {
+              if (database.name && database.name.includes('firestore')) {
+                window.indexedDB.deleteDatabase(database.name);
+              }
+            }
+          } catch (cleanError) {
+            console.warn('Önbellek temizleme hatası:', cleanError);
+          }
+        }
+        
         // Kısa bir bekleme süresi ekleyin
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
 
@@ -124,24 +144,29 @@ export const refreshAuthToken = async (): Promise<boolean> => {
       return false;
     }
 
-    const idTokenResult = await auth.currentUser.getIdTokenResult();
-    console.log('Token yenilendi', idTokenResult.claims);
+    try {
+      const idTokenResult = await auth.currentUser.getIdTokenResult();
+      console.log('Token yenilendi', idTokenResult.claims);
 
-    // LocalStorage'dan mevcut kullanıcı bilgilerini al
-    const currentUserStr = localStorage.getItem('currentUser');
-    if (currentUserStr) {
-      try {
-        const currentUser = JSON.parse(currentUserStr);
+      // LocalStorage'dan mevcut kullanıcı bilgilerini al
+      const currentUserStr = localStorage.getItem('currentUser');
+      if (currentUserStr) {
+        try {
+          const currentUser = JSON.parse(currentUserStr);
 
-        // Token claims'de rol yoksa, localStorage'dan al ve claims'e ekle
-        if (!idTokenResult.claims.rol && currentUser.rol) {
-          console.log('Rol bilgisi token claims\'de yok, localStorage\'dan alınıyor:', currentUser.rol);
-          // Bu noktada rol bilgisini claims'e ekleyemeyiz, ancak uygulama rolü kullanacaktır
-          // Cloud Functions ile rol senkronizasyonu yapılmalı
+          // Token claims'de rol yoksa, localStorage'dan al ve claims'e ekle
+          if (!idTokenResult.claims.rol && currentUser.rol) {
+            console.log('Rol bilgisi token claims\'de yok, localStorage\'dan alınıyor:', currentUser.rol);
+            // Bu noktada rol bilgisini claims'e ekleyemeyiz, ancak uygulama rolü kullanacaktır
+            // Cloud Functions ile rol senkronizasyonu yapılmalı
+          }
+        } catch (e) {
+          console.error('localStorage kullanıcı bilgisi ayrıştırma hatası', e);
         }
-      } catch (e) {
-        console.error('localStorage kullanıcı bilgisi ayrıştırma hatası', e);
       }
+    } catch (tokenResultError) {
+      console.error('Token sonucu alınırken hata:', tokenResultError);
+      // Token sonucu alınamasa bile, yenileme başarılı kabul edilebilir
     }
 
     return true;

@@ -87,23 +87,47 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // Token yenileme işlemini dene
           try {
             if (auth && auth.currentUser) {
-              // Hata yakalama ile token yenileme
-              try {
-                await auth.currentUser.getIdToken(true);
-                console.log('Bildirim dinleme hatası sonrası token yenilendi');
-                toast.info('Oturum yenileniyor, lütfen bekleyin...');
-                
-                // Token yenilendikten sonra kullanıcı bilgilerini kontrol et
-                const userDoc = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
-                if (userDoc.exists()) {
-                  console.log('Kullanıcı bilgileri doğrulandı');
-                  // Sayfayı yenileme yerine state güncellemesi daha iyi olabilir
-                  // setTimeout(() => window.location.reload(), 2000);
+              let success = false;
+              let attempts = 0;
+              const maxAttempts = 3;
+              
+              // Birkaç kez deneme yap
+              while (!success && attempts < maxAttempts) {
+                attempts++;
+                try {
+                  await auth.currentUser.getIdToken(true);
+                  console.log(`Bildirim dinleme hatası sonrası token yenilendi (${attempts}. deneme)`);
+                  success = true;
+                  
+                  // Token başarıyla yenilendiyse, kullanıcı bilgilerini doğrula
+                  try {
+                    const userDoc = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
+                    if (userDoc.exists()) {
+                      console.log('Kullanıcı bilgileri doğrulandı');
+                      
+                      // Kısa bir uyarı göster
+                      toast.success('Oturum yenilendi');
+                      
+                      // Sayfayı yenilemek yerine, kullanıcı bilgilerini güncelle
+                      // Burada AuthContext veya diğer bileşenlerin bilgilerini güncelleme işlemleri yapılabilir
+                      break; // Başarılı olduk, döngüden çık
+                    }
+                  } catch (userDocErr) {
+                    console.warn('Kullanıcı belgesi alınamadı:', userDocErr);
+                  }
+                } catch (tokenErr) {
+                  console.error(`Bildirim token yenileme hatası (${attempts}. deneme):`, tokenErr);
+                  
+                  // Kısa bir bekleme süresi ekle
+                  await new Promise(resolve => setTimeout(resolve, 1000));
                 }
-              } catch (tokenErr) {
-                console.error('Bildirim token yenileme hatası:', tokenErr);
-                toast.error('Oturum yenileme başarısız, yeniden giriş yapmanız gerekebilir.');
-                // Ciddi hata durumunda login sayfasına yönlendir
+              }
+              
+              if (!success) {
+                console.error('Token yenileme başarısız oldu');
+                toast.error('Oturum yenilenemedi, lütfen tekrar giriş yapın');
+                
+                // Birkaç saniye bekle ve login sayfasına yönlendir
                 setTimeout(() => {
                   if (window.location.pathname !== '/login') {
                     window.location.href = '/login';
