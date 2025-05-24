@@ -1,5 +1,5 @@
 import { initializeApp, getApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator, AuthError } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
@@ -27,6 +27,40 @@ try {
 }
 
 export const auth = getAuth(app);
+
+// Hata korumalı giriş işlemi
+export const signInUser = async (email: string, password: string) => {
+  try {
+    // İlk deneme - normal giriş
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return userCredential.user;
+  } catch (error: any) {
+    // Firebase hata mesajlarını detaylı olarak günlüğe kaydet
+    console.error('Firebase giriş hatası:', {
+      code: error.code,
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    
+    // Ağ hatası durumunda tekrar dene
+    if (error.code === 'auth/network-request-failed') {
+      try {
+        // Kısa bir bekleme sonrası tekrar dene
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const retryCredential = await signInWithEmailAndPassword(auth, email, password);
+        return retryCredential.user;
+      } catch (retryError) {
+        console.error('Giriş yeniden deneme hatası:', retryError);
+        throw retryError;
+      }
+    }
+    
+    // Diğer hataları yukarı ilet
+    throw error;
+  }
+};
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 

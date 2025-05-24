@@ -157,7 +157,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Önbellek temizleme hatası:', cleanupError);
       }
 
-      const user = await signInUser(email, sifre);
+      // Hata korumalı giriş işlemi
+      let user;
+      try {
+        user = await signInUser(email, sifre);
+      } catch (signInError: any) {
+        if (signInError instanceof TypeError) {
+          console.error('Firebase oturum açma hatası (TypeError):', signInError);
+          throw new Error('Sunucu bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.');
+        }
+        throw signInError;
+      }
 
       // Force token refresh to get the latest custom claims - 3 kez deneyelim
       let tokenRefreshed = false;

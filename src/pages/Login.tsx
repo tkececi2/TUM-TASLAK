@@ -55,13 +55,23 @@ export const Login = () => {
         const from = (location.state as any)?.from?.pathname || '/anasayfa';
         navigate(from, { replace: true });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      // Özel hata mesajı göster
-      if (error instanceof TypeError) {
-        toast.error('Giriş işlemi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+      
+      // Güvenli bir şekilde hata mesajı göster
+      let errorMessage = 'Giriş işlemi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.';
+      
+      // Daha spesifik hata mesajları için kontrol
+      if (typeof error === 'object' && error !== null) {
+        if (error.code) {
+          // Firebase hata kodları için kontrol - AuthContext'te zaten işleniyor
+          console.log('Firebase hata kodu:', error.code);
+        } else if (error instanceof TypeError) {
+          errorMessage = 'Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.';
+        }
       }
-      // Diğer hatalar AuthContext içindeki girisYap fonksiyonunda ele alınıyor
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
