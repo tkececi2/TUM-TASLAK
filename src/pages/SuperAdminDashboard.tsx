@@ -812,137 +812,394 @@ export const SuperAdminDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
-                          {/* Kullanıcı Abonelik Yönetimi - İyileştirilmiş UI */}
+                          {/* Kullanıcı Abonelik Yönetimi - Gelişmiş UI */}
                           <div className="flex justify-end space-x-2">
-                            {/* Deneme süresini yönet - geliştirilmiş dropdown */}
-                            <div className="relative group">
+                            {/* Abonelik süresini yönet - modal temelli UI */}
+                            <div className="relative">
                               <button
-                                className="text-amber-600 hover:text-amber-900 p-1 hover:bg-amber-50 rounded flex items-center"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  document.getElementById(`abonelik-modal-${user.id}`)?.classList.remove('hidden');
+                                }}
+                                className="text-amber-600 hover:text-amber-900 p-1.5 hover:bg-amber-50 rounded flex items-center"
                                 title="Abonelik süresini yönet"
                               >
                                 <Calendar className="h-5 w-5" />
                               </button>
-                              <div className="dropdown-menu absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 hidden group-hover:block border border-gray-200">
-                                <div className="p-3 border-b border-gray-200">
-                                  <h3 className="text-sm font-medium text-gray-700">Abonelik Süresi Yönetimi</h3>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {user.denemeSuresiBitis ? 
-                                      `Mevcut bitiş: ${format(user.denemeSuresiBitis.toDate(), 'dd MMM yyyy', { locale: tr })}` : 
-                                      'Deneme süresi henüz ayarlanmamış'}
-                                  </p>
-                                </div>
-                                <div className="py-2">
-                                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">Önceden Tanımlı Süreler</div>
-                                  <button
-                                    onClick={() => handleExtendTrial(user.id, 7)}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
-                                  >
-                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">7</span>
-                                    Bir hafta ekle
-                                  </button>
-                                  <button
-                                    onClick={() => handleExtendTrial(user.id, 14)}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
-                                  >
-                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">14</span>
-                                    İki hafta ekle
-                                  </button>
-                                  <button
-                                    onClick={() => handleExtendTrial(user.id, 30)}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
-                                  >
-                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">30</span>
-                                    Bir ay ekle
-                                  </button>
-                                  <button
-                                    onClick={() => handleExtendTrial(user.id, 90)}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-amber-50"
-                                  >
-                                    <span className="bg-amber-100 text-amber-800 p-1 rounded-md mr-2 text-xs">90</span>
-                                    Üç ay ekle
-                                  </button>
-                                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50 mt-1">Özel Süre</div>
-                                  <div className="px-4 py-2 flex items-center space-x-2">
-                                    <input 
-                                      type="number" 
-                                      min="1" 
-                                      max="365"
-                                      placeholder="Gün"
-                                      className="w-20 text-sm border border-gray-300 rounded p-1"
-                                      id={`custom-days-${user.id}`}
-                                    />
-                                    <button
-                                      onClick={() => {
-                                        const input = document.getElementById(`custom-days-${user.id}`) as HTMLInputElement;
-                                        const days = parseInt(input.value);
-                                        if (days > 0) {
-                                          handleExtendTrial(user.id, days);
-                                          input.value = '';
-                                        }
-                                      }}
-                                      className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded"
-                                    >
-                                      Ekle
-                                    </button>
+                              
+                              {/* Abonelik yönetimi modal */}
+                              <div id={`abonelik-modal-${user.id}`} className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 hidden flex justify-center items-center">
+                                <div className="bg-white rounded-lg shadow-xl w-96 max-w-full transform transition-all">
+                                  <div className="bg-gradient-to-r from-amber-100 to-amber-50 rounded-t-lg p-4 border-b border-amber-200">
+                                    <div className="flex justify-between items-center">
+                                      <div className="flex items-center">
+                                        <Calendar className="h-6 w-6 text-amber-700 mr-2" />
+                                        <h3 className="text-lg font-semibold text-amber-800">Abonelik Yönetimi</h3>
+                                      </div>
+                                      <button 
+                                        onClick={() => document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden')}
+                                        className="text-gray-500 hover:text-gray-700"
+                                      >
+                                        <X className="h-5 w-5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="p-5">
+                                    {/* Kullanıcı bilgisi ve mevcut durum */}
+                                    <div className="mb-5 border-b pb-4">
+                                      <div className="flex items-center mb-2">
+                                        <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center mr-3">
+                                          <Users className="h-6 w-6 text-amber-700" />
+                                        </div>
+                                        <div>
+                                          <div className="font-medium">{user.ad}</div>
+                                          <div className="text-sm text-gray-500">{user.email}</div>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="flex items-center justify-between mt-3">
+                                        <div className="text-sm font-medium text-gray-600">Mevcut abonelik durumu:</div>
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full 
+                                          ${user.odemeDurumu === 'deneme' ? 'bg-blue-100 text-blue-800' :
+                                          user.odemeDurumu === 'odendi' ? 'bg-green-100 text-green-800' :
+                                          user.odemeDurumu === 'beklemede' ? 'bg-amber-100 text-amber-800' :
+                                          user.odemeDurumu === 'surebitti' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                                          {user.odemeDurumu === 'deneme' ? 'Deneme' :
+                                          user.odemeDurumu === 'odendi' ? 'Ödendi' :
+                                          user.odemeDurumu === 'beklemede' ? 'Beklemede' :
+                                          user.odemeDurumu === 'surebitti' ? 'Süre Bitti' : 'Belirtilmedi'}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="mt-2">
+                                        <div className="text-sm font-medium text-gray-600">Bitiş tarihi:</div>
+                                        <div className="flex items-center mt-1">
+                                          <Clock className="h-4 w-4 mr-1 text-gray-500" />
+                                          <span className="font-medium">
+                                            {user.denemeSuresiBitis ? 
+                                              format(user.denemeSuresiBitis.toDate(), 'dd MMMM yyyy', { locale: tr }) : 
+                                              'Belirtilmemiş'}
+                                          </span>
+                                          
+                                          {user.denemeSuresiBitis && (() => {
+                                            // Kalan süreyi hesapla
+                                            const simdikiZaman = new Date().getTime();
+                                            const bitisTarihi = user.denemeSuresiBitis.toDate().getTime();
+                                            const kalanMilisaniye = bitisTarihi - simdikiZaman;
+                                            const kalanGun = Math.ceil(kalanMilisaniye / (1000 * 60 * 60 * 24));
+                                            
+                                            if (kalanMilisaniye <= 0) {
+                                              return (
+                                                <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">
+                                                  Süresi doldu
+                                                </span>
+                                              );
+                                            } else if (kalanGun <= 7) {
+                                              return (
+                                                <span className="ml-2 px-2 py-0.5 text-xs bg-amber-100 text-amber-700 rounded-full">
+                                                  {kalanGun} gün kaldı
+                                                </span>
+                                              );
+                                            } else {
+                                              return (
+                                                <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                                                  {kalanGun} gün kaldı
+                                                </span>
+                                              );
+                                            }
+                                          })()}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Hızlı süre ekleme seçenekleri */}
+                                    <div className="mb-5">
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Hızlı Süre Ekle</h4>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                          onClick={() => {
+                                            handleExtendTrial(user.id, 7);
+                                            setTimeout(() => {
+                                              document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden');
+                                            }, 1000);
+                                          }}
+                                          className="bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 border border-blue-200 rounded-md py-2 px-3 flex flex-col items-center transition-all duration-200 transform hover:scale-105"
+                                        >
+                                          <span className="text-xl font-bold">7</span>
+                                          <span className="text-xs">Gün</span>
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleExtendTrial(user.id, 14);
+                                            setTimeout(() => {
+                                              document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden');
+                                            }, 1000);
+                                          }}
+                                          className="bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 text-indigo-700 border border-indigo-200 rounded-md py-2 px-3 flex flex-col items-center transition-all duration-200 transform hover:scale-105"
+                                        >
+                                          <span className="text-xl font-bold">14</span>
+                                          <span className="text-xs">Gün</span>
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleExtendTrial(user.id, 30);
+                                            setTimeout(() => {
+                                              document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden');
+                                            }, 1000);
+                                          }}
+                                          className="bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 border border-purple-200 rounded-md py-2 px-3 flex flex-col items-center transition-all duration-200 transform hover:scale-105"
+                                        >
+                                          <span className="text-xl font-bold">30</span>
+                                          <span className="text-xs">Gün</span>
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleExtendTrial(user.id, 90);
+                                            setTimeout(() => {
+                                              document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden');
+                                            }, 1000);
+                                          }}
+                                          className="bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-700 border border-amber-200 rounded-md py-2 px-3 flex flex-col items-center transition-all duration-200 transform hover:scale-105"
+                                        >
+                                          <span className="text-xl font-bold">90</span>
+                                          <span className="text-xs">Gün</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Özel süre ekleme */}
+                                    <div className="mb-5">
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Özel Süre</h4>
+                                      <div className="flex items-center space-x-2">
+                                        <div className="relative flex-1">
+                                          <input 
+                                            type="number" 
+                                            min="1" 
+                                            max="365"
+                                            placeholder="Gün sayısı"
+                                            className="w-full border border-gray-300 rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                            id={`custom-days-input-${user.id}`}
+                                          />
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            const input = document.getElementById(`custom-days-input-${user.id}`) as HTMLInputElement;
+                                            const days = parseInt(input.value);
+                                            if (days > 0) {
+                                              handleExtendTrial(user.id, days);
+                                              input.value = '';
+                                              setTimeout(() => {
+                                                document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden');
+                                              }, 1000);
+                                            }
+                                          }}
+                                          className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-lg transition-all duration-200"
+                                        >
+                                          Ekle
+                                        </button>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Paket seçenekleri */}
+                                    <div className="mb-5">
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Paket Seçenekleri</h4>
+                                      <div className="space-y-2">
+                                        <button
+                                          onClick={() => {
+                                            handleExtendTrial(user.id, 365);
+                                            handleUpdatePaymentStatus(user.id, 'odendi');
+                                            setTimeout(() => {
+                                              document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden');
+                                            }, 1000);
+                                          }}
+                                          className="w-full border border-green-300 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded-lg py-3 px-4 flex justify-between items-center"
+                                        >
+                                          <div className="flex items-center">
+                                            <div className="h-8 w-8 rounded-full bg-green-200 flex items-center justify-center mr-3">
+                                              <CheckCircle className="h-5 w-5 text-green-700" />
+                                            </div>
+                                            <div className="text-left">
+                                              <div className="font-medium text-green-800">Yıllık Paket</div>
+                                              <div className="text-xs text-green-600">365 gün, ödendi olarak işaretler</div>
+                                            </div>
+                                          </div>
+                                          <div className="text-green-700 font-bold">1 Yıl</div>
+                                        </button>
+                                        
+                                        <button
+                                          onClick={() => {
+                                            handleExtendTrial(user.id, 180);
+                                            handleUpdatePaymentStatus(user.id, 'odendi');
+                                            setTimeout(() => {
+                                              document.getElementById(`abonelik-modal-${user.id}`)?.classList.add('hidden');
+                                            }, 1000);
+                                          }}
+                                          className="w-full border border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg py-3 px-4 flex justify-between items-center"
+                                        >
+                                          <div className="flex items-center">
+                                            <div className="h-8 w-8 rounded-full bg-blue-200 flex items-center justify-center mr-3">
+                                              <CheckCircle className="h-5 w-5 text-blue-700" />
+                                            </div>
+                                            <div className="text-left">
+                                              <div className="font-medium text-blue-800">6 Aylık Paket</div>
+                                              <div className="text-xs text-blue-600">180 gün, ödendi olarak işaretler</div>
+                                            </div>
+                                          </div>
+                                          <div className="text-blue-700 font-bold">6 Ay</div>
+                                        </button>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Bilgilendirme */}
+                                    <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                      <p>Süre uzatıldığında kullanıcıya otomatik bildirim gönderilir ve abonelik geçmişine kayıt eklenir.</p>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Ödeme durumunu değiştir - geliştirilmiş dropdown */}
-                            <div className="relative group">
+                            {/* Ödeme durumunu değiştir - modal temelli UI */}
+                            <div className="relative">
                               <button
-                                className="text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded flex items-center"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  document.getElementById(`odeme-modal-${user.id}`)?.classList.remove('hidden');
+                                }}
+                                className="text-green-600 hover:text-green-900 p-1.5 hover:bg-green-50 rounded flex items-center"
                                 title="Ödeme durumunu değiştir"
                               >
                                 <CreditCard className="h-5 w-5" />
                               </button>
-                              <div className="dropdown-menu absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 hidden group-hover:block border border-gray-200">
-                                <div className="p-3 border-b border-gray-200">
-                                  <h3 className="text-sm font-medium text-gray-700">Ödeme Durumu Değiştir</h3>
-                                  <p className="text-xs text-gray-500 mt-1">Kullanıcının ödeme durumunu güncelleyin</p>
-                                </div>
-                                <div className="py-2">
-                                  <button
-                                    onClick={() => handleUpdatePaymentStatus(user.id, 'deneme')}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-blue-50"
-                                  >
-                                    <span className="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-                                    <div>
-                                      <div className="font-medium text-blue-700">Deneme</div>
-                                      <div className="text-xs text-gray-500">Deneme süresinde kullanım</div>
+                              
+                              {/* Ödeme durumu modal */}
+                              <div id={`odeme-modal-${user.id}`} className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 hidden flex justify-center items-center">
+                                <div className="bg-white rounded-lg shadow-xl w-96 max-w-full transform transition-all">
+                                  <div className="bg-gradient-to-r from-green-100 to-green-50 rounded-t-lg p-4 border-b border-green-200">
+                                    <div className="flex justify-between items-center">
+                                      <div className="flex items-center">
+                                        <CreditCard className="h-6 w-6 text-green-700 mr-2" />
+                                        <h3 className="text-lg font-semibold text-green-800">Ödeme Durumu</h3>
+                                      </div>
+                                      <button 
+                                        onClick={() => document.getElementById(`odeme-modal-${user.id}`)?.classList.add('hidden')}
+                                        className="text-gray-500 hover:text-gray-700"
+                                      >
+                                        <X className="h-5 w-5" />
+                                      </button>
                                     </div>
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePaymentStatus(user.id, 'odendi')}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-green-50"
-                                  >
-                                    <span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                                    <div>
-                                      <div className="font-medium text-green-700">Ödendi</div>
-                                      <div className="text-xs text-gray-500">Abonelik ücreti ödendi</div>
+                                  </div>
+                                  
+                                  <div className="p-5">
+                                    {/* Kullanıcı bilgisi ve mevcut durum */}
+                                    <div className="mb-5 border-b pb-4">
+                                      <div className="flex items-center mb-2">
+                                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                                          <Users className="h-6 w-6 text-green-700" />
+                                        </div>
+                                        <div>
+                                          <div className="font-medium">{user.ad}</div>
+                                          <div className="text-sm text-gray-500">{user.email}</div>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="flex items-center justify-between mt-3">
+                                        <div className="text-sm font-medium text-gray-600">Mevcut ödeme durumu:</div>
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full 
+                                          ${user.odemeDurumu === 'deneme' ? 'bg-blue-100 text-blue-800' :
+                                          user.odemeDurumu === 'odendi' ? 'bg-green-100 text-green-800' :
+                                          user.odemeDurumu === 'beklemede' ? 'bg-amber-100 text-amber-800' :
+                                          user.odemeDurumu === 'surebitti' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                                          {user.odemeDurumu === 'deneme' ? 'Deneme' :
+                                          user.odemeDurumu === 'odendi' ? 'Ödendi' :
+                                          user.odemeDurumu === 'beklemede' ? 'Beklemede' :
+                                          user.odemeDurumu === 'surebitti' ? 'Süre Bitti' : 'Belirtilmedi'}
+                                        </span>
+                                      </div>
                                     </div>
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePaymentStatus(user.id, 'beklemede')}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-amber-50"
-                                  >
-                                    <span className="w-3 h-3 rounded-full bg-amber-500 mr-2"></span>
-                                    <div>
-                                      <div className="font-medium text-amber-700">Beklemede</div>
-                                      <div className="text-xs text-gray-500">Ödeme bekliyor</div>
+                                    
+                                    {/* Ödeme durumu seçenekleri */}
+                                    <div className="space-y-3 mb-5">
+                                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Ödeme Durumunu Güncelle</h4>
+                                      <button
+                                        onClick={() => {
+                                          handleUpdatePaymentStatus(user.id, 'odendi');
+                                          setTimeout(() => {
+                                            document.getElementById(`odeme-modal-${user.id}`)?.classList.add('hidden');
+                                          }, 1000);
+                                        }}
+                                        className="w-full border border-green-300 bg-white hover:bg-green-50 rounded-lg py-3 px-4 flex items-center transition-all duration-200"
+                                      >
+                                        <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                                          <CheckCircle className="h-5 w-5 text-green-700" />
+                                        </div>
+                                        <div className="text-left">
+                                          <div className="font-medium text-green-800">Ödendi</div>
+                                          <div className="text-xs text-green-600">Abonelik ücreti tam olarak ödendi</div>
+                                        </div>
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          handleUpdatePaymentStatus(user.id, 'deneme');
+                                          setTimeout(() => {
+                                            document.getElementById(`odeme-modal-${user.id}`)?.classList.add('hidden');
+                                          }, 1000);
+                                        }}
+                                        className="w-full border border-blue-300 bg-white hover:bg-blue-50 rounded-lg py-3 px-4 flex items-center transition-all duration-200"
+                                      >
+                                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                          <Clock className="h-5 w-5 text-blue-700" />
+                                        </div>
+                                        <div className="text-left">
+                                          <div className="font-medium text-blue-800">Deneme</div>
+                                          <div className="text-xs text-blue-600">Ücretsiz deneme süresi kullanımda</div>
+                                        </div>
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          handleUpdatePaymentStatus(user.id, 'beklemede');
+                                          setTimeout(() => {
+                                            document.getElementById(`odeme-modal-${user.id}`)?.classList.add('hidden');
+                                          }, 1000);
+                                        }}
+                                        className="w-full border border-amber-300 bg-white hover:bg-amber-50 rounded-lg py-3 px-4 flex items-center transition-all duration-200"
+                                      >
+                                        <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center mr-3">
+                                          <Clock className="h-5 w-5 text-amber-700" />
+                                        </div>
+                                        <div className="text-left">
+                                          <div className="font-medium text-amber-800">Beklemede</div>
+                                          <div className="text-xs text-amber-600">Ödeme bekleniyor (7 gün geçici erişim)</div>
+                                        </div>
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          handleUpdatePaymentStatus(user.id, 'surebitti');
+                                          setTimeout(() => {
+                                            document.getElementById(`odeme-modal-${user.id}`)?.classList.add('hidden');
+                                          }, 1000);
+                                        }}
+                                        className="w-full border border-red-300 bg-white hover:bg-red-50 rounded-lg py-3 px-4 flex items-center transition-all duration-200"
+                                      >
+                                        <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                                          <AlertTriangle className="h-5 w-5 text-red-700" />
+                                        </div>
+                                        <div className="text-left">
+                                          <div className="font-medium text-red-800">Süre Bitti</div>
+                                          <div className="text-xs text-red-600">Abonelik süresi doldu, erişim kısıtlanacak</div>
+                                        </div>
+                                      </button>
                                     </div>
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdatePaymentStatus(user.id, 'surebitti')}
-                                    className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-red-50"
-                                  >
-                                    <span className="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                                    <div>
-                                      <div className="font-medium text-red-700">Süre Bitti</div>
-                                      <div className="text-xs text-gray-500">Abonelik süresi doldu</div>
+                                    
+                                    {/* Bilgilendirme */}
+                                    <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                                      <p>Ödeme durumu değiştirildiğinde kullanıcıya otomatik bildirim gönderilir ve ödeme geçmişine kayıt eklenir.</p>
                                     </div>
-                                  </button>
+                                  </div>
                                 </div>
                               </div>
                             </div>
