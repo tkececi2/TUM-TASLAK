@@ -78,8 +78,14 @@ export const ArizaListesi: React.FC<Props> = ({
 
   if (arizalar.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500">Henüz arıza kaydı bulunmuyor.</p>
+      <div className="text-center py-12 bg-white rounded-lg shadow-md">
+        <div className="flex flex-col items-center justify-center">
+          <div className="bg-blue-100 p-4 rounded-full mb-4">
+            <ImageIcon className="h-10 w-10 text-blue-500" />
+          </div>
+          <p className="text-gray-600 font-medium">Henüz arıza kaydı bulunmuyor.</p>
+          <p className="text-gray-500 text-sm mt-1">Yeni bir arıza kaydı oluşturmak için "Yeni Arıza Kaydı" butonuna tıklayın.</p>
+        </div>
       </div>
     );
   }
@@ -134,10 +140,10 @@ export const ArizaListesi: React.FC<Props> = ({
               <tr
                 key={ariza.id}
                 onClick={() => onArizaClick(ariza)}
-                className="hover:bg-gray-50 cursor-pointer transition-all duration-200"
+                className="hover:bg-blue-50 cursor-pointer transition-all duration-200"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="h-12 w-12 rounded-lg overflow-hidden bg-gray-100">
+                  <div className="h-14 w-14 rounded-lg overflow-hidden bg-gray-100 shadow-sm border border-gray-200">
                     {fotograf ? (
                       <img
                         src={fotograf}
