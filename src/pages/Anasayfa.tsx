@@ -568,15 +568,15 @@ export const Anasayfa: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Hoş Geldiniz Kartı */}
-      <Card className="bg-gradient-to-r from-primary-50 to-primary-100 border-none shadow-md">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+      <Card className="bg-gradient-to-r from-blue-700 to-blue-900 border-none shadow-lg rounded-xl overflow-hidden">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between p-1">
           <div className="flex items-center mb-4 md:mb-0">
-            <div className="p-3 bg-primary-100 rounded-full mr-4">
-              <Sun className="h-8 w-8 text-primary-600" />
+            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-4">
+              <Sun className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Hoş Geldiniz, {kullanici?.ad}</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-xl font-bold text-white">Hoş Geldiniz, {kullanici?.ad}</h2>
+              <p className="text-sm text-blue-100">
                 {format(new Date(), 'dd MMMM yyyy, EEEE', { locale: tr })}
               </p>
             </div>
@@ -584,106 +584,108 @@ export const Anasayfa: React.FC = () => {
           <div className="flex flex-wrap gap-3">
             <button
               onClick={veriYenile}
-              className="flex items-center gap-2 text-primary-600 bg-white py-2 px-4 rounded-lg shadow-sm hover:bg-primary-50 transition-colors"
+              className="flex items-center gap-2 text-blue-900 bg-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-50 transition-all duration-300 transform hover:scale-105"
               disabled={yenileniyor}
             >
               <RefreshCw className={`h-4 w-4 ${yenileniyor ? 'animate-spin' : ''}`} />
-              <span>{yenileniyor ? 'Yenileniyor...' : 'Verileri Yenile'}</span>
+              <span className="font-medium">{yenileniyor ? 'Yenileniyor...' : 'Verileri Yenile'}</span>
             </button>
-            <div className="bg-white px-4 py-2 rounded-lg shadow-sm flex items-center">
-              <Battery className="h-5 w-5 text-green-500 mr-2" />
+            <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md flex items-center text-white border border-white/10">
+              <Battery className="h-5 w-5 text-blue-200 mr-2" />
               <div>
-                <p className="text-xs text-gray-500">Aylık Üretim</p>
+                <p className="text-xs text-blue-100">Aylık Üretim</p>
                 <p className="text-sm font-semibold">{istatistikler.aylikUretim.toLocaleString('tr-TR')} kWh</p>
               </div>
             </div>
-            <div className="bg-white px-4 py-2 rounded-lg shadow-sm flex items-center">
-              <Battery className="h-5 w-5 text-blue-500 mr-2" />
+            <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md flex items-center text-white border border-white/10">
+              <Battery className="h-5 w-5 text-blue-200 mr-2" />
               <div>
-                <p className="text-xs text-gray-500">Yıllık Üretim</p>
+                <p className="text-xs text-blue-100">Yıllık Üretim</p>
                 <p className="text-sm font-semibold">{istatistikler.yillikUretim.toLocaleString('tr-TR')} kWh</p>
               </div>
             </div>
           </div>
         </div>
+        <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-2xl"></div>
+        <div className="absolute -top-8 -left-8 w-32 h-32 bg-blue-300 rounded-full opacity-10 blur-xl"></div>
       </Card>
 
       {/* Hızlı Erişim Kartları */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <div 
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-primary-50 hover:scale-105"
+          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
           onClick={() => navigate('/arizalar')}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-red-100 rounded-full mb-3">
+            <div className="p-3 bg-red-100 rounded-full mb-3 group-hover:bg-red-200 transition-colors duration-300">
               <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
-            <h3 className="text-sm font-medium text-gray-900">Arızalar</h3>
+            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Arızalar</h3>
             <p className="text-xs text-gray-500 mt-1">Arıza takibi ve yönetimi</p>
           </div>
         </div>
         
         <div 
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-primary-50 hover:scale-105"
+          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
           onClick={() => navigate('/uretim-verileri')}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-green-100 rounded-full mb-3">
-              <Sun className="h-6 w-6 text-green-600" />
+            <div className="p-3 bg-blue-100 rounded-full mb-3 group-hover:bg-blue-200 transition-colors duration-300">
+              <Sun className="h-6 w-6 text-blue-600" />
             </div>
-            <h3 className="text-sm font-medium text-gray-900">Üretim Verileri</h3>
+            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Üretim Verileri</h3>
             <p className="text-xs text-gray-500 mt-1">Enerji üretim takibi</p>
           </div>
         </div>
         
         <div 
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-primary-50 hover:scale-105"
+          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
           onClick={() => navigate('/elektrik-bakim')}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-yellow-100 rounded-full mb-3">
+            <div className="p-3 bg-yellow-100 rounded-full mb-3 group-hover:bg-yellow-200 transition-colors duration-300">
               <Zap className="h-6 w-6 text-yellow-600" />
             </div>
-            <h3 className="text-sm font-medium text-gray-900">Elektrik Bakım</h3>
+            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Elektrik Bakım</h3>
             <p className="text-xs text-gray-500 mt-1">Elektrik bakım kontrolleri</p>
           </div>
         </div>
         
         <div 
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-primary-50 hover:scale-105"
+          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
           onClick={() => navigate('/mekanik-bakim')}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-blue-100 rounded-full mb-3">
+            <div className="p-3 bg-blue-100 rounded-full mb-3 group-hover:bg-blue-200 transition-colors duration-300">
               <PanelTop className="h-6 w-6 text-blue-600" />
             </div>
-            <h3 className="text-sm font-medium text-gray-900">Mekanik Bakım</h3>
+            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Mekanik Bakım</h3>
             <p className="text-xs text-gray-500 mt-1">Mekanik bakım kontrolleri</p>
           </div>
         </div>
         
         <div 
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-primary-50 hover:scale-105"
+          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
           onClick={() => navigate('/stok-kontrol')}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-indigo-100 rounded-full mb-3">
+            <div className="p-3 bg-indigo-100 rounded-full mb-3 group-hover:bg-indigo-200 transition-colors duration-300">
               <Package className="h-6 w-6 text-indigo-600" />
             </div>
-            <h3 className="text-sm font-medium text-gray-900">Stok Kontrol</h3>
+            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Stok Kontrol</h3>
             <p className="text-xs text-gray-500 mt-1">Malzeme ve envanter</p>
           </div>
         </div>
         
         <div 
-          className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-primary-50 hover:scale-105"
+          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
           onClick={() => navigate('/istatistikler')}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-purple-100 rounded-full mb-3">
-              <FileBarChart className="h-6 w-6 text-purple-600" />
+            <div className="p-3 bg-blue-100 rounded-full mb-3 group-hover:bg-blue-200 transition-colors duration-300">
+              <FileBarChart className="h-6 w-6 text-blue-600" />
             </div>
-            <h3 className="text-sm font-medium text-gray-900">İstatistikler</h3>
+            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">İstatistikler</h3>
             <p className="text-xs text-gray-500 mt-1">Analiz ve istatistikler</p>
           </div>
         </div>
@@ -691,140 +693,140 @@ export const Anasayfa: React.FC = () => {
 
       {/* Genel Durum Özeti */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 border-none shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="relative z-10 flex items-center">
-            <div className="p-3 bg-blue-100 rounded-full mr-3">
-              <AlertTriangle className="h-6 w-6 text-blue-600" />
+        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-blue-800 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+          <div className="relative z-10 flex items-center p-2">
+            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
+              <AlertTriangle className="h-6 w-6 text-white" />
             </div>
             <div className="w-full">
-              <p className="text-sm font-medium text-blue-900">Arıza Durumu</p>
+              <p className="text-sm font-medium text-blue-100">Arıza Durumu</p>
               <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-blue-800">{istatistikler.acikArizalar + istatistikler.devamEdenArizalar}</span>
-                <span className="ml-2 text-sm text-blue-700">Aktif Arıza</span>
+                <span className="text-2xl font-bold text-white">{istatistikler.acikArizalar + istatistikler.devamEdenArizalar}</span>
+                <span className="ml-2 text-sm text-blue-100">Aktif Arıza</span>
                 {istatistikler.acikArizalar > 3 && (
                   <Badge color="red" className="ml-2">Dikkat</Badge>
                 )}
               </div>
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-blue-700">Çözüm Oranı: %{istatistikler.performansSkoru}</span>
-                <span className="text-xs text-blue-700">{istatistikler.cozulenArizalar} çözüldü</span>
+                <span className="text-xs text-blue-100">Çözüm Oranı: %{istatistikler.performansSkoru}</span>
+                <span className="text-xs text-blue-100">{istatistikler.cozulenArizalar} çözüldü</span>
               </div>
-              <div className="mt-1 bg-blue-200 rounded-full h-1.5">
+              <div className="mt-1 bg-white/20 rounded-full h-2">
                 <div 
-                  className="bg-blue-600 h-1.5 rounded-full" 
+                  className="bg-white h-2 rounded-full" 
                   style={{ width: `${istatistikler.performansSkoru}%` }}
                 ></div>
               </div>
             </div>
           </div>
-          <div className="absolute -bottom-10 -right-10 h-32 w-32 bg-blue-200 rounded-full opacity-20"></div>
-          <div className="absolute -top-10 -left-10 h-24 w-24 bg-blue-300 rounded-full opacity-10"></div>
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-blue-400 rounded-full opacity-20 blur-xl"></div>
+          <div className="absolute -top-10 -left-10 h-32 w-32 bg-blue-300 rounded-full opacity-10 blur-xl"></div>
         </Card>
         
-        <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 border-none shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="relative z-10 flex items-center">
-            <div className="p-3 bg-green-100 rounded-full mr-3">
-              <Battery className="h-6 w-6 text-green-600" />
+        <Card className="relative overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+          <div className="relative z-10 flex items-center p-2">
+            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
+              <Battery className="h-6 w-6 text-white" />
             </div>
             <div className="w-full">
-              <p className="text-sm font-medium text-green-900">Üretim Durumu</p>
+              <p className="text-sm font-medium text-slate-100">Üretim Durumu</p>
               <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-green-800">{istatistikler.aylikUretim.toLocaleString('tr-TR')}</span>
-                <span className="ml-2 text-sm text-green-700">kWh / Ay</span>
+                <span className="text-2xl font-bold text-white">{istatistikler.aylikUretim.toLocaleString('tr-TR')}</span>
+                <span className="ml-2 text-sm text-slate-100">kWh / Ay</span>
                 {istatistikler.yillikUretim > 0 && istatistikler.yillikHedefUretim > 0 && 
                  (istatistikler.yillikUretim / istatistikler.yillikHedefUretim) > 0.5 && (
                   <Badge color="green" className="ml-2">İyi Gidiyor</Badge>
                 )}
               </div>
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-green-700">Yıllık: {istatistikler.yillikUretim.toLocaleString('tr-TR')} kWh</span>
-                <span className="text-xs text-green-700">Hedef: {istatistikler.yillikHedefUretim.toLocaleString('tr-TR')} kWh</span>
+                <span className="text-xs text-slate-100">Yıllık: {istatistikler.yillikUretim.toLocaleString('tr-TR')} kWh</span>
+                <span className="text-xs text-slate-100">Hedef: {istatistikler.yillikHedefUretim.toLocaleString('tr-TR')} kWh</span>
               </div>
-              <div className="mt-1 bg-green-200 rounded-full h-1.5">
+              <div className="mt-1 bg-white/20 rounded-full h-2">
                 <div 
-                  className="bg-green-600 h-1.5 rounded-full" 
+                  className="bg-blue-400 h-2 rounded-full" 
                   style={{ width: `${istatistikler.yillikHedefUretim > 0 ? Math.min((istatistikler.yillikUretim / istatistikler.yillikHedefUretim) * 100, 100) : 0}%` }}
                 ></div>
               </div>
             </div>
           </div>
-          <div className="absolute -bottom-10 -right-10 h-32 w-32 bg-green-200 rounded-full opacity-20"></div>
-          <div className="absolute -top-10 -left-10 h-24 w-24 bg-green-300 rounded-full opacity-10"></div>
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-slate-400 rounded-full opacity-20 blur-xl"></div>
+          <div className="absolute -top-10 -left-10 h-32 w-32 bg-slate-300 rounded-full opacity-10 blur-xl"></div>
         </Card>
         
-        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-amber-100 border-none shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="relative z-10 flex items-center">
-            <div className="p-3 bg-amber-100 rounded-full mr-3">
-              <Wrench className="h-6 w-6 text-amber-600" />
+        <Card className="relative overflow-hidden bg-gradient-to-br from-sky-600 to-sky-800 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+          <div className="relative z-10 flex items-center p-2">
+            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
+              <Wrench className="h-6 w-6 text-white" />
             </div>
             <div className="w-full">
-              <p className="text-sm font-medium text-amber-900">Bakım Durumu</p>
+              <p className="text-sm font-medium text-sky-100">Bakım Durumu</p>
               <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-amber-800">{istatistikler.planliBakimlar}</span>
-                <span className="ml-2 text-sm text-amber-700">Planlı Bakım</span>
+                <span className="text-2xl font-bold text-white">{istatistikler.planliBakimlar}</span>
+                <span className="ml-2 text-sm text-sky-100">Planlı Bakım</span>
                 {istatistikler.sonrakiBakimTarihi && new Date() > istatistikler.sonrakiBakimTarihi && (
                   <Badge color="red" className="ml-2">Bakım Gerekli</Badge>
                 )}
               </div>
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-amber-700">
+                <span className="text-xs text-sky-100">
                   Son Bakım: {istatistikler.sonBakimTarihi 
                     ? format(istatistikler.sonBakimTarihi, 'dd MMM yyyy', { locale: tr }) 
                     : 'Bilgi yok'}
                 </span>
-                <span className="text-xs text-amber-700">
+                <span className="text-xs text-sky-100">
                   Sonraki: {istatistikler.sonrakiBakimTarihi 
                     ? format(istatistikler.sonrakiBakimTarihi, 'dd MMM yyyy', { locale: tr })
                     : 'Bilgi yok'}
                 </span>
               </div>
-              <div className="mt-1 bg-amber-200 rounded-full h-1.5">
+              <div className="mt-1 bg-white/20 rounded-full h-2">
                 <div 
-                  className="bg-amber-600 h-1.5 rounded-full" 
+                  className="bg-white h-2 rounded-full" 
                   style={{ width: `${istatistikler.planliBackimYuzdesi}%` }}
                 ></div>
               </div>
             </div>
           </div>
-          <div className="absolute -bottom-10 -right-10 h-32 w-32 bg-amber-200 rounded-full opacity-20"></div>
-          <div className="absolute -top-10 -left-10 h-24 w-24 bg-amber-300 rounded-full opacity-10"></div>
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-sky-400 rounded-full opacity-20 blur-xl"></div>
+          <div className="absolute -top-10 -left-10 h-32 w-32 bg-sky-300 rounded-full opacity-10 blur-xl"></div>
         </Card>
         
-        <Card className="relative overflow-hidden bg-gradient-to-br from-red-50 to-red-100 border-none shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="relative z-10 flex items-center">
-            <div className="p-3 bg-red-100 rounded-full mr-3">
-              <Package className="h-6 w-6 text-red-600" />
+        <Card className="relative overflow-hidden bg-gradient-to-br from-gray-700 to-gray-900 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+          <div className="relative z-10 flex items-center p-2">
+            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
+              <Package className="h-6 w-6 text-white" />
             </div>
             <div className="w-full">
-              <p className="text-sm font-medium text-red-900">Stok Durumu</p>
+              <p className="text-sm font-medium text-gray-100">Stok Durumu</p>
               <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-red-800">{istatistikler.kritikStoklar}</span>
-                <span className="ml-2 text-sm text-red-700">Kritik Stok</span>
+                <span className="text-2xl font-bold text-white">{istatistikler.kritikStoklar}</span>
+                <span className="ml-2 text-sm text-gray-100">Kritik Stok</span>
                 {istatistikler.kritikStoklar > 0 && (
                   <Badge color="red" className="ml-2">Sipariş Gerekli</Badge>
                 )}
               </div>
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-red-700">
+                <span className="text-xs text-gray-100">
                   Acil Sipariş: {istatistikler.kritikStoklar > 0 ? `${istatistikler.kritikStoklar} ürün` : 'Yok'}
                 </span>
                 <button 
                   onClick={() => navigate('/stok-kontrol')} 
-                  className="text-xs text-red-700 hover:text-red-900 transition-colors"
+                  className="text-xs text-blue-200 hover:text-white transition-colors"
                 >
                   Stok Takibi
                 </button>
               </div>
-              <div className="mt-1 bg-red-200 rounded-full h-1.5">
+              <div className="mt-1 bg-white/20 rounded-full h-2">
                 <div 
-                  className="bg-red-600 h-1.5 rounded-full" 
+                  className="bg-red-400 h-2 rounded-full" 
                   style={{ width: `${Math.min(istatistikler.kritikStoklar * 10, 100)}%` }}
                 ></div>
               </div>
             </div>
           </div>
-          <div className="absolute -bottom-10 -right-10 h-32 w-32 bg-red-200 rounded-full opacity-20"></div>
-          <div className="absolute -top-10 -left-10 h-24 w-24 bg-red-300 rounded-full opacity-10"></div>
+          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-gray-500 rounded-full opacity-20 blur-xl"></div>
+          <div className="absolute -top-10 -left-10 h-32 w-32 bg-gray-400 rounded-full opacity-10 blur-xl"></div>
         </Card>
       </div>
 
@@ -832,15 +834,15 @@ export const Anasayfa: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Üretim Grafiği */}
         {istatistikler.uretimVerileri.length > 0 && (
-          <Card className="shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
+          <Card className="shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-white to-blue-50">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <Title>Günlük Üretim Trendi</Title>
-                <Text className="text-gray-500">Son 14 günün üretim verileri</Text>
+                <Title className="text-blue-900">Günlük Üretim Trendi</Title>
+                <Text className="text-blue-600">Son 14 günün üretim verileri</Text>
               </div>
               <button 
                 onClick={() => navigate('/uretim-verileri')}
-                className="text-sm text-primary-600 hover:text-primary-800 flex items-center"
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-all duration-300"
               >
                 Detaylar <ArrowRight className="h-4 w-4 ml-1" />
               </button>
@@ -850,33 +852,33 @@ export const Anasayfa: React.FC = () => {
               data={istatistikler.uretimVerileri}
               index="date"
               categories={["uretim"]}
-              colors={["emerald"]}
+              colors={["blue"]}
               valueFormatter={(value) => `${value.toLocaleString('tr-TR')} kWh`}
               showLegend={false}
               showAnimation={true}
               showGradient={true}
             />
-            <div className="mt-4 grid grid-cols-3 gap-2 p-3 bg-emerald-50 rounded-lg">
+            <div className="mt-4 grid grid-cols-3 gap-2 p-3 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg">
               <div className="text-center">
-                <Text className="text-xs text-emerald-600">Günlük Ortalama</Text>
-                <Metric className="text-lg font-bold text-emerald-700">
+                <Text className="text-xs text-blue-100">Günlük Ortalama</Text>
+                <Metric className="text-lg font-bold text-white">
                   {istatistikler.uretimVerileri.length > 0 
                     ? Math.round(istatistikler.uretimVerileri.reduce((acc, item) => acc + item.uretim, 0) / istatistikler.uretimVerileri.length).toLocaleString('tr-TR')
                     : '0'} kWh
                 </Metric>
               </div>
               <div className="text-center">
-                <Text className="text-xs text-emerald-600">En Yüksek Üretim</Text>
-                <Metric className="text-lg font-bold text-emerald-700">
+                <Text className="text-xs text-blue-100">En Yüksek Üretim</Text>
+                <Metric className="text-lg font-bold text-white">
                   {istatistikler.uretimVerileri.length > 0 
                     ? Math.max(...istatistikler.uretimVerileri.map(item => item.uretim)).toLocaleString('tr-TR')
                     : '0'} kWh
                 </Metric>
               </div>
               <div className="text-center">
-                <Text className="text-xs text-emerald-600">Performans</Text>
+                <Text className="text-xs text-blue-100">Performans</Text>
                 <Flex justifyContent="center" alignItems="center">
-                  <Metric className="text-lg font-bold text-emerald-700">
+                  <Metric className="text-lg font-bold text-white">
                     {istatistikler.yillikHedefUretim > 0 
                       ? Math.round((istatistikler.yillikUretim / istatistikler.yillikHedefUretim) * 100)
                       : '0'}%
@@ -889,15 +891,15 @@ export const Anasayfa: React.FC = () => {
         )}
 
         {/* Haftalık Arıza Trendi */}
-        <Card className="shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden">
+        <Card className="shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <Title>Haftalık Arıza Trendi</Title>
-              <Text className="text-gray-500">Son 7 günün arıza verileri</Text>
+              <Title className="text-slate-900">Haftalık Arıza Trendi</Title>
+              <Text className="text-slate-600">Son 7 günün arıza verileri</Text>
             </div>
             <button 
               onClick={() => navigate('/arizalar')}
-              className="text-sm text-primary-600 hover:text-primary-800 flex items-center"
+              className="text-sm text-slate-600 hover:text-slate-800 flex items-center bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full transition-all duration-300"
             >
               Detaylar <ArrowRight className="h-4 w-4 ml-1" />
             </button>
@@ -907,28 +909,28 @@ export const Anasayfa: React.FC = () => {
             data={istatistikler.haftalikArizalar}
             index="date"
             categories={["arizaSayisi"]}
-            colors={["amber"]}
+            colors={["slate"]}
             valueFormatter={(value) => `${value} arıza`}
             showLegend={false}
             showAnimation={true}
           />
-          <div className="mt-4 grid grid-cols-3 gap-2 p-3 bg-amber-50 rounded-lg">
+          <div className="mt-4 grid grid-cols-3 gap-2 p-3 bg-gradient-to-r from-slate-700 to-slate-900 rounded-lg">
             <div className="text-center">
-              <Text className="text-xs text-amber-600">Haftalık Toplam</Text>
-              <Metric className="text-lg font-bold text-amber-700">
+              <Text className="text-xs text-slate-100">Haftalık Toplam</Text>
+              <Metric className="text-lg font-bold text-white">
                 {istatistikler.haftalikArizalar.reduce((acc, item) => acc + item.arizaSayisi, 0)} arıza
               </Metric>
             </div>
             <div className="text-center">
-              <Text className="text-xs text-amber-600">Çözüm Hızı</Text>
-              <Metric className="text-lg font-bold text-amber-700">
+              <Text className="text-xs text-slate-100">Çözüm Hızı</Text>
+              <Metric className="text-lg font-bold text-white">
                 48 saat
               </Metric>
             </div>
             <div className="text-center">
-              <Text className="text-xs text-amber-600">Durum</Text>
+              <Text className="text-xs text-slate-100">Durum</Text>
               <Flex justifyContent="center" alignItems="center">
-                <Metric className="text-lg font-bold text-amber-700">
+                <Metric className="text-lg font-bold text-white">
                   {istatistikler.performansSkoru}%
                 </Metric>
                 <BadgeDelta 
@@ -1372,43 +1374,43 @@ export const Anasayfa: React.FC = () => {
       </div>
 
       {/* Son Arızalar */}
-      <Card className="shadow-md hover:shadow-lg transition-all duration-300">
+      <Card className="shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden border border-blue-100 bg-gradient-to-br from-white to-slate-50">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-full mr-3">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="p-3 bg-blue-600 rounded-full mr-3">
+              <AlertTriangle className="h-5 w-5 text-white" />
             </div>
             <div>
-              <Title>Son Arızalar</Title>
-              <Text className="text-gray-500">En son kaydedilen 5 arıza kaydı</Text>
+              <Title className="text-blue-900">Son Arızalar</Title>
+              <Text className="text-blue-600">En son kaydedilen 5 arıza kaydı</Text>
             </div>
           </div>
           <button 
             onClick={() => navigate('/arizalar')}
-            className="text-sm text-primary-600 hover:text-primary-800 flex items-center"
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-all duration-300"
           >
             Tümünü Görüntüle <ArrowRight className="h-4 w-4 ml-1" />
           </button>
         </div>
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-blue-100">
           {arizalar.length === 0 ? (
-            <div className="py-6 text-center">
-              <AlertTriangle className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500">Henüz arıza kaydı bulunmuyor</p>
+            <div className="py-8 text-center bg-gradient-to-r from-blue-50 to-slate-50 rounded-lg">
+              <AlertTriangle className="h-12 w-12 text-blue-200 mx-auto mb-3" />
+              <p className="text-blue-600">Henüz arıza kaydı bulunmuyor</p>
             </div>
           ) : (
             arizalar.map((ariza) => (
               <div
                 key={ariza.id}
                 onClick={() => setSeciliAriza(ariza)}
-                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150 rounded-lg group"
+                className="p-4 hover:bg-blue-50 cursor-pointer transition-all duration-200 rounded-lg group transform hover:scale-[1.01]"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      ariza.durum === 'cozuldu' ? 'bg-green-100 text-green-800' :
-                      ariza.durum === 'devam-ediyor' ? 'bg-amber-100 text-amber-800' :
-                      'bg-rose-100 text-rose-800'
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${
+                      ariza.durum === 'cozuldu' ? 'bg-green-500 text-white' :
+                      ariza.durum === 'devam-ediyor' ? 'bg-blue-500 text-white' :
+                      'bg-red-500 text-white'
                     }`}>
                       {ariza.durum === 'cozuldu' && <CheckCircle className="h-3.5 w-3.5 mr-1" />}
                       {ariza.durum === 'devam-ediyor' && <Clock className="h-3.5 w-3.5 mr-1" />}
@@ -1416,28 +1418,30 @@ export const Anasayfa: React.FC = () => {
                       {ariza.durum === 'cozuldu' ? 'Çözüldü' : 
                        ariza.durum === 'devam-ediyor' ? 'Devam Ediyor' : 'Açık'}
                     </span>
-                    <h3 className="text-sm font-medium text-gray-900">{ariza.baslik}</h3>
+                    <h3 className="text-sm font-medium text-slate-900">{ariza.baslik}</h3>
                   </div>
                   <div className="flex items-center">
-                    <span className="text-xs text-gray-500 mr-2">
+                    <span className="text-xs text-slate-500 mr-2">
                       {format(ariza.olusturmaTarihi.toDate(), 'dd MMM yyyy', { locale: tr })}
                     </span>
-                    <Eye className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="p-1.5 bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <Eye className="h-3.5 w-3.5 text-blue-600" />
+                    </div>
                   </div>
                 </div>
                 <div className="mt-2 sm:flex sm:justify-between">
                   <div className="sm:flex">
-                    <p className="flex items-center text-xs text-gray-500">
-                      <Building className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-gray-400" />
+                    <p className="flex items-center text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                      <Building className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-blue-500" />
                       {sahalar[ariza.saha] || 'Bilinmeyen Saha'}
                     </p>
-                    <p className="mt-2 flex items-center text-xs text-gray-500 sm:mt-0 sm:ml-6">
-                      <MapPin className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-gray-400" />
+                    <p className="mt-2 flex items-center text-xs text-slate-500 sm:mt-0 sm:ml-2 bg-slate-100 px-2 py-1 rounded-md">
+                      <MapPin className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-blue-500" />
                       {ariza.konum || 'Konum belirtilmemiş'}
                     </p>
                   </div>
-                  <div className="mt-2 flex items-center text-xs text-gray-500 sm:mt-0">
-                    <User className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-gray-400" />
+                  <div className="mt-2 flex items-center text-xs text-slate-500 sm:mt-0 bg-slate-100 px-2 py-1 rounded-md">
+                    <User className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-blue-500" />
                     {ariza.olusturanAd || 'Bilinmeyen Kullanıcı'}
                   </div>
                 </div>
@@ -1449,7 +1453,7 @@ export const Anasayfa: React.FC = () => {
           <div className="mt-4 text-center">
             <button
               onClick={() => navigate('/arizalar')}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+              className="inline-flex items-center px-6 py-2.5 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-all duration-300 transform hover:scale-105"
             >
               <Plus className="h-4 w-4 mr-2" />
               Yeni Arıza Kaydı

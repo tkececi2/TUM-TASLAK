@@ -226,10 +226,31 @@
   .button-hover {
     @apply transition-all duration-200 hover:shadow-md active:scale-95;
   }
-
+  
+  /* Modern UI Components */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20 shadow-lg;
+  }
+  
+  .modern-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-blue-800;
+  }
+  
+  .modern-gradient-subtle {
+    @apply bg-gradient-to-r from-blue-50 to-slate-100;
+  }
+  
+  .glass-button {
+    @apply bg-white/20 backdrop-blur-sm text-white border border-white/10 hover:bg-white/30 transition-all;
+  }
+  
+  .blue-glass-effect {
+    @apply bg-blue-600/90 backdrop-blur-sm border border-blue-500/50 text-white;
+  }
+  
   /* Loading Spinner */
   .spinner {
-    @apply animate-spin rounded-full border-4 border-gray-200 border-t-primary-500;
+    @apply animate-spin rounded-full border-4 border-gray-200 border-t-blue-500;
   }
 }
 
