@@ -161,11 +161,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let user;
       try {
         user = await signInUser(email, sifre);
+        if (!user) {
+          toast.error('Kullanıcı bilgileri alınamadı. Lütfen tekrar deneyin.');
+          return false;
+        }
       } catch (signInError: any) {
+        console.error('Firebase oturum açma hatası:', 
+          typeof signInError === 'object' ? 
+            JSON.stringify(signInError, Object.getOwnPropertyNames(signInError), 2) : 
+            signInError);
+            
         if (signInError instanceof TypeError) {
-          console.error('Firebase oturum açma hatası (TypeError):', signInError);
           throw new Error('Sunucu bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.');
         }
+        
+        // Hata mesajını daha net görebilmek için
+        if (signInError?.code) {
+          throw new Error(`Giriş hatası: ${signInError.code}`);
+        }
+        
         throw signInError;
       }
 

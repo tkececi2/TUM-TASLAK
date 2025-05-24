@@ -56,18 +56,25 @@ export const Login = () => {
         navigate(from, { replace: true });
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      // Hata detaylarını düzgün bir şekilde logla
+      console.error('Login error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2) || 'Bilinmeyen hata');
       
       // Güvenli bir şekilde hata mesajı göster
       let errorMessage = 'Giriş işlemi sırasında bir hata oluştu. Lütfen daha sonra tekrar deneyin.';
       
       // Daha spesifik hata mesajları için kontrol
-      if (typeof error === 'object' && error !== null) {
-        if (error.code) {
-          // Firebase hata kodları için kontrol - AuthContext'te zaten işleniyor
-          console.log('Firebase hata kodu:', error.code);
-        } else if (error instanceof TypeError) {
-          errorMessage = 'Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.';
+      if (error) {
+        if (typeof error === 'object') {
+          if (error.code) {
+            // Firebase hata kodları için kontrol - AuthContext'te zaten işleniyor
+            console.log('Firebase hata kodu:', error.code);
+          } else if (error.message) {
+            errorMessage = error.message;
+          } else if (error instanceof TypeError) {
+            errorMessage = 'Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.';
+          }
+        } else if (typeof error === 'string') {
+          errorMessage = error;
         }
       }
       
