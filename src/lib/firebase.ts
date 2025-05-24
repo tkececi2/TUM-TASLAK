@@ -343,6 +343,65 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
 
   if (error instanceof FirebaseError) {
     switch (error.code) {
+      case 'permission-denied':
+        toast.error(customMessage || 'Yetki hatası. Oturum yenileniyor...');
+        
+        // Token yenileme denemesi
+        if (auth.currentUser) {
+          try {
+            // Önce token'ı yenilemeyi dene
+            await auth.currentUser.getIdToken(true);
+            console.log('Token başarıyla yenilendi');
+            
+            // Kullanıcı bilgilerini Firestore'dan yeniden al
+            const userSnapshot = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
+            
+            if (userSnapshot.exists()) {
+              const userData = userSnapshot.data();
+              console.log('Firestore rol bilgisi:', userData.rol);
+              
+              // Kullanıcı bilgilerini localStorage'a kaydet
+              localStorage.setItem('currentUser', JSON.stringify({
+                ...userData,
+                id: auth.currentUser.uid,
+                email: auth.currentUser.email
+              }));
+              
+              // Kullanıcı bilgilerini AuthContext üzerinden güncelle
+              authService.setCurrentUser({
+                ...userData,
+                id: auth.currentUser.uid,
+                email: auth.currentUser.email
+              });
+              
+              toast.success('Yetkilendirme yenilendi, lütfen işlemi tekrar deneyin');
+              
+              // 1 saniye bekleyip sayfayı yenile
+              setTimeout(() => window.location.reload(), 1000);
+              return;
+            } else {
+              console.error('Kullanıcı Firestore\'da bulunamadı');
+              toast.error('Kullanıcı bilgileriniz bulunamadı. Lütfen tekrar giriş yapın.');
+              setTimeout(() => {
+                if (window.location.pathname !== '/login') {
+                  window.location.href = '/login';
+                }
+              }, 2000);
+            }
+          } catch (tokenError) {
+            console.error('Token yenileme hatası:', tokenError);
+            setTimeout(() => window.location.reload(), 3000);
+          }
+        } else {
+          toast.error('Oturum bulunamadı, lütfen tekrar giriş yapın');
+          setTimeout(() => {
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+          }, 2000);
+        }
+        return; // Özel işlemi yukarıda yaptığımız için fonksiyondan çıkıyoruz
+        
       case 'failed-precondition':
         toast.error(customMessage || 'Veritabanı erişim sorunu. Oturumunuz yenileniyor...');
         

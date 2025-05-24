@@ -59,27 +59,51 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       orderBy('tarih', 'desc')
     );
     
-    const unsubscribe = onSnapshot(bildirimQuery, (snapshot) => {
-      const yeniBildirimler: Bildirim[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Bildirim[];
-      
-      setBildirimler(yeniBildirimler);
-      
-      // Okunmamış bildirim sayısını hesapla
-      const okunmamisSayisi = yeniBildirimler.filter(b => !b.okundu).length;
-      setOkunmamisBildirimSayisi(okunmamisSayisi);
-      
-      // Yeni bildirim geldiyse tarayıcı bildirimi göster
-      const yeniBildirim = yeniBildirimler.find(b => !b.okundu && b.tarih?.toDate() > new Date(Date.now() - 10000));
-      if (yeniBildirim && Notification.permission === 'granted') {
-        showBrowserNotification(yeniBildirim.baslik, {
-          body: yeniBildirim.icerik,
-          icon: '/solar-logo.png'
-        });
+    const unsubscribe = onSnapshot(bildirimQuery, 
+      (snapshot) => {
+        const yeniBildirimler: Bildirim[] = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Bildirim[];
+        
+        setBildirimler(yeniBildirimler);
+        
+        // Okunmamış bildirim sayısını hesapla
+        const okunmamisSayisi = yeniBildirimler.filter(b => !b.okundu).length;
+        setOkunmamisBildirimSayisi(okunmamisSayisi);
+        
+        // Yeni bildirim geldiyse tarayıcı bildirimi göster
+        const yeniBildirim = yeniBildirimler.find(b => !b.okundu && b.tarih?.toDate() > new Date(Date.now() - 10000));
+        if (yeniBildirim && Notification.permission === 'granted') {
+          showBrowserNotification(yeniBildirim.baslik, {
+            body: yeniBildirim.icerik,
+            icon: '/solar-logo.png'
+          });
+        }
+      }, 
+      (error) => {
+        console.error('Bildirim dinleme hatası:', error);
+        if (error.code === 'permission-denied') {
+          // Token yenileme işlemini dene
+          if (auth.currentUser) {
+            auth.currentUser.getIdToken(true)
+              .then(() => {
+                console.log('Bildirim dinleme hatası sonrası token yenilendi');
+                toast.info('Oturum yenileniyor, lütfen bekleyin...');
+              })
+              .catch(err => {
+                console.error('Bildirim token yenileme hatası:', err);
+                // Ciddi hata durumunda login sayfasına yönlendir
+                setTimeout(() => {
+                  if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                  }
+                }, 3000);
+              });
+          }
+        }
       }
-    });
+    );
     
     return () => unsubscribe();
   }, [kullanici]);

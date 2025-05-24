@@ -3,7 +3,7 @@ import { User, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { authService } from '../services/authService';
 import { signInUser } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { Kullanici } from '../types';
 import toast from 'react-hot-toast';
 
@@ -170,16 +170,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           typeof signInError === 'object' ? 
             JSON.stringify(signInError, Object.getOwnPropertyNames(signInError), 2) : 
             signInError);
-            
+
         if (signInError instanceof TypeError) {
           throw new Error('Sunucu bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.');
         }
-        
+
         // Hata mesajını daha net görebilmek için
         if (signInError?.code) {
           throw new Error(`Giriş hatası: ${signInError.code}`);
         }
-        
+
         throw signInError;
       }
 
@@ -225,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Deneme süresi kontrolü
         try {
           console.log('Ödeme durumu kontrolü:', userData.odemeDurumu);
-          
+
           // Ödeme durumu süre bitti olarak işaretlenmişse giriş engellenir
           if (userData.odemeDurumu === 'surebitti') {
             console.log('Ödeme durumu: süre bitti');
@@ -239,10 +239,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Deneme süresi kontrolü - süre dolmuş mu?
           if ((userData.odemeDurumu === 'deneme' || userData.odemeDurumu === 'beklemede') && userData.denemeSuresiBitis) {
             console.log('Deneme süresi bitiş tarihi:', userData.denemeSuresiBitis);
-            
+
             const simdikiZaman = new Date().getTime();
             let bitisTarihi;
-            
+
             // Firestore Timestamp ve diğer tarih tipleri için güvenli dönüşüm
             if (userData.denemeSuresiBitis.toDate) {
               // Firestore Timestamp
@@ -271,7 +271,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               try {
                 console.log('Deneme süresi bitti, kullanıcı durumu güncelleniyor');
                 const userRef = doc(db, 'kullanicilar', userData.id);
-                
+
                 // Firestore'da kullanıcı durumunu güncelle
                 await updateDoc(userRef, {
                   odemeDurumu: 'surebitti',
@@ -279,7 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 });
 
                 toast.error('Abonelik süreniz dolmuştur. Lütfen yöneticinizle iletişime geçin veya ödeme yapın.');
-                
+
                 // Kullanıcıyı çıkış yaptır
                 await signOut(auth);
                 authService.clearUserData();
@@ -287,7 +287,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return false;
               } catch (error) {
                 console.error('Kullanıcı durumu güncelleme hatası:', error);
-                
+
                 // Hata olsa bile giriş yapılmasını engelle
                 toast.error('Abonelik süreniz dolmuştur. Sistem hatası nedeniyle durum güncellenemedi. Lütfen yöneticinizle iletişime geçin.');
                 await signOut(auth);

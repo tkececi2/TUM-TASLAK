@@ -421,10 +421,25 @@ export const setNewUserRole = functions.firestore
       const userData = snapshot.data();
       const userId = context.params.userId;
       const role = userData.rol;
+      const companyId = userData.companyId;
       
       if (role) {
-        await admin.auth().setCustomUserClaims(userId, { rol: role });
-        console.log(`Set custom claims for new user ${userId} with role ${role}`);
+        // Daha fazla kullanıcı bilgisini claims'e ekle
+        const claims = { 
+          rol: role,
+          companyId: companyId || null
+        };
+        
+        await admin.auth().setCustomUserClaims(userId, claims);
+        console.log(`Set custom claims for new user ${userId} with role ${role} and companyId ${companyId}`);
+        
+        // Kullanıcının oturumunu geçersiz kılma
+        try {
+          await admin.auth().revokeRefreshTokens(userId);
+          console.log(`Revoked tokens for user ${userId}`);
+        } catch (revokeError) {
+          console.error(`Error revoking tokens: ${revokeError}`);
+        }
       }
       
       return { success: true };
@@ -443,15 +458,83 @@ export const updateUserRole = functions.firestore
       const oldData = change.before.data();
       const userId = context.params.userId;
       
-      // Only update if the role has changed
-      if (newData.rol !== oldData.rol) {
-        await admin.auth().setCustomUserClaims(userId, { rol: newData.rol });
-        console.log(`Updated custom claims for user ${userId} with new role ${newData.rol}`);
+      // Role veya companyId değişmişse güncelle
+      if (newData.rol !== oldData.rol || newData.companyId !== oldData.companyId) {
+        const claims = { 
+          rol: newData.rol,
+          companyId: newData.companyId || null
+        };
+        
+        await admin.auth().setCustomUserClaims(userId, claims);
+        console.log(`Updated custom claims for user ${userId} with new role ${newData.rol} and companyId ${newData.companyId}`);
+        
+        // Kullanıcının oturumunu geçersiz kılma
+        try {
+          await admin.auth().revokeRefreshTokens(userId);
+          console.log(`Revoked tokens for user ${userId}`);
+        } catch (revokeError) {
+          console.error(`Error revoking tokens: ${revokeError}`);
+        }
       }
       
       return { success: true };
     } catch (error) {
       console.error('Error updating user role:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+// HTTP Function to manually sync a user's role
+export const syncUserRole = functions.https.onCall(async (data, context) => {
+  try {
+    // Güvenlik kontrolü - sadece oturum açmış kullanıcılar
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Bu işlem için giriş yapmanız gerekiyor.'
+      );
+    }
+    
+    const userId = data.userId || context.auth.uid;
+    
+    // Firestore'dan kullanıcı verisini al
+    const userDoc = await admin.firestore().collection('kullanicilar').doc(userId).get();
+    
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        'Kullanıcı bulunamadı'
+      );
+    }
+    
+    const userData = userDoc.data();
+    
+    // Claims'i güncelle
+    const claims = {
+      rol: userData?.rol || null,
+      companyId: userData?.companyId || null
+    };
+    
+    await admin.auth().setCustomUserClaims(userId, claims);
+    console.log(`Manually synced claims for user ${userId}`);
+    
+    // Token'ı geçersiz kıl
+    await admin.auth().revokeRefreshTokens(userId);
+    
+    return {
+      success: true,
+      message: 'Kullanıcı rol bilgileri senkronize edildi',
+      claims: claims
+    };
+  } catch (error) {
+    console.error('Error syncing user role:', error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Rol senkronizasyonu sırasında bir hata oluştu',
+      error
+    );
+  }
+});or);
       return { success: false, error: error.message };
     }
   });
