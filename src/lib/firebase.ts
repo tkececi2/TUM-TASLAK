@@ -290,8 +290,7 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
         toast.error('Çok fazla istek gönderildi. Lütfen daha sonra tekrar deneyin.');
         break;
       case 'permission-denied':
-      case 'failed-precondition':
-        // İzin hatası veya failed-precondition durumunda token'ı 3 kez yenilemeyi dene
+        // İzin hatası durumunda token'ı 3 kez yenilemeyi dene
         if (auth.currentUser) {
           let tokenRenewed = false;
           let attempts = 0;
