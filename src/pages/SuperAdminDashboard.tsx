@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { Building, Users, Calendar, Trash2, Edit2, Eye, Plus, Search, Filter, RefreshCw } from 'lucide-react';
+import { Building, Users, Calendar, Trash2, Edit2, Eye, Plus, Search, Filter, RefreshCw, X } from 'lucide-react';
 import { Card, Title, Text, Metric, BarChart } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { SearchInput } from '../components/SearchInput';
