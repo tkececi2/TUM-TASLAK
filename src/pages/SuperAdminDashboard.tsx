@@ -25,7 +25,6 @@ export const SuperAdminDashboard: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<Kullanici | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isUserEditModalOpen, setIsUserEditModalOpen] = useState(false);
   const [stats, setStats] = useState({
@@ -35,7 +34,6 @@ export const SuperAdminDashboard: React.FC = () => {
     newCompaniesThisMonth: 0
   });
   const [activeTab, setActiveTab] = useState<'companies' | 'users'>('companies');
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [newCompanyData, setNewCompanyData] = useState({
     name: '',
     email: '',
