@@ -1,6 +1,6 @@
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator, AuthError } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED, collection, query, getDocs, limit } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { FirebaseError } from 'firebase/app';
 import { authService } from '../services/authService';
@@ -346,51 +346,70 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
       case 'permission-denied':
         toast.error(customMessage || 'Yetki hatası. Oturum yenileniyor...');
         
-        // Token yenileme denemesi
+        // Token yenileme denemesi - 3 kez deneme yap
         if (auth.currentUser) {
-          try {
-            // Önce token'ı yenilemeyi dene
-            await auth.currentUser.getIdToken(true);
-            console.log('Token başarıyla yenilendi');
-            
-            // Kullanıcı bilgilerini Firestore'dan yeniden al
-            const userSnapshot = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
-            
-            if (userSnapshot.exists()) {
-              const userData = userSnapshot.data();
-              console.log('Firestore rol bilgisi:', userData.rol);
+          let success = false;
+          let attempts = 0;
+          
+          while (!success && attempts < 3) {
+            attempts++;
+            try {
+              // Token'ı yenilemeyi dene
+              await auth.currentUser.getIdToken(true);
+              console.log(`Token başarıyla yenilendi (${attempts}. deneme)`);
+              success = true;
               
-              // Kullanıcı bilgilerini localStorage'a kaydet
-              localStorage.setItem('currentUser', JSON.stringify({
-                ...userData,
-                id: auth.currentUser.uid,
-                email: auth.currentUser.email
-              }));
+              // Kullanıcı bilgilerini Firestore'dan yeniden al
+              const userSnapshot = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
               
-              // Kullanıcı bilgilerini AuthContext üzerinden güncelle
-              authService.setCurrentUser({
-                ...userData,
-                id: auth.currentUser.uid,
-                email: auth.currentUser.email
-              });
-              
-              toast.success('Yetkilendirme yenilendi, lütfen işlemi tekrar deneyin');
-              
-              // 1 saniye bekleyip sayfayı yenile
-              setTimeout(() => window.location.reload(), 1000);
-              return;
-            } else {
-              console.error('Kullanıcı Firestore\'da bulunamadı');
-              toast.error('Kullanıcı bilgileriniz bulunamadı. Lütfen tekrar giriş yapın.');
-              setTimeout(() => {
-                if (window.location.pathname !== '/login') {
-                  window.location.href = '/login';
-                }
-              }, 2000);
+              if (userSnapshot.exists()) {
+                const userData = userSnapshot.data();
+                console.log('Firestore rol bilgisi:', userData.rol);
+                
+                // Kullanıcı bilgilerini localStorage'a kaydet
+                localStorage.setItem('currentUser', JSON.stringify({
+                  ...userData,
+                  id: auth.currentUser.uid,
+                  email: auth.currentUser.email
+                }));
+                
+                // Kullanıcı bilgilerini AuthContext üzerinden güncelle
+                authService.setCurrentUser({
+                  ...userData,
+                  id: auth.currentUser.uid,
+                  email: auth.currentUser.email
+                });
+                
+                toast.success('Yetkilendirme yenilendi, lütfen işlemi tekrar deneyin');
+                
+                // 1.5 saniye bekleyip sayfayı yenile
+                setTimeout(() => window.location.reload(), 1500);
+                return;
+              } else {
+                console.error('Kullanıcı Firestore\'da bulunamadı');
+                toast.error('Kullanıcı bilgileriniz bulunamadı. Lütfen tekrar giriş yapın.');
+                setTimeout(() => {
+                  if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                  }
+                }, 2000);
+                return;
+              }
+            } catch (tokenError) {
+              console.error(`Token yenileme hatası (${attempts}. deneme):`, tokenError);
+              // Hata durumunda 1 saniye bekle ve tekrar dene
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
-          } catch (tokenError) {
-            console.error('Token yenileme hatası:', tokenError);
-            setTimeout(() => window.location.reload(), 3000);
+          }
+          
+          if (!success) {
+            console.error('Token yenileme başarısız oldu, oturumu yenilemeyi deneyin');
+            toast.error('Oturum yenilenemedi. Lütfen sayfayı yenileyip tekrar deneyin.');
+            setTimeout(() => {
+              if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+              }
+            }, 3000);
           }
         } else {
           toast.error('Oturum bulunamadı, lütfen tekrar giriş yapın');

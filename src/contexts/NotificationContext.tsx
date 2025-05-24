@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 
@@ -81,28 +81,38 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           });
         }
       }, 
-      (error) => {
+      async (error) => {
         console.error('Bildirim dinleme hatası:', error);
-        if (error.code === 'permission-denied') {
+        if (error && error.code === 'permission-denied') {
           // Token yenileme işlemini dene
           try {
-            if (auth.currentUser) {
-              auth.currentUser.getIdToken(true)
-                .then(() => {
-                  console.log('Bildirim dinleme hatası sonrası token yenilendi');
-                  toast.info('Oturum yenileniyor, lütfen bekleyin...');
-                })
-                .catch(err => {
-                  console.error('Bildirim token yenileme hatası:', err);
-                  // Ciddi hata durumunda login sayfasına yönlendir
-                  setTimeout(() => {
-                    if (window.location.pathname !== '/login') {
-                      window.location.href = '/login';
-                    }
-                  }, 3000);
-                });
+            if (auth && auth.currentUser) {
+              // Hata yakalama ile token yenileme
+              try {
+                await auth.currentUser.getIdToken(true);
+                console.log('Bildirim dinleme hatası sonrası token yenilendi');
+                toast.info('Oturum yenileniyor, lütfen bekleyin...');
+                
+                // Token yenilendikten sonra kullanıcı bilgilerini kontrol et
+                const userDoc = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
+                if (userDoc.exists()) {
+                  console.log('Kullanıcı bilgileri doğrulandı');
+                  // Sayfayı yenileme yerine state güncellemesi daha iyi olabilir
+                  // setTimeout(() => window.location.reload(), 2000);
+                }
+              } catch (tokenErr) {
+                console.error('Bildirim token yenileme hatası:', tokenErr);
+                toast.error('Oturum yenileme başarısız, yeniden giriş yapmanız gerekebilir.');
+                // Ciddi hata durumunda login sayfasına yönlendir
+                setTimeout(() => {
+                  if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                  }
+                }, 3000);
+              }
             } else {
               console.warn('Kullanıcı oturumu bulunamadı, yönlendiriliyor...');
+              toast.error('Oturum bulunamadı, lütfen giriş yapın.');
               if (window.location.pathname !== '/login') {
                 setTimeout(() => window.location.href = '/login', 1000);
               }
