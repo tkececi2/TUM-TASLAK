@@ -22,7 +22,7 @@ export default defineConfig({
       usePolling: true
     },
     cors: true,
-    allowedHosts: ['all', '59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev']
+    allowedHosts: ['all', '59c3c0ea-b998-46c3-a369-f3b8382e3aab-00-3nk2pc0b7jjne.pike.replit.dev', '45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev']
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
