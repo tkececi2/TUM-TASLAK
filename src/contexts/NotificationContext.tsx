@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { collection, query, where, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 
 interface Bildirim {
@@ -85,21 +85,36 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.error('Bildirim dinleme hatası:', error);
         if (error.code === 'permission-denied') {
           // Token yenileme işlemini dene
-          if (auth.currentUser) {
-            auth.currentUser.getIdToken(true)
-              .then(() => {
-                console.log('Bildirim dinleme hatası sonrası token yenilendi');
-                toast.info('Oturum yenileniyor, lütfen bekleyin...');
-              })
-              .catch(err => {
-                console.error('Bildirim token yenileme hatası:', err);
-                // Ciddi hata durumunda login sayfasına yönlendir
-                setTimeout(() => {
-                  if (window.location.pathname !== '/login') {
-                    window.location.href = '/login';
-                  }
-                }, 3000);
-              });
+          try {
+            if (auth.currentUser) {
+              auth.currentUser.getIdToken(true)
+                .then(() => {
+                  console.log('Bildirim dinleme hatası sonrası token yenilendi');
+                  toast.info('Oturum yenileniyor, lütfen bekleyin...');
+                })
+                .catch(err => {
+                  console.error('Bildirim token yenileme hatası:', err);
+                  // Ciddi hata durumunda login sayfasına yönlendir
+                  setTimeout(() => {
+                    if (window.location.pathname !== '/login') {
+                      window.location.href = '/login';
+                    }
+                  }, 3000);
+                });
+            } else {
+              console.warn('Kullanıcı oturumu bulunamadı, yönlendiriliyor...');
+              if (window.location.pathname !== '/login') {
+                setTimeout(() => window.location.href = '/login', 1000);
+              }
+            }
+          } catch (tokenError) {
+            console.error('Token yenileme sırasında hata:', tokenError);
+            toast.error('Oturum bilgilerinde sorun oluştu, lütfen tekrar giriş yapın.');
+            setTimeout(() => {
+              if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+              }
+            }, 2000);
           }
         }
       }
