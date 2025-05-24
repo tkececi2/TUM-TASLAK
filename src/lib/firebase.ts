@@ -27,40 +27,6 @@ try {
 }
 
 export const auth = getAuth(app);
-
-// Hata korumalı giriş işlemi
-export const signInUser = async (email: string, password: string) => {
-  try {
-    // İlk deneme - normal giriş
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-  } catch (error: any) {
-    // Firebase hata mesajlarını detaylı olarak günlüğe kaydet
-    console.error('Firebase giriş hatası:', {
-      code: error.code,
-      message: error.message,
-      name: error.name,
-      stack: error.stack
-    });
-    
-    // Ağ hatası durumunda tekrar dene
-    if (error.code === 'auth/network-request-failed') {
-      try {
-        // Kısa bir bekleme sonrası tekrar dene
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const retryCredential = await signInWithEmailAndPassword(auth, email, password);
-        return retryCredential.user;
-      } catch (retryError) {
-        console.error('Giriş yeniden deneme hatası:', retryError);
-        throw retryError;
-      }
-    }
-    
-    // Diğer hataları yukarı ilet
-    throw error;
-  }
-};
-
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
@@ -219,7 +185,31 @@ export const signInUser = async (email: string, password: string) => {
     // WebContainer ortamlarında bağlantı kontrolünü atlayın
     // Firebase ağ hatalarını uygun şekilde yönetecektir
 
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    let userCredential;
+    try {
+      // İlk deneme - normal giriş
+      userCredential = await signInWithEmailAndPassword(auth, email, password);
+    } catch (initialError: any) {
+      // Firebase hata mesajlarını detaylı olarak günlüğe kaydet
+      console.error('Firebase giriş hatası:', {
+        code: initialError.code,
+        message: initialError.message,
+        name: initialError.name,
+        stack: initialError.stack
+      });
+      
+      // Ağ hatası durumunda tekrar dene
+      if (initialError.code === 'auth/network-request-failed') {
+        // Kısa bir bekleme sonrası tekrar dene
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log('Giriş yeniden deneme başarılı');
+      } else {
+        // Diğer hataları yukarı ilet
+        handleAuthError(initialError);
+        throw initialError;
+      }
+    }
 
     // En son özel iddiaları almak için token yenileme
     await userCredential.user.getIdToken(true);
