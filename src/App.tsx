@@ -94,7 +94,7 @@ const App = () => {
                 <Route path="/anasayfa" element={
                   <PrivateRoute>
                     <Suspense fallback={<LoadingSpinner />}>
-                      <lazy(() => import('./pages/Anasayfa'))/>
+                      {React.createElement(lazy(() => import('./pages/Anasayfa')))}
                     </Suspense>
                   </PrivateRoute>
                 } />
