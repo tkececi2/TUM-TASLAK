@@ -23,13 +23,14 @@ import { ElektrikBakim } from './pages/ElektrikBakim';
 import { GesYonetimi } from './pages/GesYonetimi';
 import { GesSahalari } from './pages/GesSahalari';
 import { UretimVerileri } from './pages/UretimVerileri';
-import { AylikKapsamliRapor } from './pages/AylikKapsamliRapor';
 import { PrivateRoute } from './components/PrivateRoute';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { CompanySettings } from './pages/CompanySettings';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { InviteUser } from './pages/InviteUser';
 import HomePage from './pages/HomePage';
+import { RaporYonetimi } from './pages/RaporYonetimi';
+import { RaporTemplate } from './pages/RaporTemplate';
 
 function App() {
   const { loading } = useAuth();
@@ -58,7 +59,8 @@ return (
         <Route path="/ekip" element={<Ekip />} />
         <Route path="/istatistikler" element={<Istatistikler />} />
         <Route path="/performans" element={<Performans />} />
-        <Route path="/aylik-kapsamli-rapor" element={<AylikKapsamliRapor />} />
+        <Route path="/rapor-yonetimi" element={<RaporYonetimi />} />
+        <Route path="/rapor/:raporTuru" element={<RaporTemplate />} />
         <Route path="/ayarlar" element={<Ayarlar />} />
         <Route path="/musteriler" element={<Musteriler />} />
         <Route path="/nobet-kontrol" element={<NobetKontrol />} />

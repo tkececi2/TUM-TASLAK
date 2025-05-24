@@ -301,7 +301,7 @@ export const Layout: React.FC = () => {
 
   // Additional items for managers and engineers
   const managerEngineerItems = [
-    { name: 'Aylık Kapsamlı Rapor', href: '/aylik-kapsamli-rapor', icon: FileBarChart }
+    { name: 'Rapor Yönetimi', href: '/rapor-yonetimi', icon: FileBarChart }
   ];
 
   // Additional items for managers
