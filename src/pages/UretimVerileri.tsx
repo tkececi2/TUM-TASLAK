@@ -353,9 +353,39 @@ export const UretimVerileri: React.FC = () => {
         
         // FirebaseError için özel işleme
         if (error && error.code === 'failed-precondition') {
-          toast.error('Veritabanı bağlantısı kurulamadı. Sayfayı yenileyip tekrar deneyiniz.');
+          toast.error('Veritabanı bağlantısı kurulamadı. Oturum yenileniyor...');
           
-          // Otomatik yeniden deneme işlevi
+          // IndexedDB veritabanlarını temizle
+          try {
+            const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+            for (const database of databases) {
+              if (database.name && database.name.includes('firestore')) {
+                console.log('Temizleniyor:', database.name);
+                window.indexedDB.deleteDatabase(database.name);
+              }
+            }
+          } catch (cleanupError) {
+            console.warn('IndexedDB temizleme hatası:', cleanupError);
+          }
+          
+          // Token'ı yenilemeyi dene
+          if (auth.currentUser) {
+            try {
+              await auth.currentUser.getIdToken(true);
+              console.log('Token başarıyla yenilendi');
+              
+              // 2 saniye bekle ve yeniden dene
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+              // Yeniden veri getirme denemesi
+              handleYenile();
+              return;
+            } catch (tokenError) {
+              console.error('Token yenileme hatası:', tokenError);
+            }
+          }
+          
+          // Yenileme işlemleri başarısız olduysa, sayfayı yenile
           setTimeout(() => {
             console.log('Veritabanı bağlantısı yeniden deneniyor...');
             window.location.reload();

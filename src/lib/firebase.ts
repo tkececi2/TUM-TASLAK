@@ -58,9 +58,33 @@ try {
   
   db.settings(firestoreSettings);
   
+  // Önceki IndexedDB veritabanlarını temizlemeyi dene
+  try {
+    const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+    for (const database of databases) {
+      if (database.name && database.name.includes('firestore')) {
+        console.log('Temizleniyor:', database.name);
+        window.indexedDB.deleteDatabase(database.name);
+      }
+    }
+  } catch (cleanupError) {
+    console.warn('IndexedDB temizleme hatası:', cleanupError);
+  }
+  
   // Ağ bağlantısı olmasa bile veriler gösterilebilecek
   db.enableNetwork().catch(err => {
     console.warn('Firestore ağ bağlantısı sağlanamadı:', err);
+    
+    // Özel bir "failed-precondition" hata işleyicisi
+    if (err && err.code === 'failed-precondition') {
+      console.warn('IndexedDB erişim hatası algılandı, oturum yenileniyor...');
+      // Kullanıcı oturumunu yenilemeyi dene
+      if (auth.currentUser) {
+        auth.currentUser.getIdToken(true)
+          .then(() => console.log('Token yenilendi, sayfayı yenileyin'))
+          .catch(e => console.error('Token yenileme hatası:', e));
+      }
+    }
   });
   
 } catch (error) {
@@ -127,16 +151,44 @@ export const refreshAuthToken = async (): Promise<boolean> => {
   }
 };
 
-// Bağlantı kontrolü - WebContainer ortamları için basitleştirilmiş
+// Bağlantı kontrolü - WebContainer ortamları için geliştirilmiş
 const checkConnection = async () => {
   // Önce tarayıcının çevrimiçi olup olmadığını kontrol et
   if (!navigator.onLine) {
     throw new Error('İnternet bağlantısı yok');
   }
 
-  // WebContainer ortamlarında güvenilir harici fetch istekleri yapamayız
-  // Bu yüzden sadece tarayıcının çevrimiçi durumuna güveniyoruz
-  return true;
+  // Firestore bağlantısını test et
+  try {
+    // Ağ bağlantısını etkinleştirmeyi dene
+    await db.enableNetwork();
+    
+    // Küçük bir test sorgusu yap
+    const testQuery = query(collection(db, 'kullanicilar'), limit(1));
+    await getDocs(testQuery);
+    
+    console.log('Firestore bağlantısı başarılı');
+    return true;
+  } catch (error) {
+    console.error('Firestore bağlantı testi hatası:', error);
+    
+    if (error.code === 'failed-precondition') {
+      // IndexedDB sorunlarını temizlemeyi dene
+      try {
+        const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+        for (const database of databases) {
+          if (database.name && database.name.includes('firestore')) {
+            window.indexedDB.deleteDatabase(database.name);
+          }
+        }
+        console.log('IndexedDB veritabanları temizlendi, yeniden bağlanmayı deneyin');
+      } catch (dbError) {
+        console.warn('IndexedDB temizleme hatası:', dbError);
+      }
+    }
+    
+    throw error;
+  }
 };
 
 export const createUserWithProfile = async (email: string, password: string, userData: any) => {
@@ -292,8 +344,41 @@ export const handleFirebaseError = async (error: unknown, customMessage?: string
   if (error instanceof FirebaseError) {
     switch (error.code) {
       case 'failed-precondition':
-        toast.error(customMessage || 'Veritabanı erişim sorunu. Lütfen sayfayı yenileyip tekrar deneyin.');
-        // failed-precondition hatası için ayrı bir işleme yukarıda yapıldığından burada break kullanmıyoruz
+        toast.error(customMessage || 'Veritabanı erişim sorunu. Oturumunuz yenileniyor...');
+        
+        // IndexedDB veritabanlarını temizlemeyi dene
+        try {
+          const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
+          for (const database of databases) {
+            if (database.name && database.name.includes('firestore')) {
+              console.log('IndexedDB temizleniyor:', database.name);
+              window.indexedDB.deleteDatabase(database.name);
+            }
+          }
+        } catch (dbError) {
+          console.warn('IndexedDB temizleme hatası:', dbError);
+        }
+        
+        // Token yenileme denemesi
+        if (auth.currentUser) {
+          try {
+            await auth.currentUser.getIdToken(true);
+            console.log('Token başarıyla yenilendi, işlemi tekrar deneyin');
+            toast.success('Oturum yenilendi, lütfen işlemi tekrar deneyin');
+            return;
+          } catch (tokenError) {
+            console.error('Token yenileme hatası:', tokenError);
+            // 5 saniye sonra sayfayı yenilemeyi dene
+            setTimeout(() => window.location.reload(), 5000);
+          }
+        } else {
+          toast.error('Oturum bulunamadı, lütfen tekrar giriş yapın');
+          setTimeout(() => {
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+          }, 2000);
+        }
         return; // Özel işlemi yukarıda yaptığımız için fonksiyondan çıkıyoruz
       case 'unavailable':
         toast.error('Firebase hizmeti şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
