@@ -7,7 +7,7 @@ import { doc, setDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import toast from 'react-hot-toast';
 
-export const Register = () => {
+const Register = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -367,3 +367,5 @@ export const Register = () => {
     </div>
   );
 };
+
+export default Register;
