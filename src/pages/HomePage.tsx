@@ -44,8 +44,8 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <Sun className={`h-8 w-8 ${scrolled ? 'text-blue-600' : 'text-white'} mr-2`} />
-              <span className={`font-bold text-xl ${scrolled ? 'text-gray-900' : 'text-white'}`}>SolarVeyo</span>
+              <img src="/solar-logo.png" alt="SolarVeyo Logo" className={`h-8 w-8 mr-2`} />
+              <span className={`font-bold text-xl ${scrolled ? 'text-gray-900' : 'text-white'}`}>solarVeyo</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <button 
@@ -614,8 +614,8 @@ const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-6">
-                <Sun className="h-8 w-8 text-white mr-3" />
-                <h3 className="text-xl font-bold">SolarVeyo</h3>
+                <img src="/solar-logo.png" alt="solarVeyo Logo" className="h-8 w-8 mr-3" />
+                <h3 className="text-xl font-bold">solarVeyo</h3>
               </div>
               <p className="text-gray-400 mb-6">
                 Güneş enerjisi santrallerinizi 7/24 izleyin, arıza durumlarında anında müdahale edin.
