@@ -57,7 +57,7 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [sirketBilgileri, setSirketBilgileri] = useState<SirketBilgileri>({
     sirketAdi: 'SolarVeyo',
     slogan: 'Güneş Enerjisi Yönetimi',
-    logoURL: '/solar-logo.png'
+    logoURL: '/solarveyo-logo-blue.png'
   });
   const lastFetchTime = useRef<number>(0);
 
