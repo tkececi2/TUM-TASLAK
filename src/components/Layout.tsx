@@ -44,7 +44,7 @@ interface SirketBilgileri {
 }
 
 const SirketContext = React.createContext<SirketBilgileri>({
-  sirketAdi: 'SolarVeyo',
+  sirketAdi: 'solarVeyo',
   slogan: 'Güneş Enerjisi Yönetimi',
   logoURL: '/solar-logo.png'
 });
@@ -355,15 +355,19 @@ export const Layout: React.FC = () => {
           {/* Logo and Brand */}
           <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white">
             <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3 flex-shrink-0">
-              <img 
-                src={sirketBilgileri.logoURL} 
-                alt="Logo" 
-                className="h-full w-full object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/solar-logo.png';
-                }}
-              />
+              {menuAcik ? (
+                <img 
+                  src={sirketBilgileri.logoURL} 
+                  alt="Logo" 
+                  className="h-full w-full object-contain"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/solar-logo.png';
+                  }}
+                />
+              ) : (
+                <Sun className="h-6 w-6 text-blue-500" />
+              )}
             </div>
             {menuAcik && (
               <div>
@@ -560,15 +564,7 @@ export const Layout: React.FC = () => {
             <div className="fixed inset-y-0 left-0 z-[999] w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel translate-x-0 shadow-xl visible">
               <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white shadow-md sticky top-0 z-10">
                 <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3">
-                  <img 
-                    src={sirketBilgileri.logoURL} 
-                    alt="Logo" 
-                    className="h-full w-full object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/solar-logo.png';
-                    }}
-                  />
+                  <Sun className="h-6 w-6 text-blue-500" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h1 className="text-lg font-bold truncate">{sirketBilgileri.sirketAdi}</h1>
