@@ -44,9 +44,9 @@ interface SirketBilgileri {
 }
 
 const SirketContext = React.createContext<SirketBilgileri>({
-  sirketAdi: 'solarVeyo',
+  sirketAdi: 'SolarVeyo',
   slogan: 'Güneş Enerjisi Yönetimi',
-  logoURL: '/solar-logo.png'
+  logoURL: '/solarveyo-logo.png'
 });
 
 export const useSirketBilgileri = () => useContext(SirketContext);
@@ -57,7 +57,7 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [sirketBilgileri, setSirketBilgileri] = useState<SirketBilgileri>({
     sirketAdi: 'SolarVeyo',
     slogan: 'Güneş Enerjisi Yönetimi',
-    logoURL: '/solar-logo.png'
+    logoURL: '/solarveyo-logo.png'
   });
   const lastFetchTime = useRef<number>(0);
 
@@ -76,7 +76,7 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // If we have company data from context, use it
         if (currentCompany) {
           // Add a cache-busting parameter to the logo URL to prevent caching
-          const logoURL = currentCompany.logo ? `${currentCompany.logo}?t=${now}` : '/solar-logo.png';
+          const logoURL = currentCompany.logo ? `${currentCompany.logo}?t=${now}` : '/solarveyo-logo.png';
 
           setSirketBilgileri({
             sirketAdi: currentCompany.name || 'SolarVeyo',
@@ -91,7 +91,7 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (sirketDoc.exists()) {
           const data = sirketDoc.data();
           // Add a cache-busting parameter to the logo URL to prevent caching
-          const logoURL = data.logoURL ? `${data.logoURL}?t=${now}` : '/solar-logo.png';
+          const logoURL = data.logoURL ? `${data.logoURL}?t=${now}` : '/solarveyo-logo.png';
 
           setSirketBilgileri({
             sirketAdi: data.sirketAdi || 'SolarVeyo',
@@ -362,7 +362,7 @@ export const Layout: React.FC = () => {
                   className="h-full w-full object-contain"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = '/solar-logo.png';
+                    target.src = '/solarveyo-logo.png';
                   }}
                 />
               ) : (
