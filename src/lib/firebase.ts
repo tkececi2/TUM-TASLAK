@@ -44,34 +44,19 @@ if (process.env.NODE_ENV === 'development') {
 }
 */
 
-// Düzeltilmiş persistence konfigürasyonu
+// Basitleştirilmiş persistence konfigürasyonu
 try {
-  // Web içinde IndexedDB sorunlarını önlemek için bellek tabanlı cache kullanma
-  // Bu, Replit WebView ile daha uyumlu çalışacaktır
+  // Web içinde IndexedDB sorunlarını önlemek için basit yapılandırma kullanıyoruz
   console.warn('Hafıza tabanlı önbellek kullanılacak.');
   
-  // Firestore önbellek yapılandırması
+  // Firestore önbellek yapılandırması - sadece temel ayarlar
   const firestoreSettings = {
-    cacheSizeBytes: CACHE_SIZE_UNLIMITED,
     ignoreUndefinedProperties: true
   };
   
   db.settings(firestoreSettings);
   
-  // Önceki IndexedDB veritabanlarını temizlemeyi dene
-  try {
-    const databases = window.indexedDB.databases ? await window.indexedDB.databases() : [];
-    for (const database of databases) {
-      if (database.name && database.name.includes('firestore')) {
-        console.log('Temizleniyor:', database.name);
-        window.indexedDB.deleteDatabase(database.name);
-      }
-    }
-  } catch (cleanupError) {
-    console.warn('IndexedDB temizleme hatası:', cleanupError);
-  }
-  
-  // Ağ bağlantısı olmasa bile veriler gösterilebilecek
+  // Ağ bağlantısını etkinleştir
   db.enableNetwork().catch(err => {
     console.warn('Firestore ağ bağlantısı sağlanamadı:', err);
     
@@ -89,7 +74,7 @@ try {
   
 } catch (error) {
   console.error('Persistence yapılandırma hatası:', error);
-  console.warn('Hafıza tabanlı önbellek kullanılacak.');
+  console.warn('Basit yapılandırma kullanılacak.');
 }
 
 // Firebase token yenileme işlevi - tüm uygulama için kullanılabilir
