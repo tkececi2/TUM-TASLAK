@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Sun, Shield, Zap, CheckCircle, ArrowRight, Users, BarChart2, Globe, Mail, Phone, Clock, ChevronDown } from 'lucide-react';
+import { Sun, Shield, Zap, CheckCircle, ArrowRight, Users, BarChart2, Globe, Mail, Phone, Clock, ChevronDown, Database, FileText, PanelTop, Activity, Lightbulb, TrendingUp } from 'lucide-react';
 
 const HomePage: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
+  const [showCTA, setShowCTA] = useState(false);
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -18,8 +19,9 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
+      setShowCTA(window.scrollY > 600);
 
-      // Aktif bölümü belirle
+      // Determine active section
       const sections = ['home', 'features', 'benefits', 'testimonials', 'contact'];
       for (const section of sections) {
         const element = document.getElementById(section);
@@ -38,14 +40,14 @@ const HomePage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigasyon */}
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      {/* Navigation */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <img src="/solar-logo.png" alt="SolarVeyo Logo" className={`h-8 w-8 mr-2`} />
-              <span className={`font-bold text-xl ${scrolled ? 'text-gray-900' : 'text-white'}`}>solarVeyo</span>
+              <img src="/solarveyo-logo.png" alt="SolarVeyo Logo" className="h-10 w-10 mr-2" />
+              <span className={`font-bold text-xl ${scrolled ? 'text-gray-900' : 'text-white'}`}>SolarVeyo</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <button 
@@ -70,7 +72,7 @@ const HomePage: React.FC = () => {
                 onClick={() => scrollToSection('testimonials')} 
                 className={`px-3 py-2 rounded-md text-sm font-medium ${activeSection === 'testimonials' ? 'text-blue-600' : (scrolled ? 'text-gray-700 hover:text-blue-600' : 'text-white hover:text-blue-100')} transition-colors`}
               >
-                Hakkımızda
+                Referanslar
               </button>
               <button 
                 onClick={() => scrollToSection('contact')} 
@@ -90,12 +92,25 @@ const HomePage: React.FC = () => {
                 to="/register"
                 className={`px-4 py-2 rounded-lg text-sm font-medium ${scrolled ? 'border border-blue-600 text-blue-600 hover:bg-blue-50' : 'border border-white text-white hover:bg-white/10'} transition-all duration-300`}
               >
-                Kayıt Ol
+                Ücretsiz Dene
               </Link>
             </div>
           </div>
         </div>
       </nav>
+
+      {/* Floating CTA Button (appears on scroll) */}
+      {showCTA && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 animate-bounce-slow">
+          <Link
+            to="/register"
+            className="flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300"
+          >
+            14 Gün Ücretsiz Deneyin
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Link>
+        </div>
+      )}
 
       {/* Hero Section */}
       <header id="home" className="bg-gradient-to-r from-blue-600 to-blue-800 relative pt-24 overflow-hidden">
@@ -104,28 +119,28 @@ const HomePage: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="md:w-1/2 text-white mb-10 md:mb-0 animate-fadeIn">
               <div className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full mb-6 font-medium text-white text-sm">
-                ✨ Yenilikçi Solar Teknolojisi
+                ✨ Solar Panel Arıza ve Yönetim Sistemi
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4 leading-tight">
-                  Solar Panel <span className="text-blue-300">Yönetim</span> Sistemi
-                </h1>
-                <p className="text-xl text-white/80 mb-8 max-w-2xl leading-relaxed">
-                  Güneş enerjisi santrallerinizi tek platformdan izleyin, arızaları yönetin, bakım süreçlerini takip edin ve üretim analizleriyle performansı maksimuma çıkarın.
-                </p>
+                Güneş Enerjisi Santrallerinizi <span className="text-blue-300">Akıllı</span> Yönetin
+              </h1>
+              <p className="text-xl text-white/80 mb-8 max-w-2xl leading-relaxed">
+                SolarVeyo ile güneş enerjisi santrallerinizi tek platformdan izleyin, arızaları anında tespit edin, bakımları planlayın ve verimliliği %25'e kadar artırın.
+              </p>
               <div className="flex flex-wrap gap-4">
                 <Link
-                  to="/login"
+                  to="/register"
                   className="px-6 py-3 bg-white text-blue-700 font-medium rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-300 flex items-center transform hover:scale-105"
                 >
-                  Hemen Başlayın
+                  14 Gün Ücretsiz Deneyin
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
-                <Link
-                  to="/register"
+                <button
+                  onClick={() => scrollToSection('features')}
                   className="px-6 py-3 bg-transparent border-2 border-white text-white font-medium rounded-lg hover:bg-white/10 transition-all duration-300 transform hover:scale-105"
                 >
-                  Daha Fazla Bilgi
-                </Link>
+                  Neden SolarVeyo?
+                </button>
               </div>
 
               <div className="flex items-center mt-10 text-sm">
@@ -139,7 +154,7 @@ const HomePage: React.FC = () => {
                     <span className="text-yellow-300">★★★★★</span>
                     <span className="ml-1 text-white">4.9/5</span>
                   </div>
-                  <p className="text-white/70">Müşterilerimizin %98'i memnun</p>
+                  <p className="text-white/70">250+ GES tarafından kullanılıyor</p>
                 </div>
               </div>
             </div>
@@ -147,8 +162,8 @@ const HomePage: React.FC = () => {
               <div className="relative">
                 <div className="absolute -inset-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full blur-3xl opacity-30 animate-pulse-slow"></div>
                 <img
-                  src="/solar-logo.png"
-                  alt="Solar Panel"
+                  src="/solarveyo-logo.png"
+                  alt="Solar Panel Dashboard"
                   className="w-96 h-auto object-contain drop-shadow-xl relative z-10 animate-float"
                 />
               </div>
@@ -158,7 +173,7 @@ const HomePage: React.FC = () => {
           <div className="absolute bottom-0 left-0 right-0 flex justify-center">
             <button 
               onClick={() => scrollToSection('features')}
-              className="bg-white rounded-full p-3 shadow-md mb-6 animate-bounceSoft"
+              className="bg-white rounded-full p-3 shadow-md mb-6 animate-bounce-slow"
             >
               <ChevronDown className="h-6 w-6 text-blue-600" />
             </button>
@@ -175,270 +190,359 @@ const HomePage: React.FC = () => {
               <div className="text-gray-600 text-sm">Aktif GES</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow-sm text-center">
-              <div className="font-bold text-3xl text-blue-600 mb-1">98%</div>
-              <div className="text-gray-600 text-sm">Müşteri Memnuniyeti</div>
+              <div className="font-bold text-3xl text-blue-600 mb-1">%25</div>
+              <div className="text-gray-600 text-sm">Verimlilik Artışı</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow-sm text-center">
-              <div className="font-bold text-3xl text-blue-600 mb-1">15M+</div>
-              <div className="text-gray-600 text-sm">kWh Üretim</div>
+              <div className="font-bold text-3xl text-blue-600 mb-1">%68</div>
+              <div className="text-gray-600 text-sm">Arıza Azalması</div>
             </div>
             <div className="bg-gray-50 p-6 rounded-xl shadow-sm text-center">
-              <div className="font-bold text-3xl text-blue-600 mb-1">5.000+</div>
-              <div className="text-gray-600 text-sm">Önlenen Arıza</div>
+              <div className="font-bold text-3xl text-blue-600 mb-1">4 Saat</div>
+              <div className="text-gray-600 text-sm">Ortalama Müdahale Süresi</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-gray-50">
+      {/* Problem Statement Section */}
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
-              ÖNE ÇIKAN ÖZELLİKLER
+            <div className="inline-block px-3 py-1 bg-red-100 text-red-800 rounded-full font-medium text-sm mb-4">
+              PROBLEM
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Güneş Enerjisi Santrallerinizi Daha Verimli Yönetin
+              Güneş Enerjisi Yönetiminde Yaşanan Zorluklar
             </h2>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Solar Takip sistemi ile güneş enerjisi santrallerinizi daha akıllı, daha verimli ve daha kolay yönetin.
+              Güneş enerjisi santrali (GES) yatırımcıları ve yöneticileri için en büyük sorunlar:
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
+              <div className="p-4 bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Activity className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Verim Kayıpları</h3>
+              <p className="text-gray-600 mb-4">
+                Güneş panellerinde fark edilmeyen sorunlar, kirlilik ve bakım eksiklikleri enerji üretiminde %30'a varan kayıplara neden oluyor.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Zamanında tespit edilemeyen panel arızaları</span>
+                </li>
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Düzenli takip edilmeyen inverter performansı</span>
+                </li>
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Optimum olmayan panel açıları ve konumlandırma</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
+              <div className="p-4 bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Clock className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Yavaş Müdahale</h3>
+              <p className="text-gray-600 mb-4">
+                Arızaların geç tespit edilmesi, raporlama zorluğu ve teknik ekiplerin koordinasyon sorunları nedeniyle uzun arıza süreleri yaşanıyor.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Kağıt tabanlı manuel arıza kaydı süreçleri</span>
+                </li>
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Teknik ekiplerin geç bilgilendirilmesi</span>
+                </li>
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Arızaların önem derecesine göre sınıflandırılmaması</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
+              <div className="p-4 bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <BarChart2 className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Veri Eksikliği</h3>
+              <p className="text-gray-600 mb-4">
+                Üretim verilerinin düzenli toplanmaması ve analiz edilmemesi, stratejik karar almayı zorlaştırıyor ve yatırım getirisini olumsuz etkiliyor.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Dağınık ve tutarsız veri kaynakları</span>
+                </li>
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Karşılaştırmalı performans analizinin olmaması</span>
+                </li>
+                <li className="flex items-start text-sm text-gray-500">
+                  <span className="text-red-500 mr-2">✘</span>
+                  <span>Üretim tahminlerinin gerçekleşme oranı takibi yapılmaması</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Solution Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full font-medium text-white text-sm mb-4">
+              ÇÖZÜM
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              SolarVeyo ile Tüm Sorunlar Tek Platformda Çözülüyor
+            </h2>
+            <p className="mt-4 text-xl text-white/80 max-w-3xl mx-auto">
+              GES yönetiminizi dijitalleştirin, verimliliği artırın, maliyetleri düşürün
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-start">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-4 flex-shrink-0">
+                  <Sun className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold mb-3">Akıllı İzleme ve Erken Uyarı</h3>
+                  <p className="text-white/80 mb-4">
+                    Santralinizin performansını 7/24 izleyin, potansiyel sorunları daha oluşmadan tespit edin.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Gerçek zamanlı üretim takibi</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Anomali tespiti ve otomatik bildirimler</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Hedef/gerçekleşme karşılaştırmaları</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-start">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-4 flex-shrink-0">
+                  <Shield className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold mb-3">Profesyonel Arıza Yönetimi</h3>
+                  <p className="text-white/80 mb-4">
+                    Arızaları hızlıca kaydedip önceliklendirin, teknik ekibi anında bilgilendirin.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Mobil uygulama ile sahadan anında arıza bildirimi</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Otomatik iş emri oluşturma ve atama</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Arıza geçmişi ve çözüm bilgi bankası</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-start">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-4 flex-shrink-0">
+                  <Database className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold mb-3">Kapsamlı Analiz ve Raporlar</h3>
+                  <p className="text-white/80 mb-4">
+                    Üretim verilerini analiz edin, detaylı raporlar oluşturun, daha iyi kararlar alın.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Özelleştirilebilir yönetici gösterge panelleri</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>PDF ve Excel olarak dışa aktarılabilir raporlar</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Santral performansını etkileyen faktörlerin analizi</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-start">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-4 flex-shrink-0">
+                  <FileText className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold mb-3">Akıllı Bakım Planlama</h3>
+                  <p className="text-white/80 mb-4">
+                    Bakım programlarını optimize edin, maliyetleri düşürün, kesinti sürelerini azaltın.
+                  </p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Önleyici bakım planlaması ve hatırlatıcılar</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Ekipman ömür tahmini ve değişim planlaması</span>
+                    </li>
+                    <li className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-300 mr-2 flex-shrink-0" />
+                      <span>Bakım maliyetlerinin optimizasyonu</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
+              ÖZELLİKLER
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              SolarVeyo'nun Öne Çıkan Özellikleri
+            </h2>
+            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+              Güneş enerjisi yönetiminin tüm ihtiyaçlarını karşılayan kapsamlı çözüm
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
               <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Shield className="h-8 w-8 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Akıllı Arıza Takibi</h3>
               <p className="text-gray-600 mb-4">
-                Günlük, aylık ve yıllık enerji kontrolleri, hedef gerçekleşme analizleri ile arıza takibinizi akıllı hale getirin.
+                Arızaları anında tespit edin, hızlıca kaydedin ve teknik ekipleri yönlendirin.
               </p>
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Günlük enerji kontrolü</span>
+                  <span>Fotoğraf ve konum bilgisi ile arıza kaydı</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Aylık enerji kontrolü</span>
+                  <span>Önceliklendirme ve atama sistemi</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                   <span>Yıllık enerji kontrolü</span>
+                  <span>Çözüm süreçlerinin takibi</span>
                 </li>
-                  <li className="flex items-center text-sm text-gray-500">
+                <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Hedef Gerçekleşme Analizleri</span>
+                  <span>Arıza istatistikleri ve analizi</span>
                 </li>
               </ul>
-              <button 
-                onClick={() => scrollToSection('contact')}
-                className="text-blue-600 font-medium text-sm flex items-center hover:text-blue-800"
-              >
-                Daha Fazla Bilgi <ArrowRight className="h-4 w-4 ml-1" />
-              </button>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
+              <div className="p-4 bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <PanelTop className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Panel Performans İzleme</h3>
+              <p className="text-gray-600 mb-4">
+                Her bir panel grubunun performansını izleyin, sorunları hızlıca tespit edin.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Gerçek zamanlı üretim verileri</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Sıcaklık ve ışınım takibi</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Performans oranı hesaplamaları</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Verim düşüşü otomatik tespiti</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
+              <div className="p-4 bg-yellow-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Zap className="h-8 w-8 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">İnvertör Kontrol Sistemi</h3>
+              <p className="text-gray-600 mb-4">
+                İnvertörlerin durumunu kontrol edin, hataları önleyici bakımlarla giderin.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>İnvertör verimlilik takibi</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Hata kodları kütüphanesi</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Önleyici bakım programları</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Garanti ve servis takibi</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
               <div className="p-4 bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <BarChart2 className="h-8 w-8 text-indigo-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Arıza Takibi</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Detaylı Analiz ve Raporlama</h3>
               <p className="text-gray-600 mb-4">
-               Arıza oluşturma, silme, düzenleme ve çözüm süresi takibi ile arıza süreçlerinizi kolaylaştırın.
+                Özelleştirilebilir raporlar oluşturun, performansı karşılaştırın ve analiz edin.
               </p>
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Arıza Oluşturma</span>
+                  <span>Özelleştirilebilir gösterge panelleri</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Arıza Silme ve Düzenleme</span>
-                </li>
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Çözüm Süresi Takibi</span>
-                </li>
-              </ul>
-              <button 
-                onClick={() => scrollToSection('contact')}
-                className="text-indigo-600 font-medium text-sm flex items-center hover:text-indigo-800"
-              >
-                Daha Fazla Bilgi <ArrowRight className="h-4 w-4 ml-1" />
-              </button>
-            </div>
-
-            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Zap className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Akıllı Bakım Yönetimi</h3>
-              <p className="text-gray-600 mb-4">
-                Aylık bakım kontrolleri, müşteri ekleme/silme ve müşterilere özel santral izleme ile bakım süreçlerinizi optimize edin.
-              </p>
-              <ul className="space-y-2 mb-6">
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Aylık Bakım Kontrolleri</span>
-                </li>
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Müşteri Ekleme/Silme</span>
-                </li>
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Müşteriye Özel Santral İzleme</span>
-                </li>
-              </ul>
-              <button 
-                onClick={() => scrollToSection('contact')}
-                className="text-blue-600 font-medium text-sm flex items-center hover:text-blue-800"
-              >
-                Daha Fazla Bilgi <ArrowRight className="h-4 w-4 ml-1" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Nasıl Çalışır Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
-              NASIL ÇALIŞIR
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Üç Basit Adımda Başlayın
-            </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Solar Panel Arıza Takip Sistemimiz kullanımı kolay arayüzü ile saniyeler içinde kuruluma hazır.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center">
-              <div className="relative">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">1</div>
-                <div className="hidden md:block absolute top-8 left-full w-24 h-0.5 bg-gray-200"></div>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Hesabınızı Oluşturun</h3>
-              <p className="text-gray-600">
-                Basit kayıt sürecini tamamlayın ve hemen kullanmaya başlayın. Telefon numarası ve e-posta ile doğrulama gerekir.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center text-center">
-              <div className="relative">
-                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">2</div>
-                <div className="hidden md:block absolute top-8 left-full w-24 h-0.5 bg-gray-200"></div>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Santrallerinizi Ekleyin</h3>
-              <p className="text-gray-600">
-                GES santrallerinizin bilgilerini girin ve sistem otomatik olarak izlemeye başlasın. Ölçüm cihazlarınızı entegre edin.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mb-6">3</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Anlık Takibe Başlayın</h3>
-              <p className="text-gray-600">
-                Web veya mobil cihazlarınızdan santrallerinizi izleyin, arızaları kontrol edin ve bakım süreçlerinizi yönetin.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-16 text-center">
-            <Link
-              to="/register"
-              className="px-8 py-4 bg-blue-600 text-white font-medium rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-300 inline-flex items-center transform hover:scale-105"
-            >
-              Hemen Ücretsiz Deneyin
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-            <p className="mt-4 text-sm text-gray-500">Kredi kartı gerekmez. İlk 14 gün ücretsiz deneme.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="benefits" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
-              NEDEN BİZ
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Solar Enerji Sistemlerinizi Profesyonelce Takip Edin
-            </h2>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              SolarVeyo ile güneş enerjisi yatırımlarınızdan maksimum verim alın.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Clock className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">7/24 Kesintisiz İzleme</h3>
-              <p className="text-gray-600">
-                Güneş enerjisi santralleriniz sürekli izleme altında. Gece veya gündüz, haftasonu veya tatil demeden her an kontrol altında.
-              </p>
-              <ul className="mt-4 space-y-2">
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Gerçek zamanlı veri akışı</span>
-                </li>
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Otomatik alarm sistemi</span>
-                </li>
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Mobil uygulama desteği</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="p-4 bg-indigo-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <Zap className="h-8 w-8 text-indigo-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Hızlı Müdahale Ekibi</h3>
-              <p className="text-gray-600">
-                Arıza durumlarında anlık bildirimler alın ve uzman ekibimiz tarafından hızla müdahale edilmesini sağlayın.
-              </p>
-              <ul className="mt-4 space-y-2">
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>4 saat içinde müdahale garantisi</span>
-                </li>
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Uzman tekniker ekibi</span>
-                </li>
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Arıza sebebi analizi</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
-              <div className="p-4 bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
-                <BarChart2 className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Kapsamlı Raporlama</h3>
-              <p className="text-gray-600">
-                Detaylı raporlar ve analizler ile santrallerinizin performansını ölçün, karşılaştırın ve optimizasyon yapın.
-              </p>
-              <ul className="mt-4 space-y-2">
-                <li className="flex items-center text-sm text-gray-500">
-                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Günlük, haftalık ve aylık raporlar</span>
+                  <span>Finansal performans raporları</span>
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
@@ -446,7 +550,63 @@ const HomePage: React.FC = () => {
                 </li>
                 <li className="flex items-center text-sm text-gray-500">
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                  <span>Performans karşılaştırma grafikleri</span>
+                  <span>Karşılaştırmalı saha performansı</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
+              <div className="p-4 bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Users className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Ekip ve Müşteri Yönetimi</h3>
+              <p className="text-gray-600 mb-4">
+                Teknik ekibi koordine edin, müşterilere özel erişim imkanı sağlayın.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Rol tabanlı kullanıcı yetkilendirme</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Müşterilere sınırlı erişim sağlama</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Ekip görev ataması ve takibi</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Performans değerlendirme</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
+              <div className="p-4 bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mb-6">
+                <Lightbulb className="h-8 w-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Yapay Zeka Entegrasyonu</h3>
+              <p className="text-gray-600 mb-4">
+                Yapay zeka destekli öngörüler, otomasyon ve optimizasyon araçları.
+              </p>
+              <ul className="space-y-2 mb-6">
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Üretim tahmini ve optimizasyonu</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Kestirimci bakım algoritmaları</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Anomali tespiti ve uyarı sistemi</span>
+                </li>
+                <li className="flex items-center text-sm text-gray-500">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                  <span>Öneriler ve optimizasyon ipuçları</span>
                 </li>
               </ul>
             </div>
@@ -454,7 +614,124 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Referanslar Section */}
+      {/* ROI / Benefits Section */}
+      <section id="benefits" className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium text-sm mb-4">
+              KAZANÇLAR
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              SolarVeyo ile Elde Edeceğiniz Avantajlar
+            </h2>
+            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+              Yatırımınızdan maksimum getiri sağlamanızı nasıl destekliyoruz?
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="space-y-10">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
+                    <TrendingUp className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Gelir Artışı</h3>
+                  <p className="mt-2 text-gray-600">
+                    SolarVeyo kullanıcıları, sistemdeki optimizasyonlar ve hızlı arıza müdahaleleri sayesinde yıllık gelirlerinde <span className="font-bold text-green-600">%8-15 artış</span> bildirmektedir. 1 MW'lık bir santral için bu, yıllık <span className="font-bold text-green-600">~40.000 TL ek gelir</span> anlamına gelir.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Zaman Tasarrufu</h3>
+                  <p className="mt-2 text-gray-600">
+                    Otomatik izleme ve raporlama sayesinde manuel işlemlerde <span className="font-bold text-green-600">%75'e varan zaman tasarrufu</span>. Ortalama 4 saatlik arıza tespit süresi <span className="font-bold text-green-600">20 dakikaya</span> düşüyor.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
+                    <Leaf className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Ekipman Ömrü</h3>
+                  <p className="mt-2 text-gray-600">
+                    Önleyici bakım stratejileri sayesinde ekipman ömrünün <span className="font-bold text-green-600">%15-20 uzatılması</span> ve değişim maliyetlerinin azaltılması. İnvertör arızalarında <span className="font-bold text-green-600">%30 azalma</span> sağlıyor.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-10">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
+                    <Shield className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Risk Azaltma</h3>
+                  <p className="mt-2 text-gray-600">
+                    Arıza süresinin kısalması sayesinde gelir kayıplarında <span className="font-bold text-green-600">%40 azalma</span>. Güvenlik sorunları ve acil durumların hızlı tespiti ile risklerin önlenmesi.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
+                    <Users className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Müşteri Memnuniyeti</h3>
+                  <p className="mt-2 text-gray-600">
+                    GES sahibi müşterilerinize şeffaf raporlama sağlayarak güven oluşturun. Mevcut müşterilerin <span className="font-bold text-green-600">%90'ı işletme anlaşmalarını yeniliyor</span>, müşteri referansları ile yeni iş fırsatları.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-green-500 text-white">
+                    <BarChart2 className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Veri Odaklı Kararlar</h3>
+                  <p className="mt-2 text-gray-600">
+                    Detaylı analiz ve raporlar sayesinde daha iyi stratejik kararlar alın. Kullanıcılar gelecek santral yatırımlarında <span className="font-bold text-green-600">%22 daha isabetli bütçe planlaması</span> yapabildiğini belirtiyor.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-16 text-center">
+            <div className="inline-block p-4 bg-white rounded-lg shadow-md">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Yatırım Geri Dönüşü</h3>
+              <p className="text-gray-600">
+                SolarVeyo'nun sunduğu avantajlar sayesinde, ortalama bir GES için
+                <span className="font-bold text-green-600"> 4-8 ay içinde</span> yatırımınızı geri kazanırsınız.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
       <section id="testimonials" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -462,10 +739,10 @@ const HomePage: React.FC = () => {
               MÜŞTERİ YORUMLARI
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Müşterilerimiz Ne Diyor?
+              Kullanıcılarımız Ne Diyor?
             </h2>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Türkiye'nin önde gelen enerji şirketleri SolarVeyo'yu tercih ediyor.
+              Türkiye'nin önde gelen güneş enerjisi şirketleri SolarVeyo'yu tercih ediyor
             </p>
           </div>
 
@@ -475,11 +752,11 @@ const HomePage: React.FC = () => {
                 <img src="https://randomuser.me/api/portraits/men/32.jpg" className="w-12 h-12 rounded-full mr-4" alt="Testimonial" />
                 <div>
                   <h4 className="font-bold text-gray-900">Ahmet Yılmaz</h4>
-                  <p className="text-sm text-gray-500">Enerji Grup Müdürü, ABC Enerji</p>
+                  <p className="text-sm text-gray-500">Teknik Direktör, ABC Enerji</p>
                 </div>
               </div>
               <p className="text-gray-700 mb-4">
-                "SolarVeyo sayesinde santrallerimizin verimliliği %15 arttı. Arıza tespiti ve müdahale süreleri ciddi oranda kısaldı. Kesinlikle tavsiye ediyorum."
+                "SolarVeyo'yu kullanmaya başladıktan sonra arıza tespit süremiz 4 saatten 20 dakikaya indi. Teknik ekibimizin verimliliği arttı ve santrallerimizin üretim performansında %12 artış sağladık."
               </p>
               <div className="flex text-yellow-400">
                 <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
@@ -490,12 +767,12 @@ const HomePage: React.FC = () => {
               <div className="flex items-center mb-6">
                 <img src="https://randomuser.me/api/portraits/women/44.jpg" className="w-12 h-12 rounded-full mr-4" alt="Testimonial" />
                 <div>
-                  <h4 className="font-bold text-gray-900">Ayşe Demir</h4>
-                  <p className="text-sm text-gray-500">Operasyon Direktörü, XYZ Solar</p>
+                  <h4 className="font-bold text-gray-900">Zeynep Demir</h4>
+                  <p className="text-sm text-gray-500">CEO, XYZ Solar</p>
                 </div>
               </div>
               <p className="text-gray-700 mb-4">
-                "Sistemin kullanımı çok kolay ve raporlama özellikleri mükemmel. Artık santrallerimizin durumunu istediğimiz an görebiliyoruz. Teknik destek ekibi de oldukça yardımcı."
+                "12 farklı ildeki 35 santralimizi tek bir platformdan yönetebiliyoruz. Raporlama özelliği sayesinde yatırımcılarımıza detaylı performans analizleri sunabiliyoruz. Kullanıcı dostu arayüzü ile herkes kolayca adapte oldu."
               </p>
               <div className="flex text-yellow-400">
                 <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
@@ -507,11 +784,11 @@ const HomePage: React.FC = () => {
                 <img src="https://randomuser.me/api/portraits/men/46.jpg" className="w-12 h-12 rounded-full mr-4" alt="Testimonial" />
                 <div>
                   <h4 className="font-bold text-gray-900">Mehmet Kaya</h4>
-                  <p className="text-sm text-gray-500">CEO, Kaya Enerji</p>
+                  <p className="text-sm text-gray-500">İşletme Müdürü, Kaya Enerji</p>
                 </div>
               </div>
               <p className="text-gray-700 mb-4">
-                "6 farklı ilde bulunan santrallerimizi tek bir platformdan yönetebiliyoruz. Bakım süreçlerimiz artık çok daha düzenli ve verimli. SolarVeyo ekibine teşekkürler."
+                "Bakım maliyetlerimiz %28 azaldı, çünkü artık sorunları erkenden tespit edip büyümeden müdahale edebiliyoruz. Stok yönetimi sayesinde gereksiz malzeme alımlarını önlüyoruz. İlk yılda yatırımımızı 5 kat geri kazandık."
               </p>
               <div className="flex text-yellow-400">
                 <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
@@ -520,37 +797,198 @@ const HomePage: React.FC = () => {
           </div>
 
           <div className="mt-16 flex justify-center">
-            <img src="/edeon-logo.png" alt="Edeon Logo" className="h-16" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-12 items-center">
+              <img src="/edeon-logo.png" alt="Edeon Logo" className="h-10 opacity-70 hover:opacity-100 transition-opacity" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/Logo_INDITEX.svg" alt="Client Logo" className="h-8 opacity-70 hover:opacity-100 transition-opacity" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Client Logo" className="h-8 opacity-70 hover:opacity-100 transition-opacity" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" alt="Client Logo" className="h-8 opacity-70 hover:opacity-100 transition-opacity" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium text-sm mb-4">
+              FİYATLANDIRMA
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              İhtiyacınıza Uygun Paketler
+            </h2>
+            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+              Her ölçekteki güneş enerjisi yatırımı için uygun çözümler
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-200">
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Başlangıç</h3>
+                <p className="text-gray-500 mb-4">Küçük GES'ler için</p>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-gray-900">₺1.990</span>
+                  <span className="text-gray-500 ml-2">/ay</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-6">5 MW'a kadar santral kapasitesi</p>
+              </div>
+              
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Temel arıza takibi</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Günlük üretim raporları</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">5 kullanıcı hesabı</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">E-posta desteği</span>
+                </li>
+              </ul>
+              
+              <div className="text-center">
+                <Link
+                  to="/register"
+                  className="w-full inline-block px-4 py-3 border border-blue-600 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-all duration-300"
+                >
+                  14 Gün Ücretsiz Deneyin
+                </Link>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-b from-blue-50 to-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-2 border-blue-500 transform scale-105">
+              <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                <span className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium">En Popüler</span>
+              </div>
+              <div className="text-center mt-2">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Profesyonel</h3>
+                <p className="text-gray-500 mb-4">Orta ölçekli GES'ler için</p>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-gray-900">₺4.990</span>
+                  <span className="text-gray-500 ml-2">/ay</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-6">20 MW'a kadar santral kapasitesi</p>
+              </div>
+              
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Gelişmiş arıza yönetimi</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Detaylı analiz ve raporlar</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">İnvertör kontrol modülü</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">20 kullanıcı hesabı</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">7/24 telefon ve e-posta desteği</span>
+                </li>
+              </ul>
+              
+              <div className="text-center">
+                <Link
+                  to="/register"
+                  className="w-full inline-block px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all duration-300"
+                >
+                  14 Gün Ücretsiz Deneyin
+                </Link>
+              </div>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-200">
+              <div className="text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">Kurumsal</h3>
+                <p className="text-gray-500 mb-4">Büyük ölçekli GES'ler için</p>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-gray-900">₺9.990</span>
+                  <span className="text-gray-500 ml-2">/ay</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-6">Sınırsız santral kapasitesi</p>
+              </div>
+              
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">AI destekli öngörü ve analiz</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Özel API entegrasyonları</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Sınırsız kullanıcı</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Özel eğitim ve danışmanlık</span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <span className="text-gray-600">Öncelikli 7/24 destek</span>
+                </li>
+              </ul>
+              
+              <div className="text-center">
+                <Link
+                  to="/register"
+                  className="w-full inline-block px-4 py-3 border border-blue-600 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-all duration-300"
+                >
+                  Özel Teklif Alın
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-10 text-center">
+            <p className="text-gray-500">
+              Tüm paketlerde ilk 14 gün ücretsiz deneme. Kredi kartı gerekmez. İstediğiniz zaman iptal edebilirsiniz.
+            </p>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Hemen Başlayın</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">GES Yönetiminizi Dijitalleştirmeye Hazır mısınız?</h2>
           <p className="text-xl text-white/90 mb-10 max-w-3xl mx-auto">
-            Solar Panel Arıza Takip Sistemimiz ile güneş enerjisi yatırımlarınızı daha verimli hale getirin. İlk 14 gün ücretsiz deneyin.
+            SolarVeyo ile güneş enerjisi santrallerinizin verimliliğini artırın, arızaları azaltın ve gelirlerinizi maksimize edin.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              to="/login"
+              to="/register"
               className="px-8 py-4 bg-white text-blue-700 font-medium rounded-lg shadow-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105"
             >
-              Hemen Giriş Yap
+              14 Gün Ücretsiz Deneyin
             </Link>
             <Link
-              to="/register"
+              to="/login"
               className="px-8 py-4 bg-transparent border-2 border-white text-white font-medium rounded-lg hover:bg-white/10 transition-all duration-300 transform hover:scale-105"
             >
-              Ücretsiz Hesap Oluştur
+              Demo İçin Giriş Yapın
             </Link>
           </div>
           <p className="mt-6 text-sm text-white/70">Kredi kartı bilgisi gerekmez. İstediğiniz zaman iptal edebilirsiniz.</p>
         </div>
       </section>
 
-      {/* İletişim Section */}
+      {/* Contact Section */}
       <section id="contact" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -558,10 +996,10 @@ const HomePage: React.FC = () => {
               İLETİŞİM
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Bize Ulaşın
+              Sorularınız mı var?
             </h2>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Sorularınız mı var? Size yardımcı olmaktan memnuniyet duyarız.
+              Ekibimiz size yardımcı olmak için hazır. İstediğiniz kanaldan bize ulaşabilirsiniz.
             </p>
           </div>
 
@@ -572,9 +1010,9 @@ const HomePage: React.FC = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">Bizi Arayın</h3>
               <p className="text-gray-600 mb-4">
-                Teknik destek ve satış ekibimiz size yardımcı olmak için hazır.
+                Satış ve teknik destek ekibimiz sorularınızı yanıtlamak için hazır.
               </p>
-              <a href="tel:+902121234567" className="text-blue-600 font-bold">
+              <a href="tel:+902121234567" className="text-blue-600 font-bold hover:text-blue-800 transition-colors">
                 +90 (212) 123 45 67
               </a>
             </div>
@@ -585,9 +1023,9 @@ const HomePage: React.FC = () => {
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">E-posta Gönderin</h3>
               <p className="text-gray-600 mb-4">
-                Sorularınızı e-posta ile iletebilirsiniz, en kısa sürede dönüş yapacağız.
+                E-posta ile iletişime geçin, en kısa sürede dönüş yapalım.
               </p>
-              <a href="mailto:info@edeonenerji.com" className="text-blue-600 font-bold">
+              <a href="mailto:info@solarveyo.com" className="text-blue-600 font-bold hover:text-blue-800 transition-colors">
                 info@solarveyo.com
               </a>
             </div>
@@ -614,11 +1052,11 @@ const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-6">
-                <img src="/solar-logo.png" alt="solarVeyo Logo" className="h-8 w-8 mr-3" />
-                <h3 className="text-xl font-bold">solarVeyo</h3>
+                <img src="/solarveyo-logo.png" alt="SolarVeyo Logo" className="h-8 w-8 mr-3" />
+                <h3 className="text-xl font-bold">SolarVeyo</h3>
               </div>
               <p className="text-gray-400 mb-6">
-                Güneş enerjisi santrallerinizi 7/24 izleyin, arıza durumlarında anında müdahale edin.
+                Güneş enerjisi santrallerinizi 7/24 izleyin, arıza durumlarında anında müdahale edin, veriminizi artırın.
               </p>
               <div className="flex space-x-4">
                 <a href="#" className="text-gray-400 hover:text-white transition-colors">
@@ -642,7 +1080,7 @@ const HomePage: React.FC = () => {
                 <li><button onClick={() => scrollToSection('home')} className="text-gray-400 hover:text-white transition-colors">Ana Sayfa</button></li>
                 <li><button onClick={() => scrollToSection('features')} className="text-gray-400 hover:text-white transition-colors">Özellikler</button></li>
                 <li><button onClick={() => scrollToSection('benefits')} className="text-gray-400 hover:text-white transition-colors">Avantajlar</button></li>
-                <li><button onClick={() => scrollToSection('testimonials')} className="text-gray-400 hover:text-white transition-colors">Müşteri Yorumları</button></li>
+                <li><button onClick={() => scrollToSection('testimonials')} className="text-gray-400 hover:text-white transition-colors">Referanslar</button></li>
                 <li><button onClick={() => scrollToSection('contact')} className="text-gray-400 hover:text-white transition-colors">İletişim</button></li>
               </ul>
             </div>
@@ -690,11 +1128,11 @@ const HomePage: React.FC = () => {
         </div>
       </footer>
 
-      {/* Sayfanın en üstüne çıkma butonu */}
+      {/* Back to top button */}
       {scrolled && (
         <button 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
-          className="fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 z-50"
+          className="fixed bottom-6 right-6 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 z-40"
           aria-label="Yukarı çık"
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
