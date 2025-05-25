@@ -57,7 +57,7 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [sirketBilgileri, setSirketBilgileri] = useState<SirketBilgileri>({
     sirketAdi: 'SolarVeyo',
     slogan: 'Güneş Enerjisi Yönetimi',
-    logoURL: '/solarveyo-logo.png'
+    logoURL: '/solar-logo.png'
   });
   const lastFetchTime = useRef<number>(0);
 
@@ -81,7 +81,7 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setSirketBilgileri({
             sirketAdi: currentCompany.name || 'SolarVeyo',
             slogan: currentCompany.slogan || 'Güneş Enerjisi Yönetimi',
-            logoURL: logoURL
+            logoURL: logoURL || '/solar-logo.png'
           });
           return;
         }
@@ -362,7 +362,7 @@ export const Layout: React.FC = () => {
                   className="h-full w-full object-contain"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = '/solarveyo-logo.png';
+                    target.src = '/solar-logo.png';
                   }}
                 />
               ) : (
