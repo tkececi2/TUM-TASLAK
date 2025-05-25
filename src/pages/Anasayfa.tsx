@@ -608,6 +608,7 @@ export const Anasayfa: React.FC = () => {
         </div>
         <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-2xl"></div>
         <div className="absolute -top-8 -left-8 w-32 h-32 bg-blue-300 rounded-full opacity-10 blur-xl"></div>
+      </div>
       </Card>
 
       {/* Hızlı Erişim Kartları */}
