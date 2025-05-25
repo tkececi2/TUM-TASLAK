@@ -568,17 +568,18 @@ export const Anasayfa: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Hoş Geldiniz Kartı */}
       <Card className="bg-gradient-to-r from-blue-700 to-blue-900 border-none shadow-lg rounded-xl overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between p-1">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between p-4">
           <div className="flex items-center mb-4 md:mb-0">
             <div className="flex flex-col md:flex-row items-center gap-4">
-        <div className="bg-blue-600 text-white p-4 rounded-full flex items-center justify-center">
-          <img src="/solar-logo.png" alt="SolarVeyo Logo" className="h-8 w-8 object-contain" />
-        </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Hoş Geldiniz, {kullanici?.ad}</h2>
-              <p className="text-sm text-blue-100">
-                {format(new Date(), 'dd MMMM yyyy, EEEE', { locale: tr })}
-              </p>
+              <div className="bg-white p-3 rounded-full flex items-center justify-center shadow-lg">
+                <img src="/solarveyo-logo.png" alt="SolarVeyo Logo" className="h-10 w-10 object-contain" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Hoş Geldiniz, {kullanici?.ad}</h2>
+                <p className="text-sm text-blue-100">
+                  {format(new Date(), 'dd MMMM yyyy, EEEE', { locale: tr })}
+                </p>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -608,7 +609,6 @@ export const Anasayfa: React.FC = () => {
         </div>
         <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-2xl"></div>
         <div className="absolute -top-8 -left-8 w-32 h-32 bg-blue-300 rounded-full opacity-10 blur-xl"></div>
-      </div>
       </Card>
 
       {/* Hızlı Erişim Kartları */}
