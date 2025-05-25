@@ -1,0 +1,38 @@
+Leaf is not defined
+at HomePage (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/pages/HomePage.tsx:1915:240)
+at renderWithHooks (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:11548:26)
+at mountIndeterminateComponent (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:14926:21)
+at beginWork (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:15914:22)
+at HTMLUnknownElement.callCallback2 (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:3674:22)
+at Object.invokeGuardedCallbackDev (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:3699:24)
+at invokeGuardedCallback (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:3733:39)
+at beginWork$1 (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:19765:15)
+at performUnitOfWork (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:19198:20)
+at workLoopSync (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:19137:13)
+Leaf is not defined
+at HomePage (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/pages/HomePage.tsx:1915:240)
+at renderWithHooks (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:11548:26)
+at mountIndeterminateComponent (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:14926:21)
+at beginWork (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:15914:22)
+at HTMLUnknownElement.callCallback2 (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:3674:22)
+at Object.invokeGuardedCallbackDev (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:3699:24)
+at invokeGuardedCallback (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:3733:39)
+at beginWork$1 (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:19765:15)
+at performUnitOfWork (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:19198:20)
+at workLoopSync (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/chunk-WRD5HZVH.js?v=80916044:19137:13)
+The above error occurred in the <HomePage> component:
+
+    at HomePage (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/pages/HomePage.tsx:23:35)
+    at RenderedRoute (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=80916044:4089:5)
+    at Routes (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=80916044:4559:5)
+    at App (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/App.tsx:52:23)
+    at BildirimProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/contexts/BildirimContext.tsx:36:36)
+    at NotificationProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/contexts/NotificationContext.tsx:29:40)
+    at CompanyProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/contexts/CompanyContext.tsx:35:35)
+    at AuthProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/src/contexts/AuthContext.tsx:39:32)
+    at Router (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=80916044:4502:15)
+    at BrowserRouter (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/node_modules/.vite/deps/react-router-dom.js?v=80916044:5248:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+Leaf is not defined
