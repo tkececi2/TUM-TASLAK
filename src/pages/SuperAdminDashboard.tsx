@@ -12,6 +12,7 @@ import { tr } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { Company } from '../types';
 import { Kullanici } from '../types';
+import { getAuth } from "firebase/auth";
 
 export const SuperAdminDashboard: React.FC = () => {
   const { kullanici } = useAuth();
@@ -40,6 +41,8 @@ export const SuperAdminDashboard: React.FC = () => {
     phone: '',
     address: ''
   });
+
+  const auth = getAuth();
 
 
   // Check if user is superadmin
@@ -179,15 +182,27 @@ export const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  // Kullanıcı abonelik süresini yönet
+  // Abonelik süresini yönet
   const handleExtendTrial = async (userId: string, days: number) => {
     try {
       setLoading(true);
-      
+
+      // Token yenileme ve yetki kontrolü
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.getIdToken(true);
+          console.log('Token yenilendi, abonelik güncellemesi başlatılıyor');
+        } catch (tokenError) {
+          console.error('Token yenileme hatası:', tokenError);
+          toast.error('Yetkilendirme hatası. Sayfayı yenileyip tekrar deneyin.');
+          return;
+        }
+      }
+
       // Kullanıcı bilgilerini al
       const userRef = doc(db, 'kullanicilar', userId);
       const userDoc = await getDoc(userRef);
-      
+
       if (!userDoc.exists()) {
         toast.error('Kullanıcı bulunamadı');
         return;
@@ -202,7 +217,7 @@ export const SuperAdminDashboard: React.FC = () => {
       if (userData.denemeSuresiBitis) {
         const mevcutBitisTarihi = userData.denemeSuresiBitis.toDate();
         oncekiBitisTarihi = mevcutBitisTarihi;
-        
+
         // Süre bittiyse, şimdiden itibaren yeni süre ekle
         const simdikiZaman = new Date();
         if (mevcutBitisTarihi < simdikiZaman) {
@@ -277,19 +292,31 @@ export const SuperAdminDashboard: React.FC = () => {
   const handleUpdatePaymentStatus = async (userId: string, status: 'deneme' | 'odendi' | 'beklemede' | 'surebitti') => {
     try {
       setLoading(true);
-      
+
+      // Token yenileme ve yetki kontrolü
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.getIdToken(true);
+          console.log('Token yenilendi, ödeme durumu güncellemesi başlatılıyor');
+        } catch (tokenError) {
+          console.error('Token yenileme hatası:', tokenError);
+          toast.error('Yetkilendirme hatası. Sayfayı yenileyip tekrar deneyin.');
+          return;
+        }
+      }
+
       // Kullanıcı bilgilerini al
       const userRef = doc(db, 'kullanicilar', userId);
       const userDoc = await getDoc(userRef);
-      
+
       if (!userDoc.exists()) {
         toast.error('Kullanıcı bulunamadı');
         return;
       }
-      
+
       const userData = userDoc.data();
       const oncekiDurum = userData.odemeDurumu || 'belirtilmemiş';
-      
+
       // Durum güncellemesi için veri hazırla
       const updateData: any = {
         odemeDurumu: status,
@@ -301,7 +328,7 @@ export const SuperAdminDashboard: React.FC = () => {
       if (status === 'odendi') {
         // Ödeme tarihi ve süresi ekle
         updateData.sonOdemeTarihi = Timestamp.now();
-        
+
         // Varsayılan olarak 1 yıllık abonelik süresi ekle (opsiyonel)
         const birYilSonra = new Date();
         birYilSonra.setFullYear(birYilSonra.getFullYear() + 1);
@@ -340,7 +367,7 @@ export const SuperAdminDashboard: React.FC = () => {
       const bildirimRef = collection(db, 'bildirimler');
       let bildirimBaslik = 'Ödeme Durumu Güncellendi';
       let bildirimIcerik = `Ödeme durumunuz "${status}" olarak güncellendi.`;
-      
+
       if (status === 'odendi') {
         bildirimBaslik = 'Ödemeniz Alındı';
         bildirimIcerik = 'Ödemeniz başarıyla alındı. Teşekkür ederiz!';
@@ -351,7 +378,7 @@ export const SuperAdminDashboard: React.FC = () => {
         bildirimBaslik = 'Ödeme Bekleniyor';
         bildirimIcerik = 'Ödemenizi bekliyoruz. Lütfen 7 gün içinde ödemenizi tamamlayın.';
       }
-      
+
       await addDoc(bildirimRef, {
         aliciId: userId,
         baslik: bildirimBaslik,
@@ -371,7 +398,7 @@ export const SuperAdminDashboard: React.FC = () => {
         'beklemede': 'Ödeme Bekliyor',
         'surebitti': 'Süre Bitti'
       };
-      
+
       toast.success(`Kullanıcının ödeme durumu "${durumAdlari[status]}" olarak güncellendi`);
     } catch (error) {
       console.error('Ödeme durumu güncelleme hatası:', error);
@@ -678,25 +705,25 @@ export const SuperAdminDashboard: React.FC = () => {
               <div className="col-span-full mb-4 bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                 <div className="flex flex-wrap gap-2 items-center">
                   <div className="text-sm font-medium text-gray-700 mr-2">Filtrele:</div>
-                  
+
                   <button className="px-3 py-1.5 text-xs font-medium rounded-full bg-primary-50 text-primary-700 border border-primary-200 hover:bg-primary-100 transition-colors">
                     Tüm Kullanıcılar
                   </button>
-                  
+
                   <button className="px-3 py-1.5 text-xs font-medium rounded-full bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">
                     Deneme Süresi Aktif
                   </button>
-                  
+
                   <button className="px-3 py-1.5 text-xs font-medium rounded-full bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">
                     Süresi Bitenler
                   </button>
-                  
+
                   <button className="px-3 py-1.5 text-xs font-medium rounded-full bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">
                     Yöneticiler
                   </button>
-                  
+
                   <div className="flex-grow"></div>
-                  
+
                   <div className="relative">
                     <select className="appearance-none bg-white border border-gray-200 rounded-lg py-1.5 pl-3 pr-8 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                       <option value="recent">Son Kayıt Olma</option>
@@ -707,7 +734,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       <ChevronDown className="h-4 w-4 text-gray-500" />
                     </div>
                   </div>
-                  
+
                   <button 
                     onClick={() => handleRefresh()}
                     className="p-1.5 text-gray-500 hover:text-gray-700 bg-white rounded-full border border-gray-200 hover:bg-gray-50"
@@ -716,7 +743,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
-              
+
               {filteredUsers.length === 0 ? (
                 <div className="col-span-full flex flex-col items-center justify-center py-12 bg-white rounded-lg shadow-sm border border-gray-100">
                   <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -777,7 +804,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Orta Bölüm: Abonelik Durumu */}
                       <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
                         <div className="flex flex-col">
@@ -794,7 +821,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 user.odemeDurumu === 'surebitti' ? 'Süre Bitti' : 'Belirtilmedi'}
                             </span>
                           </div>
-                          
+
                           {user.denemeSuresiBitis ? (
                             <div className="flex items-center justify-between">
                               <div className="flex items-center text-xs text-gray-600">
@@ -803,14 +830,14 @@ export const SuperAdminDashboard: React.FC = () => {
                                   {format(user.denemeSuresiBitis.toDate(), 'dd MMM yyyy', { locale: tr })}
                                 </span>
                               </div>
-                              
+
                               {(() => {
                                 // Kalan süreyi hesapla
                                 const simdikiZaman = new Date().getTime();
                                 const bitisTarihi = user.denemeSuresiBitis.toDate().getTime();
                                 const kalanMilisaniye = bitisTarihi - simdikiZaman;
                                 const kalanGun = Math.ceil(kalanMilisaniye / (1000 * 60 * 60 * 24));
-                                
+
                                 if (kalanMilisaniye <= 0) {
                                   return (
                                     <span className="text-xs text-red-600 flex items-center font-medium">
@@ -847,22 +874,22 @@ export const SuperAdminDashboard: React.FC = () => {
                               Bitiş tarihi belirtilmemiş
                             </div>
                           )}
-                          
+
                           {/* İlerleme Çubuğu */}
                           {user.denemeSuresiBitis && (() => {
                             const simdikiZaman = new Date().getTime();
                             const bitisTarihi = user.denemeSuresiBitis.toDate().getTime();
                             const kalanMilisaniye = bitisTarihi - simdikiZaman;
-                            
+
                             // Varsayalım ki deneme süresi 30 gün
                             const toplamSure = 30 * 24 * 60 * 60 * 1000;
                             const gecenSure = toplamSure - kalanMilisaniye;
                             const yuzde = Math.max(0, Math.min(100, (gecenSure / toplamSure) * 100));
-                            
+
                             const bgColor = kalanMilisaniye <= 0 ? 'bg-red-500' : 
                                            kalanMilisaniye <= 7 * 24 * 60 * 60 * 1000 ? 'bg-amber-500' : 
                                            'bg-green-500';
-                            
+
                             return (
                               <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                                 <div className={`h-1.5 rounded-full ${bgColor}`} style={{ width: `${yuzde}%` }}></div>
@@ -871,7 +898,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           })()}
                         </div>
                       </div>
-                      
+
                       {/* Alt Bölüm: İşlemler */}
                       <div className="px-4 py-3 bg-white border-t border-gray-100 flex justify-between items-center">
                         <div className="text-xs text-gray-500">
@@ -892,7 +919,7 @@ export const SuperAdminDashboard: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        
+
                         <div className="flex space-x-1">
                           {/* Abonelik düğmesi */}
                           <button
@@ -905,7 +932,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           >
                             <Calendar className="h-4 w-4" />
                           </button>
-                          
+
                           {/* Ödeme durumu düğmesi */}
                           <button
                             onClick={() => {
@@ -917,7 +944,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           >
                             <CreditCard className="h-4 w-4" />
                           </button>
-                          
+
                           {/* Detay düğmesi */}
                           <button
                             onClick={() => {
@@ -931,7 +958,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           </button>
                         </div>
                       </div>
-                      
+
                       {/* Abonelik yönetimi modal - kodun geri kalanı aynı kalacak */}
                       <div id={`abonelik-modal-${user.id}`} className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 hidden flex justify-center items-center">
                         <div className="bg-white rounded-lg shadow-xl w-96 max-w-full transform transition-all">
@@ -949,7 +976,7 @@ export const SuperAdminDashboard: React.FC = () => {
                               </button>
                             </div>
                           </div>
-                          
+
                           <div className="p-5">
                             {/* Kullanıcı bilgisi ve mevcut durum */}
                             <div className="mb-5 border-b pb-4">
@@ -962,7 +989,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                   <div className="text-sm text-gray-500">{user.email}</div>
                                 </div>
                               </div>
-                              
+
                               <div className="flex items-center justify-between mt-3">
                                 <div className="text-sm font-medium text-gray-600">Mevcut abonelik durumu:</div>
                                 <span className={`px-2 py-1 text-xs font-semibold rounded-full 
@@ -976,7 +1003,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                   user.odemeDurumu === 'surebitti' ? 'Süre Bitti' : 'Belirtilmedi'}
                                 </span>
                               </div>
-                              
+
                               <div className="mt-2">
                                 <div className="text-sm font-medium text-gray-600">Bitiş tarihi:</div>
                                 <div className="flex items-center mt-1">
@@ -986,14 +1013,14 @@ export const SuperAdminDashboard: React.FC = () => {
                                       format(user.denemeSuresiBitis.toDate(), 'dd MMMM yyyy', { locale: tr }) : 
                                       'Belirtilmemiş'}
                                   </span>
-                                  
+
                                   {user.denemeSuresiBitis && (() => {
                                     // Kalan süreyi hesapla
                                     const simdikiZaman = new Date().getTime();
                                     const bitisTarihi = user.denemeSuresiBitis.toDate().getTime();
                                     const kalanMilisaniye = bitisTarihi - simdikiZaman;
                                     const kalanGun = Math.ceil(kalanMilisaniye / (1000 * 60 * 60 * 24));
-                                    
+
                                     if (kalanMilisaniye <= 0) {
                                       return (
                                         <span className="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">
@@ -1017,7 +1044,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 </div>
                               </div>
                             </div>
-                            
+
                             {/* Hızlı süre ekleme seçenekleri */}
                             <div className="mb-5">
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">Hızlı Süre Ekle</h4>
@@ -1072,7 +1099,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 </button>
                               </div>
                             </div>
-                            
+
                             {/* Özel süre ekleme */}
                             <div className="mb-5">
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">Özel Süre</h4>
@@ -1105,7 +1132,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 </button>
                               </div>
                             </div>
-                            
+
                             {/* Paket seçenekleri */}
                             <div className="mb-5">
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">Paket Seçenekleri</h4>
@@ -1131,7 +1158,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                   </div>
                                   <div className="text-green-700 font-bold">1 Yıl</div>
                                 </button>
-                                
+
                                 <button
                                   onClick={() => {
                                     handleExtendTrial(user.id, 180);
@@ -1155,7 +1182,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 </button>
                               </div>
                             </div>
-                            
+
                             {/* Bilgilendirme */}
                             <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
                               <p>Süre uzatıldığında kullanıcıya otomatik bildirim gönderilir ve abonelik geçmişine kayıt eklenir.</p>
@@ -1163,7 +1190,7 @@ export const SuperAdminDashboard: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Ödeme durumu modal - kodun geri kalanı aynı kalacak */}
                       <div id={`odeme-modal-${user.id}`} className="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 hidden flex justify-center items-center">
                         <div className="bg-white rounded-lg shadow-xl w-96 max-w-full transform transition-all">
@@ -1181,7 +1208,7 @@ export const SuperAdminDashboard: React.FC = () => {
                               </button>
                             </div>
                           </div>
-                          
+
                           <div className="p-5">
                             {/* Kullanıcı bilgisi ve mevcut durum */}
                             <div className="mb-5 border-b pb-4">
@@ -1194,7 +1221,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                   <div className="text-sm text-gray-500">{user.email}</div>
                                 </div>
                               </div>
-                              
+
                               <div className="flex items-center justify-between mt-3">
                                 <div className="text-sm font-medium text-gray-600">Mevcut ödeme durumu:</div>
                                 <span className={`px-2 py-1 text-xs font-semibold rounded-full 
@@ -1209,7 +1236,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 </span>
                               </div>
                             </div>
-                            
+
                             {/* Ödeme durumu seçenekleri */}
                             <div className="space-y-3 mb-5">
                               <h4 className="text-sm font-semibold text-gray-700 mb-2">Ödeme Durumunu Güncelle</h4>
@@ -1230,7 +1257,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                   <div className="text-xs text-green-600">Abonelik ücreti tam olarak ödendi</div>
                                 </div>
                               </button>
-                              
+
                               <button
                                 onClick={() => {
                                   handleUpdatePaymentStatus(user.id, 'deneme');
@@ -1248,7 +1275,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                   <div className="text-xs text-blue-600">Ücretsiz deneme süresi kullanımda</div>
                                 </div>
                               </button>
-                              
+
                               <button
                                 onClick={() => {
                                   handleUpdatePaymentStatus(user.id, 'beklemede');
@@ -1266,7 +1293,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                   <div className="text-xs text-amber-600">Ödeme bekleniyor (7 gün geçici erişim)</div>
                                 </div>
                               </button>
-                              
+
                               <button
                                 onClick={() => {
                                   handleUpdatePaymentStatus(user.id, 'surebitti');
@@ -1285,7 +1312,7 @@ export const SuperAdminDashboard: React.FC = () => {
                                 </div>
                               </button>
                             </div>
-                            
+
                             {/* Bilgilendirme */}
                             <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
                               <p>Ödeme durumu değiştirildiğinde kullanıcıya otomatik bildirim gönderilir ve ödeme geçmişine kayıt eklenir.</p>
@@ -1295,7 +1322,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
-                  
+
                   {/* Sayfalar arası geçiş kontrolü */}
                   <div className="col-span-full mt-4 flex justify-center">
                     <nav className="flex items-center space-x-1 text-sm">
@@ -1313,7 +1340,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       </button>
                       <button className="px-2 py-1 rounded text-gray-700 bg-white border border-gray-200 hover:bg-gray-50">
                         Sonraki
-                      </button>
+                      </button>                      </button>
                     </nav>
                   </div>
                 </>
@@ -1375,7 +1402,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   <p className="text-base">{selectedCompany.slogan || "-"}</p>
                 </div>
                 <div>
-                  This code integrates the functionality to display the number of sites (sahalar) for each company in the Super Admin Dashboard.                  <p className="text-sm font-medium text-gray-500">E-posta</p>
+                  <p className="text-sm font-medium text-gray-500">E-posta</p>
                   <p className="text-base">{selectedCompany.email || "-"}</p>
                 </div>
                 <div>

@@ -77,6 +77,40 @@ try {
   console.info('Basit yapılandırma kullanılacak.');
 }
 
+// SuperAdmin için özel token yenileme işlevi
+export const refreshSuperAdminToken = async (): Promise<boolean> => {
+  try {
+    if (!auth.currentUser) {
+      console.error('SuperAdmin token yenileme hatası: Kullanıcı oturum açmamış');
+      return false;
+    }
+
+    console.log('SuperAdmin token yenileniyor...');
+
+    // Firestore'dan kullanıcı rolünü kontrol et
+    const userDoc = await getDoc(doc(db, 'kullanicilar', auth.currentUser.uid));
+    if (!userDoc.exists()) {
+      console.error('SuperAdmin kullanıcı belgesi bulunamadı');
+      return false;
+    }
+
+    const userData = userDoc.data();
+    if (userData.rol !== 'superadmin') {
+      console.error('Kullanıcı SuperAdmin değil:', userData.rol);
+      return false;
+    }
+
+    // Token'ı force refresh et
+    await auth.currentUser.getIdToken(true);
+    console.log('SuperAdmin token başarıyla yenilendi');
+
+    return true;
+  } catch (error) {
+    console.error('SuperAdmin token yenileme hatası:', error);
+    return false;
+  }
+};
+
 // Firebase token yenileme işlevi - tüm uygulama için kullanılabilir
 export const refreshAuthToken = async (): Promise<boolean> => {
   try {

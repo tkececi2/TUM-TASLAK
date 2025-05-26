@@ -88,11 +88,12 @@ service cloud.firestore {
          resource.data.companyId)
       );
       // Sadece yöneticiler ve superadmin yeni kullanıcı oluşturabilir
-      allow create: if request.auth.uid == userId || hasTeamManagementAccess();
+      allow create: if request.auth.uid == userId || hasTeamManagementAccess() || isSuperAdmin();
       // Kendi profilini herkes güncelleyebilir, başkalarını sadece yöneticiler ve superadmin
-      allow update: if request.auth.uid == userId || hasTeamManagementAccess();
+      // SuperAdmin tüm kullanıcıları güncelleyebilir (abonelik ve ödeme durumu için)
+      allow update: if request.auth.uid == userId || hasTeamManagementAccess() || isSuperAdmin();
       // Sadece yöneticiler ve superadmin kullanıcı silebilir
-      allow delete: if hasTeamManagementAccess();
+      allow delete: if hasTeamManagementAccess() || isSuperAdmin();
     }
 
     // Mekanik Bakım
