@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where, Timestamp, addDoc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth, refreshSuperAdminToken } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Building, Users, Calendar, Trash2, Edit2, Eye, Plus, Search, Filter, RefreshCw, X, Clock, CreditCard, ChevronDown, CheckCircle, AlertTriangle, Mail, Phone } from 'lucide-react';
 import { Card, Title, Text, Metric, BarChart } from '@tremor/react';
@@ -402,7 +402,13 @@ export const SuperAdminDashboard: React.FC = () => {
       toast.success(`Kullanıcının ödeme durumu "${durumAdlari[status]}" olarak güncellendi`);
     } catch (error) {
       console.error('Ödeme durumu güncelleme hatası:', error);
-      toast.error('Ödeme durumu güncellenirken bir hata oluştu');
+
+      // Firebase hata koduna göre özel mesaj
+      if (error.code === 'permission-denied') {
+        toast.error('Bu işlem için yetkiniz bulunmuyor. SuperAdmin olarak tekrar giriş yapın.');
+      } else {
+        toast.error('Ödeme durumu güncellenirken bir hata oluştu');
+      }
     } finally {
       setLoading(false);
     }
@@ -1336,7 +1342,8 @@ export const SuperAdminDashboard: React.FC = () => {
                         2
                       </button>
                       <button className="px-3 py-1 rounded text-gray-700 bg-white border border-gray-200 hover:bg-gray-50">
-                        3
+                        ```text
+3
                       </button>
                       <button className="px-2 py-1 rounded text-gray-700 bg-white border border-gray-200 hover:bg-gray-50">
                         Sonraki

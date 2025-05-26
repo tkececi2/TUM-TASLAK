@@ -91,7 +91,11 @@ service cloud.firestore {
       allow create: if request.auth.uid == userId || hasTeamManagementAccess() || isSuperAdmin();
       // Kendi profilini herkes güncelleyebilir, başkalarını sadece yöneticiler ve superadmin
       // SuperAdmin tüm kullanıcıları güncelleyebilir (abonelik ve ödeme durumu için)
-      allow update: if request.auth.uid == userId || hasTeamManagementAccess() || isSuperAdmin();
+      allow update: if request.auth.uid == userId || hasTeamManagementAccess() || isSuperAdmin() ||
+        // SuperAdmin için özel yetkilendirme - ödeme durumu ve abonelik güncellemeleri
+        (isAuthenticated() && 
+         exists(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data.rol == 'superadmin');
       // Sadece yöneticiler ve superadmin kullanıcı silebilir
       allow delete: if hasTeamManagementAccess() || isSuperAdmin();
     }
