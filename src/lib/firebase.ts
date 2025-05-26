@@ -47,7 +47,7 @@ if (process.env.NODE_ENV === 'development') {
 // Basitleştirilmiş persistence konfigürasyonu
 try {
   // Web içinde IndexedDB sorunlarını önlemek için basit yapılandırma kullanıyoruz
-  console.warn('Hafıza tabanlı önbellek kullanılacak.');
+  console.info('Hafıza tabanlı önbellek kullanılacak.');
   
   // Firestore önbellek yapılandırması - sadece temel ayarlar
   const firestoreSettings = {
@@ -73,8 +73,8 @@ try {
   });
   
 } catch (error) {
-  console.error('Persistence yapılandırma hatası:', error);
-  console.warn('Basit yapılandırma kullanılacak.');
+  console.info('Persistence yapılandırma hatası:', error);
+  console.info('Basit yapılandırma kullanılacak.');
 }
 
 // Firebase token yenileme işlevi - tüm uygulama için kullanılabilir
