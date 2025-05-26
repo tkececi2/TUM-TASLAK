@@ -1340,7 +1340,7 @@ export const SuperAdminDashboard: React.FC = () => {
                       </button>
                       <button className="px-2 py-1 rounded text-gray-700 bg-white border border-gray-200 hover:bg-gray-50">
                         Sonraki
-                      </button>                      </button>
+                      </button>
                     </nav>
                   </div>
                 </>
