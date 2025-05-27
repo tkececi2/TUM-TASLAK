@@ -16,10 +16,17 @@ const HomePage = () => {
               className="relative order-2 lg:order-1"
             >
               <div className="rounded-2xl overflow-hidden shadow-2xl relative">
-                <img src="/solarveyo-logo.png" alt="Solar Panel Dashboard" className="w-full" onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = '/placeholder-image.png';
-                }} />
+                <div className="w-full h-96 bg-gradient-to-br from-blue-100 to-green-100 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {[...Array(9)].map((_, i) => (
+                        <div key={i} className="w-12 h-8 bg-blue-600 rounded opacity-80"></div>
+                      ))}
+                    </div>
+                    <p className="text-gray-600 font-medium">Solar Panel Dashboard</p>
+                    <p className="text-sm text-gray-500">Gerçek zamanlı monitoring</p>
+                  </div>
+                </div>
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent"></div>
               </div>
               <motion.div 
