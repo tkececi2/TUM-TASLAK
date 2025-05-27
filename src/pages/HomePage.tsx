@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -10,11 +9,33 @@ const HomePage = () => {
       <section className="relative pt-16 pb-32 overflow-hidden">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative order-2 lg:order-1"
+            >
+              <div className="rounded-2xl overflow-hidden shadow-2xl relative">
+                <img src="/solarveyo-logo.png" alt="Solar Panel Dashboard" className="w-full" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent"></div>
+              </div>
+              <motion.div 
+                className="absolute -bottom-10 -right-10 w-64 h-64 bg-blue-500 rounded-full opacity-10 blur-3xl"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 5, repeat: Infinity }}
+              ></motion.div>
+              <motion.div 
+                className="absolute -top-10 -left-10 w-48 h-48 bg-green-500 rounded-full opacity-10 blur-3xl"
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 6, repeat: Infinity, delay: 1 }}
+              ></motion.div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
-              className="space-y-8"
+              className="space-y-8 order-1 lg:order-2"
             >
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
                 Solar Panel Yönetimi ve<br />
@@ -41,27 +62,7 @@ const HomePage = () => {
               </div>
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="rounded-2xl overflow-hidden shadow-2xl relative">
-                <img src="/solarveyo-logo.png" alt="Solar Panel Dashboard" className="w-full" />
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent"></div>
-              </div>
-              <motion.div 
-                className="absolute -bottom-10 -right-10 w-64 h-64 bg-blue-500 rounded-full opacity-10 blur-3xl"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 5, repeat: Infinity }}
-              ></motion.div>
-              <motion.div 
-                className="absolute -top-10 -left-10 w-48 h-48 bg-green-500 rounded-full opacity-10 blur-3xl"
-                animate={{ scale: [1, 1.3, 1] }}
-                transition={{ duration: 6, repeat: Infinity, delay: 1 }}
-              ></motion.div>
-            </motion.div>
+            
           </div>
         </div>
       </section>
@@ -294,7 +295,7 @@ const HomePage = () => {
                 Hızlı kayıt formunu doldurun ve hemen SolarVeyo'yu kullanmaya başlayın.
               </p>
             </motion.div>
-            
+
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -308,7 +309,7 @@ const HomePage = () => {
                 Güneş enerji santrallerinizi sisteme ekleyin ve tüm bilgilerini güncelleyin.
               </p>
             </motion.div>
-            
+
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -448,7 +449,7 @@ const HomePage = () => {
             <polygon points="50,0 100,0 50,100 0,100" opacity="0.1" />
           </svg>
         </div>
-        
+
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
@@ -554,7 +555,7 @@ const HomePage = () => {
                   </svg>
                 </a>
               </div>
-              
+
               <div className="mt-6">
                 <h5 className="font-semibold mb-3">Bültenimize Abone Olun</h5>
                 <div className="flex">
