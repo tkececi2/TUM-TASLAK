@@ -16,7 +16,10 @@ const HomePage = () => {
               className="relative order-2 lg:order-1"
             >
               <div className="rounded-2xl overflow-hidden shadow-2xl relative">
-                <img src="/solarveyo-logo.png" alt="Solar Panel Dashboard" className="w-full" />
+                <img src="/solarveyo-logo.png" alt="Solar Panel Dashboard" className="w-full" onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholder-image.png';
+                }} />
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-transparent"></div>
               </div>
               <motion.div 
