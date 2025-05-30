@@ -16,62 +16,15 @@ const HomePage = () => {
               className="relative order-2 lg:order-1"
             >
               <div className="rounded-2xl overflow-hidden shadow-2xl relative">
-                <div className="w-full h-96 bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-                  {/* Dashboard Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">Solar Panel Dashboard</h3>
-                    <div className="flex space-x-2">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    </div>
-                  </div>
-                  
-                  {/* Stats Row */}
-                  <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div className="bg-white p-3 rounded-lg shadow-sm">
-                      <p className="text-xs text-gray-500">Toplam Üretim</p>
-                      <p className="text-sm font-bold text-green-600">2.4 MW</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg shadow-sm">
-                      <p className="text-xs text-gray-500">Verimlilik</p>
-                      <p className="text-sm font-bold text-blue-600">94.2%</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg shadow-sm">
-                      <p className="text-xs text-gray-500">Durum</p>
-                      <p className="text-sm font-bold text-green-600">Aktif</p>
-                    </div>
-                  </div>
-                  
-                  {/* Solar Panel Grid */}
-                  <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-                    <p className="text-sm font-medium text-gray-700 mb-3">Panel Durumu</p>
-                    <div className="grid grid-cols-8 gap-1">
-                      {[...Array(32)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={`w-4 h-6 rounded-sm ${
-                            i < 28 ? 'bg-green-400' : i < 30 ? 'bg-yellow-400' : 'bg-red-400'
-                          }`}
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Performance Chart Simulation */}
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <p className="text-sm font-medium text-gray-700 mb-3">Günlük Performans</p>
-                    <div className="flex items-end space-x-1 h-16">
-                      {[20, 35, 45, 60, 75, 80, 70, 55, 40, 25, 15, 10].map((height, i) => (
-                        <div 
-                          key={i} 
-                          className="bg-blue-400 rounded-sm flex-1"
-                          style={{ height: `${height}%` }}
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <img 
+                  src="/dashboard-preview.png" 
+                  alt="Solar Panel Dashboard" 
+                  className="w-full h-96 object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/solarveyo-logo.png';
+                  }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-transparent pointer-events-none"></div>
               </div>
               <motion.div 
