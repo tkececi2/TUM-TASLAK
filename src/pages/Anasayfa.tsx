@@ -71,31 +71,10 @@ const Anasayfa: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Sample data for charts
-  const uretimVerileri = [
-    { saat: '06:00', uretim: 12, hedef: 15 },
-    { saat: '08:00', uretim: 45, hedef: 50 },
-    { saat: '10:00', uretim: 78, hedef: 85 },
-    { saat: '12:00', uretim: 95, hedef: 100 },
-    { saat: '14:00', uretim: 88, hedef: 95 },
-    { saat: '16:00', uretim: 65, hedef: 70 },
-    { saat: '18:00', uretim: 25, hedef: 30 }
-  ];
-
-  const performansVerileri = [
-    { name: 'Panel A', deger: 98, fill: '#10b981' },
-    { name: 'Panel B', deger: 95, fill: '#3b82f6' },
-    { name: 'Panel C', deger: 92, fill: '#f59e0b' },
-    { name: 'Panel D', deger: 88, fill: '#ef4444' }
-  ];
-
-  const bakimVerileri = [
-    { ay: 'Oca', tamamlanan: 24, planlanan: 28 },
-    { ay: 'Şub', tamamlanan: 32, planlanan: 35 },
-    { ay: 'Mar', tamamlanan: 28, planlanan: 30 },
-    { ay: 'Nis', tamamlanan: 35, planlanan: 40 },
-    { ay: 'May', tamamlanan: 42, planlanan: 45 }
-  ];
+  // Real data states
+  const [uretimVerileri, setUretimVerileri] = useState<any[]>([]);
+  const [performansVerileri, setPerformansVerileri] = useState<any[]>([]);
+  const [bakimVerileri, setBakimVerileri] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -112,22 +91,80 @@ const Anasayfa: React.FC = () => {
         const santrallerRef = collection(db, 'santraller');
         const santrallerSnapshot = await getDocs(santrallerRef);
 
+        // Sahalar verileri
+        const sahalarRef = collection(db, 'sahalar');
+        const sahalarSnapshot = await getDocs(sahalarRef);
+
         // Ekip verileri
         const ekiplerRef = collection(db, 'ekipler');
         const ekiplerSnapshot = await getDocs(ekiplerRef);
 
+        // Üretim verileri
+        const uretimRef = collection(db, 'uretimVerileri');
+        const uretimSnapshot = await getDocs(uretimRef);
+
+        // Mekanik bakım verileri
+        const mekanikBakimRef = collection(db, 'mekanikBakimlar');
+        const mekanikBakimSnapshot = await getDocs(mekanikBakimRef);
+
+        // Elektrik bakım verileri
+        const elektrikBakimRef = collection(db, 'elektrikBakimlar');
+        const elektrikBakimSnapshot = await getDocs(elektrikBakimRef);
+
+        // Stok kontrol verileri
+        const stokRef = collection(db, 'stokKontrol');
+        const stokSnapshot = await getDocs(stokRef);
+        const kritikStoklar = stokSnapshot.docs.filter(doc => {
+          const data = doc.data();
+          return data.stokMiktari <= data.kritikSeviye;
+        });
+
+        // Toplam üretim hesapla
+        let toplamUretim = 0;
+        uretimSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.uretimMiktari && typeof data.uretimMiktari === 'number') {
+            toplamUretim += data.uretimMiktari;
+          }
+        });
+
+        // Bekleyen bakımları hesapla
+        const toplamMekanikBakim = mekanikBakimSnapshot.size;
+        const toplamElektrikBakim = elektrikBakimSnapshot.size;
+        const bekleyenBakimlar = toplamMekanikBakim + toplamElektrikBakim;
+
+        // Verimlilik hesapla (sahalar bazında)
+        let toplamKapasite = 0;
+        let aktifKapasite = 0;
+        sahalarSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.kapasite) {
+            const kapasiteNumber = parseFloat(data.kapasite.toString().replace(/[^0-9.]/g, ''));
+            toplamKapasite += kapasiteNumber;
+            // Aktif sahalar için (arızası olmayan)
+            const sahaArizalari = arizalarSnapshot.docs.filter(arizaDoc => 
+              arizaDoc.data().saha === doc.id && arizaDoc.data().durum !== 'cozuldu'
+            );
+            if (sahaArizalari.length === 0) {
+              aktifKapasite += kapasiteNumber;
+            }
+          }
+        });
+
+        const verimlilik = toplamKapasite > 0 ? (aktifKapasite / toplamKapasite) * 100 : 0;
+
         setStats({
           totalArizalar: arizalarSnapshot.size,
           aktifArizalar: aktifArizalarSnapshot.size,
-          toplamUretim: 2845,
-          verimlilik: 95.2,
-          toplamSantral: santrallerSnapshot.size,
+          toplamUretim: Math.round(toplamUretim),
+          verimlilik: Math.round(verimlilik * 10) / 10,
+          toplamSantral: sahalarSnapshot.size,
           aktifEkip: ekiplerSnapshot.size,
-          kritikStok: 3,
-          bakimBekleyen: 8
+          kritikStok: kritikStoklar.length,
+          bakimBekleyen: bekleyenBakimlar
         });
 
-        // Son aktiviteler
+        // Son aktiviteler (arızalar + bakımlar)
         const recentQuery = query(arizalarRef, orderBy('olusturmaTarihi', 'desc'), limit(5));
         const recentSnapshot = await getDocs(recentQuery);
 
@@ -144,6 +181,100 @@ const Anasayfa: React.FC = () => {
         });
 
         setRecentActivities(activities);
+
+        // Günlük üretim verilerini hazırla (son 7 gün)
+        const gunlukUretim = [];
+        for (let i = 6; i >= 0; i--) {
+          const tarih = new Date();
+          tarih.setDate(tarih.getDate() - i);
+          const tarihStr = tarih.toISOString().split('T')[0];
+          
+          const gunlukVeri = uretimSnapshot.docs.filter(doc => {
+            const data = doc.data();
+            if (data.tarih?.toDate) {
+              const veriTarih = data.tarih.toDate().toISOString().split('T')[0];
+              return veriTarih === tarihStr;
+            }
+            return false;
+          });
+
+          let gunlukToplam = 0;
+          gunlukVeri.forEach(doc => {
+            const data = doc.data();
+            if (data.uretimMiktari) {
+              gunlukToplam += data.uretimMiktari;
+            }
+          });
+
+          gunlukUretim.push({
+            saat: tarih.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }),
+            uretim: Math.round(gunlukToplam),
+            hedef: Math.round(gunlukToplam * 1.1) // %10 daha yüksek hedef
+          });
+        }
+
+        setUretimVerileri(gunlukUretim);
+
+        // Saha performans verilerini hazırla
+        const sahaPerformans = sahalarSnapshot.docs.slice(0, 4).map((doc, index) => {
+          const data = doc.data();
+          const sahaArizalari = arizalarSnapshot.docs.filter(arizaDoc => 
+            arizaDoc.data().saha === doc.id && arizaDoc.data().durum !== 'cozuldu'
+          );
+          
+          // Performans hesapla (arıza sayısına göre)
+          const performans = Math.max(70, 100 - (sahaArizalari.length * 5));
+          
+          const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
+          
+          return {
+            name: data.ad || `Saha ${index + 1}`,
+            deger: performans,
+            fill: colors[index]
+          };
+        });
+
+        setPerformansVerileri(sahaPerformans);
+
+        // Aylık bakım trendleri (son 5 ay)
+        const aylikBakim = [];
+        for (let i = 4; i >= 0; i--) {
+          const tarih = new Date();
+          tarih.setMonth(tarih.getMonth() - i);
+          const ay = tarih.toLocaleDateString('tr-TR', { month: 'short' });
+          
+          const aylikMekanikBakim = mekanikBakimSnapshot.docs.filter(doc => {
+            const data = doc.data();
+            if (data.tarih?.toDate) {
+              const bakimTarih = data.tarih.toDate();
+              return bakimTarih.getMonth() === tarih.getMonth() && 
+                     bakimTarih.getFullYear() === tarih.getFullYear();
+            }
+            return false;
+          });
+
+          const aylikElektrikBakim = elektrikBakimSnapshot.docs.filter(doc => {
+            const data = doc.data();
+            if (data.tarih?.toDate) {
+              const bakimTarih = data.tarih.toDate();
+              return bakimTarih.getMonth() === tarih.getMonth() && 
+                     bakimTarih.getFullYear() === tarih.getFullYear();
+            }
+            return false;
+          });
+
+          const tamamlanan = aylikMekanikBakim.length + aylikElektrikBakim.length;
+          const planlanan = Math.round(tamamlanan * 1.2); // %20 daha fazla planlanmış
+
+          aylikBakim.push({
+            ay,
+            tamamlanan,
+            planlanan
+          });
+        }
+
+        setBakimVerileri(aylikBakim);
+
       } catch (error) {
         console.error('Dashboard verileri yüklenirken hata:', error);
       } finally {
