@@ -140,87 +140,154 @@ export const GesYonetimi: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!kullanici) return;
+    e.stopPropagation();
+    
+    if (!kullanici) {
+      toast.error('Kullanıcı bilgisi bulunamadı');
+      return;
+    }
+
+    // Formu devre dışı bırak
+    const submitButton = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
 
     try {
       setYukleniyor(true);
+      
+      // Form validasyonu
+      if (!form.ad.trim()) {
+        toast.error('Santral adı boş olamaz');
+        return;
+      }
+      
+      if (form.kapasite <= 0) {
+        toast.error('Kapasite 0\'dan büyük olmalıdır');
+        return;
+      }
 
       let fotografURLleri: string[] = [];
       if (form.fotograflar.length > 0 && canUploadPhotos) {
         try {
+          setUploadProgress(10);
           fotografURLleri = await uploadMultipleFiles(
             form.fotograflar, 
             'santraller',
             (progress) => {
-              if (typeof setUploadProgress === 'function') {
-                setUploadProgress(progress);
-              }
+              setUploadProgress(Math.min(90, 10 + progress * 0.8));
             }
           );
+          setUploadProgress(90);
         } catch (error) {
           console.error('Fotoğraf yükleme hatası:', error);
           toast.error('Fotoğraf yükleme sırasında bir hata oluştu');
+          return;
         }
       }
 
       const santralData = {
-        ...form,
-        fotograflar: fotografURLleri.length > 0 ? fotografURLleri : (secilenSantral?.fotograflar || []),
-        musteriId: secilenSantral?.musteriId || kullanici.id,
-        olusturmaTarihi: Timestamp.now(),
+        ad: form.ad.trim(),
         kurulumTarihi: Timestamp.fromDate(new Date(form.kurulumTarihi)),
-        companyId: kullanici.companyId
+        konum: {
+          lat: form.konum.lat,
+          lng: form.konum.lng,
+          adres: form.konum.adres.trim()
+        },
+        kapasite: Number(form.kapasite),
+        panelSayisi: Number(form.panelSayisi),
+        inverterSayisi: Number(form.inverterSayisi),
+        yillikHedefUretim: Number(form.yillikHedefUretim),
+        fotograflar: fotografURLleri.length > 0 ? fotografURLleri : (secilenSantral?.fotograflar || []),
+        teknikOzellikler: {
+          panelTipi: form.teknikOzellikler.panelTipi.trim(),
+          inverterTipi: form.teknikOzellikler.inverterTipi.trim(),
+          panelGucu: Number(form.teknikOzellikler.panelGucu),
+          sistemVerimi: Number(form.teknikOzellikler.sistemVerimi)
+        },
+        aylikHedefler: {
+          ocak: Number(form.aylikHedefler.ocak),
+          subat: Number(form.aylikHedefler.subat),
+          mart: Number(form.aylikHedefler.mart),
+          nisan: Number(form.aylikHedefler.nisan),
+          mayis: Number(form.aylikHedefler.mayis),
+          haziran: Number(form.aylikHedefler.haziran),
+          temmuz: Number(form.aylikHedefler.temmuz),
+          agustos: Number(form.aylikHedefler.agustos),
+          eylul: Number(form.aylikHedefler.eylul),
+          ekim: Number(form.aylikHedefler.ekim),
+          kasim: Number(form.aylikHedefler.kasim),
+          aralik: Number(form.aylikHedefler.aralik)
+        },
+        companyId: kullanici.companyId,
+        musteriId: secilenSantral?.musteriId || kullanici.id
       };
 
+      // Düzenleme durumunda güncelleme tarihi ekle, yeni ekleme durumunda oluşturma tarihi ekle
       if (secilenSantral) {
+        santralData.guncellemeTarihi = Timestamp.now();
         await updateDoc(doc(db, 'santraller', secilenSantral.id), santralData);
         toast.success('Santral başarıyla güncellendi');
       } else {
-        await addDoc(collection(db, 'santraller'), santralData);
+        santralData.olusturmaTarihi = Timestamp.now();
+        const docRef = await addDoc(collection(db, 'santraller'), santralData);
         toast.success('Santral başarıyla eklendi');
+        console.log('Yeni santral eklendi, ID:', docRef.id);
       }
 
+      // Formu temizle ve kapat
+      resetForm();
       setFormAcik(false);
       setSecilenSantral(null);
-      setForm({
-        ad: '',
-        kurulumTarihi: format(new Date(), "yyyy-MM-dd"),
-        konum: { lat: 0, lng: 0, adres: '' },
-        kapasite: 0,
-        panelSayisi: 0,
-        inverterSayisi: 0,
-        yillikHedefUretim: 0,
-        fotograflar: [],
-        teknikOzellikler: {
-          panelTipi: '',
-          inverterTipi: '',
-          panelGucu: 0,
-          sistemVerimi: 0
-        },
-        aylikHedefler: {
-          ocak: 0,
-          subat: 0,
-          mart: 0,
-          nisan: 0,
-          mayis: 0,
-          haziran: 0,
-          temmuz: 0,
-          agustos: 0,
-          eylul: 0,
-          ekim: 0,
-          kasim: 0,
-          aralik: 0
-        }
-      });
       
-      fetchSantraller();
+      // Santral listesini yenile
+      await fetchSantraller();
+      
     } catch (error) {
       console.error('Santral kaydetme hatası:', error);
       toast.error(secilenSantral ? 'Santral güncellenirken bir hata oluştu' : 'Santral eklenirken bir hata oluştu');
     } finally {
       setYukleniyor(false);
       setUploadProgress(0);
+      
+      // Submit button'u tekrar aktif et
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
     }
+  };
+
+  const resetForm = () => {
+    setForm({
+      ad: '',
+      kurulumTarihi: format(new Date(), "yyyy-MM-dd"),
+      konum: { lat: 0, lng: 0, adres: '' },
+      kapasite: 0,
+      panelSayisi: 0,
+      inverterSayisi: 0,
+      yillikHedefUretim: 0,
+      fotograflar: [],
+      teknikOzellikler: {
+        panelTipi: '',
+        inverterTipi: '',
+        panelGucu: 0,
+        sistemVerimi: 0
+      },
+      aylikHedefler: {
+        ocak: 0,
+        subat: 0,
+        mart: 0,
+        nisan: 0,
+        mayis: 0,
+        haziran: 0,
+        temmuz: 0,
+        agustos: 0,
+        eylul: 0,
+        ekim: 0,
+        kasim: 0,
+        aralik: 0
+      }
+    });
   };
 
   const handleFiyatSubmit = async (e: React.FormEvent) => {
@@ -415,6 +482,8 @@ export const GesYonetimi: React.FC = () => {
             <button
               onClick={() => {
                 setSecilenSantral(null);
+                resetForm();
+                setUploadProgress(0);
                 setFormAcik(true);
               }}
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
@@ -470,9 +539,34 @@ export const GesYonetimi: React.FC = () => {
                       onClick={() => {
                         setSecilenSantral(santral);
                         setForm({
-                          ...santral,
+                          ad: santral.ad || '',
                           kurulumTarihi: format(santral.kurulumTarihi.toDate(), "yyyy-MM-dd"),
-                          fotograflar: []
+                          konum: santral.konum || { lat: 0, lng: 0, adres: '' },
+                          kapasite: santral.kapasite || 0,
+                          panelSayisi: santral.panelSayisi || 0,
+                          inverterSayisi: santral.inverterSayisi || 0,
+                          yillikHedefUretim: santral.yillikHedefUretim || 0,
+                          fotograflar: [],
+                          teknikOzellikler: santral.teknikOzellikler || {
+                            panelTipi: '',
+                            inverterTipi: '',
+                            panelGucu: 0,
+                            sistemVerimi: 0
+                          },
+                          aylikHedefler: santral.aylikHedefler || {
+                            ocak: 0,
+                            subat: 0,
+                            mart: 0,
+                            nisan: 0,
+                            mayis: 0,
+                            haziran: 0,
+                            temmuz: 0,
+                            agustos: 0,
+                            eylul: 0,
+                            ekim: 0,
+                            kasim: 0,
+                            aralik: 0
+                          }
                         });
                         setFormAcik(true);
                       }}
@@ -559,8 +653,14 @@ export const GesYonetimi: React.FC = () => {
                 {secilenSantral ? 'Santral Düzenle' : 'Yeni Santral Ekle'}
               </h2>
               <button
-                onClick={() => setFormAcik(false)}
+                onClick={() => {
+                  setFormAcik(false);
+                  setSecilenSantral(null);
+                  resetForm();
+                  setUploadProgress(0);
+                }}
                 className="text-gray-400 hover:text-gray-500"
+                type="button"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -954,7 +1054,12 @@ export const GesYonetimi: React.FC = () => {
                 <div className="flex justify-end space-x-3 mt-6">
                   <button
                     type="button"
-                    onClick={() => setFormAcik(false)}
+                    onClick={() => {
+                      setFormAcik(false);
+                      setSecilenSantral(null);
+                      resetForm();
+                      setUploadProgress(0);
+                    }}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     İptal
