@@ -21,8 +21,6 @@ import { InvertorKontrol } from './pages/InvertorKontrol';
 import { MekanikBakim } from './pages/MekanikBakim';
 import { ElektrikBakim } from './pages/ElektrikBakim';
 import { GesYonetimi } from './pages/GesYonetimi';
-import { SantralEkle } from './pages/SantralEkle';
-import { SantralDetay } from './pages/SantralDetay';
 import { GesSahalari } from './pages/GesSahalari';
 import { UretimVerileri } from './pages/UretimVerileri';
 import { PrivateRoute } from './components/PrivateRoute';
@@ -72,8 +70,6 @@ function App() {
         <Route path="/mekanik-bakim" element={<MekanikBakim />} />
         <Route path="/elektrik-bakim" element={<ElektrikBakim />} />
         <Route path="/ges-yonetimi" element={<GesYonetimi />} />
-        <Route path="/ges-yonetimi/ekle" element={<SantralEkle />} />
-        <Route path="/ges-yonetimi/:id" element={<SantralDetay />} />
         <Route path="/ges-sahalari" element={<GesSahalari />} />
         <Route path="/uretim-verileri" element={<UretimVerileri />} />
         <Route path="/company-settings" element={<CompanySettings />} />
