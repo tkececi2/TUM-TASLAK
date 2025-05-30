@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -57,7 +56,7 @@ export const Arizalar: React.FC = () => {
             where('companyId', '==', kullanici.companyId)
           );
         }
-        
+
         const sahaSnapshot = await getDocs(sahaQuery);
         const sahaMap: Record<string, string> = {};
         sahaSnapshot.docs.forEach(doc => {
@@ -84,7 +83,7 @@ export const Arizalar: React.FC = () => {
             setArizalar([]);
             return;
           }
-          
+
           arizaQuery = query(
             collection(db, 'arizalar'),
             where('companyId', '==', kullanici.companyId),
@@ -111,24 +110,24 @@ export const Arizalar: React.FC = () => {
           id: doc.id,
           ...doc.data()
         })) as Ariza[];
-        
+
         setArizalar(arizaVerileri);
-        
+
         // Aylık grupları oluştur
         const gruplar: Record<string, Ariza[]> = {};
         arizaVerileri.forEach(ariza => {
           const tarih = ariza.olusturmaTarihi.toDate();
           const ayYil = format(tarih, 'MMMM yyyy', { locale: tr });
-          
+
           if (!gruplar[ayYil]) {
             gruplar[ayYil] = [];
           }
-          
+
           gruplar[ayYil].push(ariza);
         });
-        
+
         setAylikGruplar(gruplar);
-        
+
         // İlk 3 ayı otomatik olarak aç
         const ilkAylar = Object.keys(gruplar).slice(0, 3);
         const acikAylarObj: Record<string, boolean> = {};
@@ -160,7 +159,7 @@ export const Arizalar: React.FC = () => {
       setSilinecekAriza(null);
       // Listeyi güncelle
       setArizalar(prev => prev.filter(ariza => ariza.id !== id));
-      
+
       // Aylık grupları güncelle
       const yeniGruplar = { ...aylikGruplar };
       Object.keys(yeniGruplar).forEach(ayYil => {
@@ -186,7 +185,7 @@ export const Arizalar: React.FC = () => {
     setDuzenlenecekAriza(ariza);
     setFormAcik(true);
   };
-  
+
   const toggleAyAciklik = (ay: string) => {
     setAcikAylar(prev => ({
       ...prev,
@@ -197,7 +196,7 @@ export const Arizalar: React.FC = () => {
   const getCozumSuresi = (ariza: Ariza): string => {
     const baslangic = ariza.olusturmaTarihi.toDate();
     const bitis = ariza.cozum ? ariza.cozum.tamamlanmaTarihi.toDate() : new Date();
-    
+
     const dakikaFarki = differenceInMinutes(bitis, baslangic);
     const saatFarki = differenceInHours(bitis, baslangic);
     const gunFarki = differenceInDays(bitis, baslangic);
@@ -234,7 +233,7 @@ export const Arizalar: React.FC = () => {
 
     return aramaUyumu && durumUyumu;
   });
-  
+
   // İstatistikleri hesapla
   const istatistikler = {
     toplam: filtrelenmisArizalar.length,
@@ -264,7 +263,7 @@ export const Arizalar: React.FC = () => {
 
       return aramaUyumu && durumUyumu;
     });
-    
+
     if (filtrelenmisArizalar.length > 0) {
       filtrelenmisAylikGruplar[ayYil] = filtrelenmisArizalar;
     }
@@ -273,7 +272,7 @@ export const Arizalar: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Header Section */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -425,7 +424,7 @@ export const Arizalar: React.FC = () => {
                 <option value="cozuldu">Çözüldü</option>
               </select>
             </div>
-            
+
             <div className="flex bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setGorunumTipi('kart')}
@@ -516,7 +515,7 @@ export const Arizalar: React.FC = () => {
                         <ImageIcon className="h-16 w-16 text-gray-400" />
                       </div>
                     )}
-                    
+
                     <div className="absolute top-3 right-3">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
                         ariza.durum === 'cozuldu' ? 'bg-green-500 text-white' :
@@ -534,11 +533,11 @@ export const Arizalar: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{ariza.baslik}</h3>
                     <p className="text-sm text-gray-600 line-clamp-2 mb-4">{ariza.aciklama}</p>
-                    
+
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center text-sm text-gray-500">
                         <span className="font-medium mr-2">Saha:</span> 
@@ -551,7 +550,7 @@ export const Arizalar: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center text-gray-500">
@@ -565,7 +564,7 @@ export const Arizalar: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {(canEdit || canDelete) && (
                   <div className="absolute top-3 left-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     {canEdit && (
@@ -646,7 +645,7 @@ export const Arizalar: React.FC = () => {
                       {acikAylar[ayYil] ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </button>
                   </div>
-                  
+
                   {acikAylar[ayYil] && (
                     <div className="p-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -672,7 +671,7 @@ export const Arizalar: React.FC = () => {
                                   <ImageIcon className="h-8 w-8 text-gray-400" />
                                 </div>
                               )}
-                              
+
                               <div className="absolute top-2 right-2">
                                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                   ariza.durum === 'cozuldu' ? 'bg-green-500 text-white' :
@@ -684,7 +683,7 @@ export const Arizalar: React.FC = () => {
                                 </span>
                               </div>
                             </div>
-                            
+
                             <div className="p-4">
                               <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">{ariza.baslik}</h3>
                               <div className="text-xs text-gray-600 mb-2">
@@ -742,4 +741,4 @@ export const Arizalar: React.FC = () => {
   );
 };
 
-export { Arizalar };
+export default Arizalar;
