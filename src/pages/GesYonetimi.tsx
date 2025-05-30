@@ -29,6 +29,7 @@ import {
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { SilmeOnayModal } from '../components/SilmeOnayModal';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface Santral {
   id: string;
@@ -76,6 +77,8 @@ export const GesYonetimi: React.FC = () => {
     toplamHedefUretim: 0,
     ortalamaSantralYasi: 0
   });
+
+  const navigate = useNavigate();
 
   const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
   const canDelete = kullanici?.rol === 'yonetici';
@@ -365,7 +368,7 @@ export const GesYonetimi: React.FC = () => {
 
             {canAdd && (
               <button
-                onClick={() => window.location.href = '/ges-yonetimi/ekle'}
+                onClick={() => navigate('/ges-yonetimi/ekle')}
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -391,7 +394,7 @@ export const GesYonetimi: React.FC = () => {
             </p>
             {canAdd && santraller.length === 0 && (
               <button
-                onClick={() => window.location.href = '/ges-yonetimi/ekle'}
+                onClick={() => navigate('/ges-yonetimi/ekle')}
                 className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
