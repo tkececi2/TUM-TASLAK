@@ -716,72 +716,83 @@ export const UretimVerileri: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Üst Başlık ve Kontroller */}
-      <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-xl shadow-sm border border-yellow-100">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Sun className="h-7 w-7 mr-2 text-yellow-500" />
-              Üretim Verileri
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              {santralDetay?.ad} santralinin üretim performansı ve analizi
-            </p>
+      {/* Modern Üst Başlık ve Kontroller */}
+      <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6 rounded-xl shadow-lg border-0">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+          <div className="flex items-center">
+            <div className="p-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl shadow-lg mr-4">
+              <Sun className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Üretim Verileri
+              </h1>
+              <p className="mt-1 text-sm text-gray-600 flex items-center">
+                <Activity className="h-4 w-4 mr-1.5 text-blue-500" />
+                {santralDetay?.ad} - Performans analizi ve üretim takibi
+              </p>
+            </div>
           </div>
           
           <div className="flex flex-wrap gap-3">
-            <select
-              value={secilenSantral}
-              onChange={(e) => setSecilenSantral(e.target.value)}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-            >
-              {santraller.map(santral => (
-                <option key={santral.id} value={santral.id}>{santral.ad}</option>
-              ))}
-            </select>
+            <div className="bg-white p-1 rounded-lg shadow-sm border">
+              <select
+                value={secilenSantral}
+                onChange={(e) => setSecilenSantral(e.target.value)}
+                className="border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded-md text-sm font-medium"
+              >
+                {santraller.map(santral => (
+                  <option key={santral.id} value={santral.id}>{santral.ad}</option>
+                ))}
+              </select>
+            </div>
             
-            <select
-              value={secilenYil}
-              onChange={(e) => setSecilenYil(parseInt(e.target.value))}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-            >
-              {yilSecenekleri.map(yil => (
-                <option key={yil} value={yil}>{yil}</option>
-              ))}
-            </select>
+            <div className="bg-white p-1 rounded-lg shadow-sm border">
+              <select
+                value={secilenYil}
+                onChange={(e) => setSecilenYil(parseInt(e.target.value))}
+                className="border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded-md text-sm font-medium"
+              >
+                {yilSecenekleri.map(yil => (
+                  <option key={yil} value={yil}>{yil}</option>
+                ))}
+              </select>
+            </div>
             
-            <select
-              value={secilenAy}
-              onChange={(e) => setSecilenAy(parseInt(e.target.value))}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-            >
-              {aySecenekleri.map(ay => (
-                <option key={ay.value} value={ay.value}>{ay.label}</option>
-              ))}
-            </select>
+            <div className="bg-white p-1 rounded-lg shadow-sm border">
+              <select
+                value={secilenAy}
+                onChange={(e) => setSecilenAy(parseInt(e.target.value))}
+                className="border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded-md text-sm font-medium"
+              >
+                {aySecenekleri.map(ay => (
+                  <option key={ay.value} value={ay.value}>{ay.label}</option>
+                ))}
+              </select>
+            </div>
             
             <div className="flex space-x-2">
               <button
                 onClick={handleYenile}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-200"
                 disabled={yenileniyor}
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${yenileniyor ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 mr-2 ${yenileniyor ? 'animate-spin text-blue-500' : 'text-gray-500'}`} />
                 Yenile
               </button>
               
               <button
                 onClick={handleExcelExport}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-200"
               >
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 mr-2 text-green-500" />
                 Excel
               </button>
               
               {canAdd && (
                 <button
                   onClick={() => setImportModalAcik(true)}
-                  className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
+                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-sm text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 hover:shadow-md transition-all duration-200"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Veri Ekle
@@ -800,81 +811,126 @@ export const UretimVerileri: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Santral Bilgileri */}
+          {/* Modern Santral Bilgileri Kartı */}
           {santralDetay && (
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center mb-4 md:mb-0">
-                  <div className="p-3 bg-blue-100 rounded-full mr-4">
-                    <Sun className="h-8 w-8 text-blue-600" />
+            <div className="bg-gradient-to-br from-white to-blue-50 p-6 rounded-xl shadow-lg border border-blue-100">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div className="flex items-center">
+                  <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg mr-6">
+                    <Sun className="h-10 w-10 text-white" />
                   </div>
                   <div>
-                    <Title>{santralDetay.ad}</Title>
-                    <Text className="text-blue-700">
-                      {santralDetay.kapasite} kWp kurulu güç
-                    </Text>
+                    <h2 className="text-2xl font-bold text-gray-900">{santralDetay.ad}</h2>
+                    <p className="text-lg text-blue-700 font-medium flex items-center mt-1">
+                      <Zap className="h-5 w-5 mr-2" />
+                      {santralDetay.kapasite} kWp Kurulu Güç
+                    </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <div className="bg-white px-4 py-2 rounded-lg shadow-sm flex items-center">
-                    <Battery className="h-5 w-5 text-green-500 mr-2" />
-                    <div>
-                      <p className="text-xs text-gray-500">Kurulum Tarihi</p>
-                      <p className="text-sm font-semibold">
-                        {format(santralDetay.kurulumTarihi.toDate(), 'dd MMMM yyyy', { locale: tr })}
-                      </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg mr-3">
+                        <Calendar className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Kurulum Tarihi</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {format(santralDetay.kurulumTarihi.toDate(), 'dd MMM yyyy', { locale: tr })}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-white px-4 py-2 rounded-lg shadow-sm flex items-center">
-                    <BarChart2 className="h-5 w-5 text-blue-500 mr-2" />
-                    <div>
-                      <p className="text-xs text-gray-500">Yıllık Hedef</p>
-                      <p className="text-sm font-semibold">{santralDetay.yillikHedefUretim.toLocaleString('tr-TR')} kWh</p>
+                  
+                  <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                        <BarChart2 className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Yıllık Hedef</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {(santralDetay.yillikHedefUretim / 1000).toLocaleString('tr-TR')}k kWh
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                        <Battery className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Santral Yaşı</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {new Date().getFullYear() - santralDetay.kurulumTarihi.toDate().getFullYear()} Yıl
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           )}
 
-          {/* Yıllık Hedef Gerçekleşme Kartı */}
+          {/* Modern Yıllık Hedef Gerçekleşme Kartı */}
           {istatistikler && (
-            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-none">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center mb-4 md:mb-0">
-                  <div className="p-3 bg-green-100 rounded-full mr-4">
-                    <Target className="h-8 w-8 text-green-600" />
+            <div className="bg-gradient-to-br from-emerald-50 to-green-100 p-6 rounded-xl shadow-lg border-0">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div className="flex items-center">
+                  <div className="p-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg mr-6">
+                    <Target className="h-10 w-10 text-white" />
                   </div>
                   <div>
-                    <Title>Yıllık Hedef Gerçekleşme</Title>
-                    <Text className="text-green-700">
-                      {secilenYil} yılı için hedef gerçekleşme durumu
-                    </Text>
+                    <h3 className="text-2xl font-bold text-gray-900">Yıllık Hedef Gerçekleşme</h3>
+                    <p className="text-emerald-700 font-medium flex items-center mt-1">
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      {secilenYil} yılı performans durumu
+                    </p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <div className="flex items-center">
-                    <Text className="text-lg font-bold text-green-700 mr-2">
+                
+                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-3xl font-bold text-emerald-600">
                       %{istatistikler.yillikHedefGerceklesme.toFixed(1)}
-                    </Text>
-                    <Badge color={istatistikler.yillikHedefGerceklesme >= 100 ? "green" : "yellow"}>
+                    </span>
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                      istatistikler.yillikHedefGerceklesme >= 100 
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                        : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                    }`}>
+                      <CheckCircle className="h-4 w-4 mr-1.5" />
                       {istatistikler.yillikHedefGerceklesme >= 100 ? 'Hedef Aşıldı' : 'Devam Ediyor'}
-                    </Badge>
+                    </span>
                   </div>
-                  <div className="mt-2 w-full max-w-xs">
-                    <ProgressBar 
-                      value={Math.min(istatistikler.yillikHedefGerceklesme, 100)} 
-                      color={istatistikler.yillikHedefGerceklesme >= 100 ? "green" : "yellow"} 
-                      className="h-2" 
-                    />
-                    <div className="flex justify-between mt-1 text-xs text-gray-500">
-                      <span>{istatistikler.yillikToplamUretim.toLocaleString('tr-TR')} kWh</span>
-                      <span>{santralDetay?.yillikHedefUretim.toLocaleString('tr-TR')} kWh</span>
+                  
+                  <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        istatistikler.yillikHedefGerceklesme >= 100 
+                          ? 'bg-gradient-to-r from-emerald-500 to-green-600' 
+                          : 'bg-gradient-to-r from-yellow-400 to-yellow-500'
+                      }`}
+                      style={{ width: `${Math.min(istatistikler.yillikHedefGerceklesme, 100)}%` }}
+                    ></div>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <div>
+                      <p className="font-medium">Gerçekleşen</p>
+                      <p className="text-xs">{istatistikler.yillikToplamUretim.toLocaleString('tr-TR')} kWh</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">Hedef</p>
+                      <p className="text-xs">{santralDetay?.yillikHedefUretim.toLocaleString('tr-TR')} kWh</p>
                     </div>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           )}
 
           {/* Aylık Özet Kartları */}
