@@ -516,7 +516,7 @@ export const GesYonetimi: React.FC = () => {
 
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => window.location.href = `/ges-yonetimi/${santral.id}`}
+                          onClick={() => navigate(`/ges-yonetimi/${santral.id}`)}
                           className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                         >
                           <Eye className="h-4 w-4 mr-1.5" />
