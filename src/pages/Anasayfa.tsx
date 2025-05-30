@@ -1,1577 +1,561 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { collection, query, orderBy, getDocs, where, limit, Timestamp, getDoc, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear, addMonths } from 'date-fns';
-import { tr } from 'date-fns/locale';
+import { db } from '../lib/firebase';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { 
+  Sun, 
+  Zap, 
+  Activity, 
   AlertTriangle, 
-  CheckCircle,
-  Clock,
-  Plus,
-  Building,
-  MapPin,
-  User,
-  Calendar,
-  Package,
-  Zap,
-  Wrench,
-  BarChart2,
-  TrendingUp,
-  Sun,
+  TrendingUp, 
+  Users, 
   Battery,
-  Leaf,
-  Activity,
-  FileText,
-  Bolt,
-  PanelTop,
-  ArrowRight,
-  FileBarChart,
-  BrainCircuit,
-  Gauge,
-  Lightbulb,
-  Shield,
+  BarChart3,
+  Calendar,
+  Clock,
+  MapPin,
   Settings,
-  ExternalLink,
-  BarChart,
-  PieChart,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Eye
+  Bell,
+  ChevronRight,
+  Wrench,
+  Package,
+  ThermometerSun,
+  Wind
 } from 'lucide-react';
-import { StatsCard } from '../components/StatsCard';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { ArizaDetayModal } from '../components/ArizaDetayModal';
-import { Card, Title, BarChart as TremorBarChart, DonutChart, AreaChart, ProgressBar, Text, Flex, Metric, Badge, BadgeDelta } from '@tremor/react';
-import type { Ariza } from '../types';
-import toast from 'react-hot-toast';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
-export const Anasayfa: React.FC = () => {
-  const { kullanici } = useAuth();
-  const navigate = useNavigate();
-  const [arizalar, setArizalar] = useState<Ariza[]>([]);
-  const [yukleniyor, setYukleniyor] = useState(true);
-  const [sahalar, setSahalar] = useState<Record<string, string>>({});
-  const [seciliAriza, setSeciliAriza] = useState<Ariza | null>(null);
-  const [yenileniyor, setYenileniyor] = useState(false);
-  const [genisletilenPanel, setGenisletilenPanel] = useState<string | null>(null);
-  const [istatistikler, setIstatistikler] = useState({
-    toplamAriza: 0,
-    acikArizalar: 0,
-    devamEdenArizalar: 0,
-    cozulenArizalar: 0,
-    kritikStoklar: 0,
-    planliBakimlar: 0,
-    performansSkoru: 0,
-    haftalikArizalar: [] as { date: string; arizaSayisi: number }[],
-    arizaDagilimi: [] as { durum: string; sayi: number }[],
-    sahaPerformansi: [] as { saha: string; performans: number }[],
-    uretimVerileri: [] as { date: string; uretim: number }[],
+interface DashboardStats {
+  totalArizalar: number;
+  aktifArizalar: number;
+  toplamUretim: number;
+  verimlilik: number;
+  toplamSantral: number;
+  aktifEkip: number;
+  kritikStok: number;
+  bakimBekleyen: number;
+}
+
+interface RecentActivity {
+  id: string;
+  type: 'ariza' | 'bakim' | 'uretim';
+  title: string;
+  description: string;
+  time: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+const Anasayfa: React.FC = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalArizalar: 0,
+    aktifArizalar: 0,
     toplamUretim: 0,
-    aylikUretim: 0,
-    yillikUretim: 0,
-    toplamCO2Tasarrufu: 0,
-    yillikHedefUretim: 0,
-    sonBakimTarihi: null as Date | null,
-    sonrakiBakimTarihi: null as Date | null,
-    planliBackimYuzdesi: 30, // Varsayılan değer
-    stokDurumu: [] as { urun: string; miktar: number; kritikSeviye: number }[]
+    verimlilik: 95,
+    toplamSantral: 0,
+    aktifEkip: 0,
+    kritikStok: 0,
+    bakimBekleyen: 0
   });
 
-  // Boş istatistikler oluştur
-  const createEmptyStats = () => {
-    return {
-      toplamAriza: 0,
-      acikArizalar: 0,
-      devamEdenArizalar: 0,
-      cozulenArizalar: 0,
-      kritikStoklar: 0,
-      planliBakimlar: 0,
-      performansSkoru: 0,
-      haftalikArizalar: Array.from({ length: 7 }, (_, i) => ({
-        date: format(subDays(new Date(), 6 - i), 'dd MMM', { locale: tr }),
-        arizaSayisi: 0
-      })),
-      arizaDagilimi: [
-        { durum: 'Açık', sayi: 0 },
-        { durum: 'Devam Eden', sayi: 0 },
-        { durum: 'Çözülen', sayi: 0 }
-      ],
-      sahaPerformansi: [],
-      uretimVerileri: [],
-      toplamUretim: 0,
-      aylikUretim: 0,
-      yillikUretim: 0,
-      toplamCO2Tasarrufu: 0,
-      yillikHedefUretim: 0,
-      sonBakimTarihi: null as Date | null,
-      sonrakiBakimTarihi: null as Date | null,
-      planliBackimYuzdesi: 30, // Varsayılan değer
-      stokDurumu: [] as { urun: string; miktar: number; kritikSeviye: number }[]
-    };
-  };
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  const veriYenile = async () => {
-    setYenileniyor(true);
-    try {
-      await veriGetir();
-      toast.success('Veriler başarıyla güncellendi');
-    } catch (error) {
-      toast.error('Veriler güncellenirken bir hata oluştu');
-      console.error('Veri yenileme hatası:', error);
-    } finally {
-      setYenileniyor(false);
-    }
-  };
+  // Gerçek zamanlı saat
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const veriGetir = async () => {
-    if (!kullanici) return;
+  // Sample data for charts
+  const uretimVerileri = [
+    { saat: '06:00', uretim: 12, hedef: 15 },
+    { saat: '08:00', uretim: 45, hedef: 50 },
+    { saat: '10:00', uretim: 78, hedef: 85 },
+    { saat: '12:00', uretim: 95, hedef: 100 },
+    { saat: '14:00', uretim: 88, hedef: 95 },
+    { saat: '16:00', uretim: 65, hedef: 70 },
+    { saat: '18:00', uretim: 25, hedef: 30 }
+  ];
 
-    try {
-      setYukleniyor(true);
+  const performansVerileri = [
+    { name: 'Panel A', deger: 98, fill: '#10b981' },
+    { name: 'Panel B', deger: 95, fill: '#3b82f6' },
+    { name: 'Panel C', deger: 92, fill: '#f59e0b' },
+    { name: 'Panel D', deger: 88, fill: '#ef4444' }
+  ];
 
-      // Kullanıcının sahalarını kontrol et
-      const userSahalar = kullanici.sahalar || [];
-
-      // Sahaları getir
-      let sahaMap: Record<string, string> = {};
-
-      try {
-        let sahaQuery;
-        if (kullanici.rol === 'musteri' && userSahalar.length > 0) {
-          sahaQuery = query(
-            collection(db, 'sahalar'),
-            where('__name__', 'in', userSahalar)
-          );
-        } else if (kullanici.rol !== 'musteri') {
-          sahaQuery = query(
-            collection(db, 'sahalar'),
-            where('companyId', '==', kullanici.companyId)
-          );
-        } else {
-          // Müşteri rolü ve sahası yoksa boş veriler göster
-          setArizalar([]);
-          setIstatistikler(createEmptyStats());
-          setSahalar({});
-          setYukleniyor(false);
-          return;
-        }
-
-        const sahaSnapshot = await getDocs(sahaQuery);
-        sahaMap = {};
-        sahaSnapshot.docs.forEach(doc => {
-          sahaMap[doc.id] = doc.data().ad;
-        });
-        setSahalar(sahaMap);
-      } catch (error) {
-        console.error('Sahalar getirilemedi:', error);
-        setSahalar({});
-        // Sahalar getirilemezse devam et, diğer verileri almaya çalış
-      }
-
-      // Müşteri rolü ve sahası yoksa boş veriler göster
-      if (kullanici.rol === 'musteri' && userSahalar.length === 0) {
-        setArizalar([]);
-        setIstatistikler(createEmptyStats());
-        setYukleniyor(false);
-        return;
-      }
-
-      // Arızaları getir
-      let sonArizalar: Ariza[] = [];
-      let butunArizalar: Ariza[] = [];
-
-      try {
-        let arizaQuery;
-        if (kullanici.rol === 'musteri' && userSahalar.length > 0) {
-          arizaQuery = query(
-            collection(db, 'arizalar'),
-            where('saha', 'in', userSahalar),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('olusturmaTarihi', 'desc'),
-            limit(5)
-          );
-        } else if (kullanici.rol !== 'musteri') {
-          arizaQuery = query(
-            collection(db, 'arizalar'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('olusturmaTarihi', 'desc'),
-            limit(5)
-          );
-        } else {
-          setArizalar([]);
-          setIstatistikler(createEmptyStats());
-          setYukleniyor(false);
-          return;
-        }
-
-        const snapshot = await getDocs(arizaQuery);
-        sonArizalar = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Ariza[];
-
-        setArizalar(sonArizalar);
-
-        // Tüm arızaları getir (istatistikler için)
-        let tumArizalarQuery;
-        if (kullanici.rol === 'musteri' && userSahalar.length > 0) {
-          tumArizalarQuery = query(
-            collection(db, 'arizalar'),
-            where('saha', 'in', userSahalar),
-            where('companyId', '==', kullanici.companyId)
-          );
-        } else if (kullanici.rol !== 'musteri') {
-          tumArizalarQuery = query(
-            collection(db, 'arizalar'),
-            where('companyId', '==', kullanici.companyId)
-          );
-        } else {
-          setIstatistikler(createEmptyStats());
-          setYukleniyor(false);
-          return;
-        }
-
-        const tumArizalarSnapshot = await getDocs(tumArizalarQuery);
-        butunArizalar = tumArizalarSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Ariza[];
-      } catch (error) {
-        console.error('Arızalar getirilemedi:', error);
-        setArizalar([]);
-        butunArizalar = [];
-        // Arızalar getirilemezse devam et, diğer verileri almaya çalış
-      }
-
-      // İstatistikleri hesapla
-      const acik = butunArizalar.filter(a => a.durum === 'acik').length;
-      const devamEden = butunArizalar.filter(a => a.durum === 'devam-ediyor').length;
-      const cozulen = butunArizalar.filter(a => a.durum === 'cozuldu').length;
-      const toplam = butunArizalar.length;
-
-      // Kritik stok sayısını getir
-      let kritikStokSayisi = 0;
-      let stokDurumu: { urun: string; miktar: number; kritikSeviye: number }[] = [];
-      try {
-        let stokQuery;
-        if (kullanici.rol === 'musteri' && userSahalar.length > 0) {
-          stokQuery = query(
-            collection(db, 'stoklar'),
-            where('sahaId', 'in', userSahalar),
-            where('companyId', '==', kullanici.companyId)
-          );
-        } else if (kullanici.rol !== 'musteri') {
-          stokQuery = query(
-            collection(db, 'stoklar'),
-            where('companyId', '==', kullanici.companyId)
-          );
-        } else {
-          // Müşteri rolü ve sahası yoksa bu kısmı atla
-          kritikStokSayisi = 0;
-        }
-
-        if (stokQuery) {
-          const stokSnapshot = await getDocs(stokQuery);
-          kritikStokSayisi = stokSnapshot.docs.filter(doc => {
-            const stok = doc.data();
-            return stok.miktar <= stok.kritikSeviye;
-          }).length;
-
-          // Kritik stoklara yakın olanları listele
-          stokDurumu = stokSnapshot.docs
-            .map(doc => {
-              const data = doc.data();
-              return {
-                urun: data.urunAdi,
-                miktar: data.miktar,
-                kritikSeviye: data.kritikSeviye
-              };
-            })
-            .sort((a, b) => {
-              // Kritik seviyenin altındakileri önce göster
-              const aKritik = a.miktar <= a.kritikSeviye;
-              const bKritik = b.miktar <= b.kritikSeviye;
-
-              if (aKritik && !bKritik) return -1;
-              if (!aKritik && bKritik) return 1;
-
-              // Her iki ürün de kritik seviyenin altındaysa veya üstündeyse, kritik seviyeye olan yakınlığına göre sırala
-              const aOran = a.miktar / a.kritikSeviye;
-              const bOran = b.miktar / b.kritikSeviye;
-
-              return aOran - bOran;
-            })
-            .slice(0, 5); // Sadece ilk 5 ürünü al
-        }
-      } catch (error) {
-        console.error('Stoklar getirilemedi:', error);
-        kritikStokSayisi = 0;
-        // Stoklar getirilemezse devam et, diğer verileri almaya çalış
-      }
-
-      // Planlı bakım sayısını getir
-      let planlanmisBakimlar = 0;
-      let sonBakimTarihi = null;
-      let sonrakiBakimTarihi = null;
-      let planliBackimYuzdesi = 30; // Varsayılan değer
-
-      try {
-        let bakimQuery;
-        if (kullanici.rol === 'musteri' && userSahalar.length > 0) {
-          bakimQuery = query(
-            collection(db, 'mekanikBakimlar'),
-            where('sahaId', 'in', userSahalar),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('tarih', 'desc')
-          );
-        } else if (kullanici.rol !== 'musteri') {
-          bakimQuery = query(
-            collection(db, 'mekanikBakimlar'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('tarih', 'desc')
-          );
-        } else {
-          // Müşteri rolü ve sahası yoksa bu kısmı atla
-          planlanmisBakimlar = 0;
-        }
-
-        if (bakimQuery) {
-          const bakimSnapshot = await getDocs(bakimQuery);
-          planlanmisBakimlar = bakimSnapshot.docs.length;
-
-          if (bakimSnapshot.docs.length > 0) {
-            const sonBakim = bakimSnapshot.docs[0].data();
-            sonBakimTarihi = sonBakim.tarih.toDate();
-
-            // Sonraki bakım için 3 ay sonrasını tahmin et
-            sonrakiBakimTarihi = addMonths(sonBakimTarihi, 3);
-
-            // Planlı bakım yüzdesini hesapla (3 aylık döngüde ne kadar ilerlendiği)
-            const bugun = new Date();
-            const toplamGun = 90; // 3 ay
-            const gecenGun = Math.min(
-              Math.floor((bugun.getTime() - sonBakimTarihi.getTime()) / (1000 * 60 * 60 * 24)),
-              toplamGun
-            );
-            planliBackimYuzdesi = Math.round((gecenGun / toplamGun) * 100);
-          }
-        }
-      } catch (error) {
-        console.error('Bakımlar getirilemedi:', error);
-        planlanmisBakimlar = 0;
-        // Bakımlar getirilemezse devam et, diğer verileri almaya çalış
-      }
-
-      // Performans skoru hesapla (0-100 arası)
-      const performans = toplam > 0 ? Math.round((cozulen / toplam) * 100) : 0;
-
-      // Son 7 günün arızaları
-      const sonYediGun = Array.from({ length: 7 }, (_, i) => {
-        const tarih = subDays(new Date(), 6 - i);
-        const gunlukArizalar = butunArizalar.filter(ariza => {
-          const arizaTarihi = ariza.olusturmaTarihi.toDate();
-          return format(arizaTarihi, 'yyyy-MM-dd') === format(tarih, 'yyyy-MM-dd');
-        });
-        return {
-          date: format(tarih, 'dd MMM', { locale: tr }),
-          arizaSayisi: gunlukArizalar.length
-        };
-      });
-
-      // Arıza durumu dağılımı
-      const durumDagilimi = [
-        { durum: 'Açık', sayi: acik },
-        { durum: 'Devam Eden', sayi: devamEden },
-        { durum: 'Çözülen', sayi: cozulen }
-      ];
-
-      // Saha bazlı performans
-      const sahaPerformansi = Object.entries(sahaMap).map(([sahaId, sahaAdi]) => {
-        const sahaArizalari = butunArizalar.filter(a => a.saha === sahaId);
-        const sahaCozulen = sahaArizalari.filter(a => a.durum === 'cozuldu').length;
-        const sahaPerformans = sahaArizalari.length > 0 
-          ? (sahaCozulen / sahaArizalari.length) * 100 
-          : 100;
-        return {
-          saha: sahaAdi,
-          performans: Math.round(sahaPerformans)
-        };
-      });
-
-      // Üretim verilerini getir
-      let uretimGrafigi: { date: string; uretim: number }[] = [];
-      let toplamUretim = 0;
-      let aylikUretim = 0;
-      let yillikUretim = 0;
-      let toplamCO2Tasarrufu = 0;
-      let yillikHedefUretim = 0; // Yıllık hedef üretim değeri
-
-      try {
-        // Önce santralleri getir
-        let santralQuery;
-        if (kullanici.rol === 'musteri' && userSahalar.length > 0) {
-          santralQuery = query(
-            collection(db, 'santraller'),
-            where('__name__', 'in', userSahalar),
-            where('companyId', '==', kullanici.companyId)
-          );
-        } else if (kullanici.rol !== 'musteri') {
-          santralQuery = query(
-            collection(db, 'santraller'),
-            where('companyId', '==', kullanici.companyId)
-          );
-        }
-
-        if (santralQuery) {
-          const santralSnapshot = await getDocs(santralQuery);
-          // Tüm santrallerin yıllık hedeflerini topla
-          yillikHedefUretim = santralSnapshot.docs.reduce((acc, doc) => {
-            const santralData = doc.data();
-            return acc + (santralData.yillikHedefUretim || 0);
-          }, 0);
-        }
-
-        // Üretim verilerini getir
-        let uretimQuery;
-        if (kullanici.rol === 'musteri' && userSahalar.length > 0) {
-          uretimQuery = query(
-            collection(db, 'uretimVerileri'),
-            where('santralId', 'in', userSahalar),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('tarih', 'desc'),
-            limit(30)
-          );
-        } else if (kullanici.rol !== 'musteri') {
-          uretimQuery = query(
-            collection(db, 'uretimVerileri'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('tarih', 'desc'),
-            limit(30)
-          );
-        } else {
-          // Müşteri rolü ve sahası yoksa bu kısmı atla
-          uretimGrafigi = [];
-          toplamUretim = 0;
-          aylikUretim = 0;
-          yillikUretim = 0;
-          toplamCO2Tasarrufu = 0;
-          yillikHedefUretim = 0;
-        }
-
-        if (uretimQuery) {
-          const uretimSnapshot = await getDocs(uretimQuery);
-          const uretimVerileri = uretimSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-
-          // Üretim istatistikleri
-          const bugun = new Date();
-          const ayBaslangic = startOfMonth(bugun);
-          const ayBitis = endOfMonth(bugun);
-          const yilBaslangic = startOfYear(bugun);
-          const yilBitis = endOfYear(bugun);
-
-          toplamUretim = uretimVerileri.reduce((acc, veri) => acc + veri.gunlukUretim, 0);
-
-          aylikUretim = uretimVerileri.filter(veri => {
-            const veriTarihi = veri.tarih.toDate();
-            return veriTarihi >= ayBaslangic && veriTarihi <= ayBitis;
-          }).reduce((acc, veri) => acc + veri.gunlukUretim, 0);
-
-          yillikUretim = uretimVerileri.filter(veri => {
-            const veriTarihi = veri.tarih.toDate();
-            return veriTarihi >= yilBaslangic && veriTarihi <= yilBitis;
-          }).reduce((acc, veri) => acc + veri.gunlukUretim, 0);
-
-          toplamCO2Tasarrufu = uretimVerileri.reduce((acc, veri) => acc + (veri.tasarrufEdilenCO2 || 0), 0);
-
-          // Üretim grafiği için verileri hazırla
-          uretimGrafigi = uretimVerileri
-            .slice(0, 14)
-            .sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime())
-            .map(veri => ({
-              date: format(veri.tarih.toDate(), 'dd MMM', { locale: tr }),
-              uretim: veri.gunlukUretim
-            }));
-        }
-      } catch (error) {
-        console.error('Üretim verileri getirilemedi:', error);
-        uretimGrafigi = [];
-        toplamUretim = 0;
-        aylikUretim = 0;
-        yillikUretim = 0;
-        toplamCO2Tasarrufu = 0;
-        yillikHedefUretim = 0;
-        // Üretim verileri getirilemezse devam et
-      }
-
-      setIstatistikler({
-        toplamAriza: toplam,
-        acikArizalar: acik,
-        devamEdenArizalar: devamEden,
-        cozulenArizalar: cozulen,
-        kritikStoklar: kritikStokSayisi,
-        planliBakimlar: planlanmisBakimlar,
-        performansSkoru: performans,
-        haftalikArizalar: sonYediGun,
-        arizaDagilimi: durumDagilimi,
-        sahaPerformansi,
-        uretimVerileri: uretimGrafigi,
-        toplamUretim,
-        aylikUretim,
-        yillikUretim,
-        toplamCO2Tasarrufu,
-        yillikHedefUretim,
-        sonBakimTarihi,
-        sonrakiBakimTarihi,
-        planliBackimYuzdesi,
-        stokDurumu
-      });
-
-    } catch (error) {
-      console.error('Veri getirme hatası:', error);
-      // Hata durumunda boş veriler göster
-      setArizalar([]);
-      setIstatistikler(createEmptyStats());
-      setSahalar({});
-      toast.error('Veriler yüklenirken bir hata oluştu');
-    } finally {
-      setYukleniyor(false);
-    }
-  };
+  const bakimVerileri = [
+    { ay: 'Oca', tamamlanan: 24, planlanan: 28 },
+    { ay: 'Şub', tamamlanan: 32, planlanan: 35 },
+    { ay: 'Mar', tamamlanan: 28, planlanan: 30 },
+    { ay: 'Nis', tamamlanan: 35, planlanan: 40 },
+    { ay: 'May', tamamlanan: 42, planlanan: 45 }
+  ];
 
   useEffect(() => {
-    veriGetir();
-  }, [kullanici]);
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
 
-  const togglePanel = (panel: string) => {
-    if (genisletilenPanel === panel) {
-      setGenisletilenPanel(null);
-    } else {
-      setGenisletilenPanel(panel);
-    }
+        // Arıza verileri
+        const arizalarRef = collection(db, 'arizalar');
+        const arizalarSnapshot = await getDocs(arizalarRef);
+        const aktifArizalarQuery = query(arizalarRef, where('durum', '!=', 'cozuldu'));
+        const aktifArizalarSnapshot = await getDocs(aktifArizalarQuery);
+
+        // Santral verileri
+        const santrallerRef = collection(db, 'santraller');
+        const santrallerSnapshot = await getDocs(santrallerRef);
+
+        // Ekip verileri
+        const ekiplerRef = collection(db, 'ekipler');
+        const ekiplerSnapshot = await getDocs(ekiplerRef);
+
+        setStats({
+          totalArizalar: arizalarSnapshot.size,
+          aktifArizalar: aktifArizalarSnapshot.size,
+          toplamUretim: 2845,
+          verimlilik: 95.2,
+          toplamSantral: santrallerSnapshot.size,
+          aktifEkip: ekiplerSnapshot.size,
+          kritikStok: 3,
+          bakimBekleyen: 8
+        });
+
+        // Son aktiviteler
+        const recentQuery = query(arizalarRef, orderBy('olusturmaTarihi', 'desc'), limit(5));
+        const recentSnapshot = await getDocs(recentQuery);
+
+        const activities: RecentActivity[] = recentSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            type: 'ariza',
+            title: data.baslik || 'Arıza Bildirimi',
+            description: data.aciklama || 'Detay bilgi yok',
+            time: data.olusturmaTarihi?.toDate?.()?.toLocaleTimeString('tr-TR') || 'Bilinmiyor',
+            priority: data.oncelik || 'medium'
+          };
+        });
+
+        setRecentActivities(activities);
+      } catch (error) {
+        console.error('Dashboard verileri yüklenirken hata:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+    hover: { y: -5, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }
   };
 
-  if (yukleniyor) {
+  const statsCards = [
+    {
+      title: 'Toplam Üretim',
+      value: `${stats.toplamUretim.toLocaleString()} kWh`,
+      change: '+12.5%',
+      icon: <Sun className="h-6 w-6" />,
+      color: 'from-yellow-400 to-orange-500',
+      textColor: 'text-yellow-600'
+    },
+    {
+      title: 'Sistem Verimliliği',
+      value: `%${stats.verimlilik}`,
+      change: '+2.1%',
+      icon: <TrendingUp className="h-6 w-6" />,
+      color: 'from-green-400 to-emerald-500',
+      textColor: 'text-green-600'
+    },
+    {
+      title: 'Aktif Arızalar',
+      value: stats.aktifArizalar.toString(),
+      change: '-15%',
+      icon: <AlertTriangle className="h-6 w-6" />,
+      color: 'from-red-400 to-pink-500',
+      textColor: 'text-red-600'
+    },
+    {
+      title: 'Aktif Santral',
+      value: stats.toplamSantral.toString(),
+      change: '+5',
+      icon: <Battery className="h-6 w-6" />,
+      color: 'from-blue-400 to-indigo-500',
+      textColor: 'text-blue-600'
+    }
+  ];
+
+  const quickActions = [
+    { title: 'Yeni Arıza Bildir', icon: <AlertTriangle className="h-5 w-5" />, link: '/arizalar', color: 'bg-red-500' },
+    { title: 'Bakım Planla', icon: <Wrench className="h-5 w-5" />, link: '/mekanik-bakim', color: 'bg-blue-500' },
+    { title: 'Stok Kontrol', icon: <Package className="h-5 w-5" />, link: '/stok-kontrol', color: 'bg-purple-500' },
+    { title: 'Performans', icon: <BarChart3 className="h-5 w-5" />, link: '/performans', color: 'bg-green-500' },
+    { title: 'Ekip Yönetimi', icon: <Users className="h-5 w-5" />, link: '/ekip', color: 'bg-orange-500' },
+    { title: 'Raporlar', icon: <Calendar className="h-5 w-5" />, link: '/raporlar', color: 'bg-indigo-500' }
+  ];
+
+  if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <LoadingSpinner size="lg" />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Hoş Geldiniz Kartı */}
-      <Card className="bg-gradient-to-r from-blue-700 to-blue-900 border-none shadow-lg rounded-xl overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between p-4">
-          <div className="flex items-center mb-4 md:mb-0">
-            <div className="flex flex-col md:flex-row items-center gap-4">
-              <div className="bg-white p-3 rounded-full flex items-center justify-center shadow-lg">
-                <img src="/solarveyo-logo.png" alt="SolarVeyo Logo" className="h-10 w-10 object-contain" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                <Sun className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Hoş Geldiniz, {kullanici?.ad}</h2>
-                <p className="text-sm text-blue-100">
-                  {format(new Date(), 'dd MMMM yyyy, EEEE', { locale: tr })}
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Hoş Geldiniz, {user?.email?.split('@')[0]}!
+                </h1>
+                <p className="text-gray-600">
+                  {currentTime.toLocaleDateString('tr-TR', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })} • {currentTime.toLocaleTimeString('tr-TR')}
                 </p>
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={veriYenile}
-              className="flex items-center gap-2 text-blue-900 bg-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-50 transition-all duration-300 transform hover:scale-105"
-              disabled={yenileniyor}
-            >
-              <RefreshCw className={`h-4 w-4 ${yenileniyor ? 'animate-spin' : ''}`} />
-              <span className="font-medium">{yenileniyor ? 'Yenileniyor...' : 'Verileri Yenile'}</span>
-            </button>
-            <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md flex items-center text-white border border-white/10">
-              <Battery className="h-5 w-5 text-blue-200 mr-2" />
-              <div>
-                <p className="text-xs text-blue-100">Aylık Üretim</p>
-                <p className="text-sm font-semibold">{istatistikler.aylikUretim.toLocaleString('tr-TR')} kWh</p>
+
+            <div className="mt-4 lg:mt-0 flex items-center space-x-4">
+              <div className="flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">Sistem Aktif</span>
               </div>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md flex items-center text-white border border-white/10">
-              <Battery className="h-5 w-5 text-blue-200 mr-2" />
-              <div>
-                <p className="text-xs text-blue-100">Yıllık Üretim</p>
-                <p className="text-sm font-semibold">{istatistikler.yillikUretim.toLocaleString('tr-TR')} kWh</p>
-              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <Bell className="h-4 w-4" />
+                <span>Bildirimler</span>
+              </motion.button>
             </div>
           </div>
         </div>
-        <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-2xl"></div>
-        <div className="absolute -top-8 -left-8 w-32 h-32 bg-blue-300 rounded-full opacity-10 blur-xl"></div>
-      </Card>
+      </motion.div>
 
-      {/* Hızlı Erişim Kartları */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <div 
-          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
-          onClick={() => navigate('/arizalar')}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-red-100 rounded-full mb-3 group-hover:bg-red-200 transition-colors duration-300">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Arızalar</h3>
-            <p className="text-xs text-gray-500 mt-1">Arıza takibi ve yönetimi</p>
-          </div>
-        </div>
-
-        <div 
-          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
-          onClick={() => navigate('/uretim-verileri')}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-blue-100 rounded-full mb-3 group-hover:bg-blue-200 transition-colors duration-300">
-              <Sun className="h-6 w-6 text-blue-600" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Üretim Verileri</h3>
-            <p className="text-xs text-gray-500 mt-1">Enerji üretim takibi</p>
-          </div>
-        </div>
-
-        <div 
-          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
-          onClick={() => navigate('/elektrik-bakim')}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-yellow-100 rounded-full mb-3 group-hover:bg-yellow-200 transition-colors duration-300">
-              <Zap className="h-6 w-6 text-yellow-600" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Elektrik Bakım</h3>
-            <p className="text-xs text-gray-500 mt-1">Elektrik bakım kontrolleri</p>
-          </div>
-        </div>
-
-        <div 
-          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
-          onClick={() => navigate('/mekanik-bakim')}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-blue-100 rounded-full mb-3 group-hover:bg-blue-200 transition-colors duration-300">
-              <PanelTop className="h-6 w-6 text-blue-600" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Mekanik Bakım</h3>
-            <p className="text-xs text-gray-500 mt-1">Mekanik bakım kontrolleri</p>
-          </div>
-        </div>
-
-        <div 
-          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
-          onClick={() => navigate('/stok-kontrol')}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-indigo-100 rounded-full mb-3 group-hover:bg-indigo-200 transition-colors duration-300">
-              <Package className="h-6 w-6 text-indigo-600" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">Stok Kontrol</h3>
-            <p className="text-xs text-gray-500 mt-1">Malzeme ve envanter</p>
-          </div>
-        </div>
-
-        <div 
-          className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-lg p-4 border border-blue-100 hover:shadow-xl transition-all duration-300 cursor-pointer hover:bg-gradient-to-br hover:from-blue-50 hover:to-blue-100 hover:scale-105 group"
-          onClick={() => navigate('/istatistikler')}
-        >
-          <div className="flex flex-col items-center text-center">
-            <div className="p-3 bg-blue-100 rounded-full mb-3 group-hover:bg-blue-200 transition-colors duration-300">
-              <FileBarChart className="h-6 w-6 text-blue-600" />
-            </div>
-            <h3 className="text-sm font-medium text-gray-800 group-hover:text-blue-800 transition-colors">İstatistikler</h3>
-            <p className="text-xs text-gray-500 mt-1">Analiz ve istatistikler</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Genel Durum Özeti */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-blue-800 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
-          <div className="relative z-10 flex items-center p-2">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
-              <AlertTriangle className="h-6 w-6 text-white" />
-            </div>
-            <div className="w-full">
-              <p className="text-sm font-medium text-blue-100">Arıza Durumu</p>
-              <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-white">{istatistikler.acikArizalar + istatistikler.devamEdenArizalar}</span>
-                <span className="ml-2 text-sm text-blue-100">Aktif Arıza</span>
-                {istatistikler.acikArizalar > 3 && (
-                  <Badge color="red" className="ml-2">Dikkat</Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-blue-100">Çözüm Oranı: %{istatistikler.performansSkoru}</span>
-                <span className="text-xs text-blue-100">{istatistikler.cozulenArizalar} çözüldü</span>
-              </div>
-              <div className="mt-1 bg-white/20 rounded-full h-2">
-                <div 
-                  className="bg-white h-2 rounded-full" 
-                  style={{ width: `${istatistikler.performansSkoru}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-blue-400 rounded-full opacity-20 blur-xl"></div>
-          <div className="absolute -top-10 -left-10 h-32 w-32 bg-blue-300 rounded-full opacity-10 blur-xl"></div>
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-slate-700 to-slate-900 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
-          <div className="relative z-10 flex items-center p-2">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
-              <Battery className="h-6 w-6 text-white" />
-            </div>
-            <div className="w-full">
-              <p className="text-sm font-medium text-slate-100">Üretim Durumu</p>
-              <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-white">{istatistikler.aylikUretim.toLocaleString('tr-TR')}</span>
-                <span className="ml-2 text-sm text-slate-100">kWh / Ay</span>
-                {istatistikler.yillikUretim > 0 && istatistikler.yillikHedefUretim > 0 && 
-                 (istatistikler.yillikUretim / istatistikler.yillikHedefUretim) > 0.5 && (
-                  <Badge color="green" className="ml-2">İyi Gidiyor</Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-slate-100">Yıllık: {istatistikler.yillikUretim.toLocaleString('tr-TR')} kWh</span>
-                <span className="text-xs text-slate-100">Hedef: {istatistikler.yillikHedefUretim.toLocaleString('tr-TR')} kWh</span>
-              </div>
-              <div className="mt-1 bg-white/20 rounded-full h-2">
-                <div 
-                  className="bg-blue-400 h-2 rounded-full" 
-                  style={{ width: `${istatistikler.yillikHedefUretim > 0 ? Math.min((istatistikler.yillikUretim / istatistikler.yillikHedefUretim) * 100, 100) : 0}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-slate-400 rounded-full opacity-20 blur-xl"></div>
-          <div className="absolute -top-10 -left-10 h-32 w-32 bg-slate-300 rounded-full opacity-10 blur-xl"></div>
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-sky-600 to-sky-800 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
-          <div className="relative z-10 flex items-center p-2">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
-              <Wrench className="h-6 w-6 text-white" />
-            </div>
-            <div className="w-full">
-              <p className="text-sm font-medium text-sky-100">Bakım Durumu</p>
-              <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-white">{istatistikler.planliBakimlar}</span>
-                <span className="ml-2 text-sm text-sky-100">Planlı Bakım</span>
-                {istatistikler.sonrakiBakimTarihi && new Date() > istatistikler.sonrakiBakimTarihi && (
-                  <Badge color="red" className="ml-2">Bakım Gerekli</Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-sky-100">
-                  Son Bakım: {istatistikler.sonBakimTarihi 
-                    ? format(istatistikler.sonBakimTarihi, 'dd MMM yyyy', { locale: tr }) 
-                    : 'Bilgi yok'}
-                </span>
-                <span className="text-xs text-sky-100">
-                  Sonraki: {istatistikler.sonrakiBakimTarihi 
-                    ? format(istatistikler.sonrakiBakimTarihi, 'dd MMM yyyy', { locale: tr })
-                    : 'Bilgi yok'}
+      {/* Stats Cards */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+      >
+        {statsCards.map((card, index) => (
+          <motion.div
+            key={card.title}
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover="hover"
+            transition={{ delay: index * 0.1 }}
+            className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-5`}></div>
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-xl bg-gradient-to-br ${card.color} text-white`}>
+                  {card.icon}
+                </div>
+                <span className={`text-sm font-medium ${card.textColor} bg-opacity-20 px-2 py-1 rounded-full`}>
+                  {card.change}
                 </span>
               </div>
-              <div className="mt-1 bg-white/20 rounded-full h-2">
-                <div 
-                  className="bg-white h-2 rounded-full" 
-                  style={{ width: `${istatistikler.planliBackimYuzdesi}%` }}
-                ></div>
-              </div>
+              <h3 className="text-gray-600 text-sm font-medium mb-1">{card.title}</h3>
+              <p className="text-2xl font-bold text-gray-900">{card.value}</p>
             </div>
-          </div>
-          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-sky-400 rounded-full opacity-20 blur-xl"></div>
-          <div className="absolute -top-10 -left-10 h-32 w-32 bg-sky-300 rounded-full opacity-10 blur-xl"></div>
-        </Card>
+          </motion.div>
+        ))}
+      </motion.div>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-gray-700 to-gray-900 border-none shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
-          <div className="relative z-10 flex items-center p-2">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full mr-3">
-              <Package className="h-6 w-6 text-white" />
-            </div>
-            <div className="w-full">
-              <p className="text-sm font-medium text-gray-100">Stok Durumu</p>
-              <div className="flex items-center mt-1">
-                <span className="text-2xl font-bold text-white">{istatistikler.kritikStoklar}</span>
-                <span className="ml-2 text-sm text-gray-100">Kritik Stok</span>
-                {istatistikler.kritikStoklar > 0 && (
-                  <Badge color="red" className="ml-2">Sipariş Gerekli</Badge>
-                )}
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-100">
-                  Acil Sipariş: {istatistikler.kritikStoklar > 0 ? `${istatistikler.kritikStoklar} ürün` : 'Yok'}
-                </span>
-                <button 
-                  onClick={() => navigate('/stok-kontrol')} 
-                  className="text-xs text-blue-200 hover:text-white transition-colors"
-                >
-                  Stok Takibi
-                </button>
-              </div>
-              <div className="mt-1 bg-white/20 rounded-full h-2">
-                <div 
-                  className="bg-red-400 h-2 rounded-full" 
-                  style={{ width: `${Math.min(istatistikler.kritikStoklar * 10, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -bottom-10 -right-10 h-40 w-40 bg-gray-500 rounded-full opacity-20 blur-xl"></div>
-          <div className="absolute -top-10 -left-10 h-32 w-32 bg-gray-400 rounded-full opacity-10 blur-xl"></div>
-        </Card>
-      </div>
-
-      {/* Üretim ve Arıza Grafikleri */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Üretim Grafiği */}
-        {istatistikler.uretimVerileri.length > 0 && (
-          <Card className="shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden rounded-xl border border-blue-100 bg-gradient-to-br from-white to-blue-50">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <Title className="text-blue-900">Günlük Üretim Trendi</Title>
-                <Text className="text-blue-600">Son 14 günün üretim verileri</Text>
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Günlük Üretim Performansı</h3>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-xs text-gray-600">Gerçek</span>
               </div>
-              <button 
-                onClick={() => navigate('/uretim-verileri')}
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-all duration-300"
-              >
-                Detaylar <ArrowRight className="h-4 w-4 ml-1" />
-              </button>
-            </div>
-            <AreaChart
-              className="h-72 mt-4"
-              data={istatistikler.uretimVerileri}
-              index="date"
-              categories={["uretim"]}
-              colors={["blue"]}
-              valueFormatter={(value) => `${value.toLocaleString('tr-TR')} kWh`}
-              showLegend={false}
-              showAnimation={true}
-              showGradient={true}
-            />
-            <div className="mt-4 grid grid-cols-3 gap-2 p-3 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg">
-              <div className="text-center">
-                <Text className="text-xs text-blue-100">Günlük Ortalama</Text>
-                <Metric className="text-lg font-bold text-white">
-                  {istatistikler.uretimVerileri.length > 0 
-                    ? Math.round(istatistikler.uretimVerileri.reduce((acc, item) => acc + item.uretim, 0) / istatistikler.uretimVerileri.length).toLocaleString('tr-TR')
-                    : '0'} kWh
-                </Metric>
-              </div>
-              <div className="text-center">
-                <Text className="text-xs text-blue-100">En Yüksek Üretim</Text>
-                <Metric className="text-lg font-bold text-white">
-                  {istatistikler.uretimVerileri.length > 0 
-                    ? Math.max(...istatistikler.uretimVerileri.map(item => item.uretim)).toLocaleString('tr-TR')
-                    : '0'} kWh
-                </Metric>
-              </div>
-              <div className="text-center">
-                <Text className="text-xs text-blue-100">Performans</Text>
-                <Flex justifyContent="center" alignItems="center">
-                  <Metric className="text-lg font-bold text-white">
-                    {istatistikler.yillikHedefUretim > 0 
-                      ? Math.round((istatistikler.yillikUretim / istatistikler.yillikHedefUretim) * 100)
-                      : '0'}%
-                  </Metric>
-                  <BadgeDelta deltaType="moderateIncrease" className="ml-1" size="xs" />
-                </Flex>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                <span className="text-xs text-gray-600">Hedef</span>
               </div>
             </div>
-          </Card>
-        )}
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={uretimVerileri}>
+              <defs>
+                <linearGradient id="colorUretim" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="saat" stroke="#64748b" />
+              <YAxis stroke="#64748b" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: 'none', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' 
+                }} 
+              />
+              <Area 
+                type="monotone" 
+                dataKey="uretim" 
+                stroke="#3b82f6" 
+                strokeWidth={3}
+                fillOpacity={1} 
+                fill="url(#colorUretim)" 
+              />
+              <Line 
+                type="monotone" 
+                dataKey="hedef" 
+                stroke="#e2e8f0" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </motion.div>
 
-        {/* Haftalık Arıza Trendi */}
-        <Card className="shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <Title className="text-slate-900">Haftalık Arıza Trendi</Title>
-              <Text className="text-slate-600">Son 7 günün arıza verileri</Text>
-            </div>
-            <button 
-              onClick={() => navigate('/arizalar')}
-              className="text-sm text-slate-600 hover:text-slate-800 flex items-center bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full transition-all duration-300"
-            >
-              Detaylar <ArrowRight className="h-4 w-4 ml-1" />
-            </button>
+        {/* Hızlı Aksiyonlar */}
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Hızlı Aksiyonlar</h3>
+          <div className="space-y-3">
+            {quickActions.map((action, index) => (
+              <motion.div
+                key={action.title}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Link 
+                  to={action.link}
+                  className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-colors group"
+                >
+                  <div className={`${action.color} p-2 rounded-lg text-white mr-3`}>
+                    {action.icon}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 flex-1">
+                    {action.title}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                </Link>
+              </motion.div>
+            ))}
           </div>
-          <TremorBarChart
-            className="h-72 mt-4"
-            data={istatistikler.haftalikArizalar}
-            index="date"
-            categories={["arizaSayisi"]}
-            colors={["slate"]}
-            valueFormatter={(value) => `${value} arıza`}
-            showLegend={false}
-            showAnimation={true}
-          />
-          <div className="mt-4 grid grid-cols-3 gap-2 p-3 bg-gradient-to-r from-slate-700 to-slate-900 rounded-lg">
-            <div className="text-center">
-              <Text className="text-xs text-slate-100">Haftalık Toplam</Text>
-              <Metric className="text-lg font-bold text-white">
-                {istatistikler.haftalikArizalar.reduce((acc, item) => acc + item.arizaSayisi, 0)} arıza
-              </Metric>
-            </div>
-            <div className="text-center">
-              <Text className="text-xs text-slate-100">Çözüm Hızı</Text>
-              <Metric className="text-lg font-bold text-white">
-                48 saat
-              </Metric>
-            </div>
-            <div className="text-center">
-              <Text className="text-xs text-slate-100">Durum</Text>
-              <Flex justifyContent="center" alignItems="center">
-                <Metric className="text-lg font-bold text-white">
-                  {istatistikler.performansSkoru}%
-                </Metric>
-                <BadgeDelta 
-                  deltaType={istatistikler.performansSkoru > 70 ? "moderateIncrease" : "moderateDecrease"} 
-                  className="ml-1" 
-                  size="xs" 
-                />
-              </Flex>
-            </div>
-          </div>
-        </Card>
+        </motion.div>
       </div>
 
-      {/* Bakım ve Kontrol Durumu */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Arıza Durumu Dağılımı */}
-        <Card className="shadow-md hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <Title>Arıza Durumu Dağılımı</Title>
-              <Text className="text-gray-500">Tüm arızaların durum bilgisi</Text>
-            </div>
-            <button 
-              onClick={() => navigate('/istatistikler')}
-              className="text-sm text-primary-600 hover:text-primary-800 flex items-center"
-            >
-              Detaylar <ArrowRight className="h-4 w-4 ml-1" />
-            </button>
-          </div>
-          <DonutChart
-            className="h-60 mt-4"
-            data={istatistikler.arizaDagilimi}
-            category="sayi"
-            index="durum"
-            colors={["rose", "amber", "emerald"]}
-            valueFormatter={(value) => `${value} arıza`}
-            showAnimation={true}
-          />
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <div className="text-center py-2 px-3 bg-rose-50 rounded-lg">
-              <Text className="text-xs text-rose-600">Açık</Text>
-              <Metric className="text-lg font-bold text-rose-700">
-                {istatistikler.acikArizalar}
-              </Metric>
-            </div>
-            <div className="text-center py-2 px-3 bg-amber-50 rounded-lg">
-              <Text className="text-xs text-amber-600">Devam Eden</Text>
-              <Metric className="text-lg font-bold text-amber-700">
-                {istatistikler.devamEdenArizalar}
-              </Metric>
-            </div>
-            <div className="text-center py-2 px-3 bg-emerald-50 rounded-lg">
-              <Text className="text-xs text-emerald-600">Çözülen</Text>
-              <Metric className="text-lg font-bold text-emerald-700">
-                {istatistikler.cozulenArizalar}
-              </Metric>
-            </div>
-          </div>
-        </Card>
-
-        {/* Bakım Kontrol Durumu */}
-        <Card className="shadow-md hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <Title>Bakım Kontrol Durumu</Title>
-              <Text className="text-gray-500">Bakım ve performans durumu</Text>
-            </div>
-            <div className="flex space-x-2">
-              <button 
-                onClick={() => navigate('/mekanik-bakim')}
-                className="text-xs text-primary-600 hover:text-primary-800"
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Performans Dağılımı */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Panel Performans Dağılımı</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={performansVerileri}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={5}
+                dataKey="deger"
               >
-                Mekanik
-              </button>
-              <span className="text-gray-300">|</span>
-              <button 
-                onClick={() => navigate('/elektrik-bakim')}
-                className="text-xs text-primary-600 hover:text-primary-800"
-              >
-                Elektrik
-              </button>
-            </div>
-          </div>
-          <div className="space-y-6 mt-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <PanelTop className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm text-gray-700">Mekanik Bakım</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-xs font-medium text-green-600">Son 30 gün</span>
-                  <Badge className="ml-2" color="emerald" size="xs">Tamamlandı</Badge>
-                </div>
-              </div>
-              <ProgressBar value={75} color="blue" />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <Zap className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm text-gray-700">Elektrik Bakım</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-xs font-medium text-green-600">Son 30 gün</span>
-                  <Badge className="ml-2" color="amber" size="xs">Devam Ediyor</Badge>
-                </div>
-              </div>
-              <ProgressBar value={60} color="amber" />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <Activity className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm text-gray-700">İnvertör Kontrol</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-xs font-medium text-green-600">Son 30 gün</span>
-                  <Badge className="ml-2" color="emerald" size="xs">Tamamlandı</Badge>
-                </div>
-              </div>
-              <ProgressBar value={85} color="emerald" />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <Bolt className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-sm text-gray-700">Elektrik Kesintileri</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-xs font-medium text-red-600">Son 30 gün</span>
-                  <Badge className="ml-2" color="rose" size="xs">Dikkat</Badge>
-                </div>
-              </div>
-              <ProgressBar value={15} color="rose" />
-            </div>
-          </div>
-        </Card>
-
-        {/* Saha Performansı */}
-        <Card className="shadow-md hover:shadow-lg transition-all duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <Title>Saha Performansı</Title>
-              <Text className="text-gray-500">Santral bazlı performans durumu</Text>
-            </div>
-            <button 
-              onClick={() => navigate('/sahalar')}
-              className="text-sm text-primary-600 hover:text-primary-800 flex items-center"
-            >
-              Detaylar <ArrowRight className="h-4 w-4 ml-1" />
-            </button>
-          </div>
-          <div className="mt-6 space-y-4">
-            {istatistikler.sahaPerformansi.length > 0 ? (
-              <>
-                {istatistikler.sahaPerformansi.slice(0, 5).map((saha) => (
-                  <div key={saha.saha}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium text-gray-700">{saha.saha}</span>
-                      <div className="flex items-center">
-                        <span className="text-sm text-gray-600">%{saha.performans}</span>
-                        <Badge 
-                          className="ml-2" 
-                          color={saha.performans > 90 ? "emerald" : saha.performans > 70 ? "amber" : "rose"} 
-                          size="xs"
-                        >
-                          {saha.performans > 90 ? "Mükemmel" : saha.performans > 70 ? "İyi" : "Geliştirilebilir"}
-                        </Badge>
-                      </div>
-                    </div>
-                    <ProgressBar 
-                      value={saha.performans} 
-                      color={saha.performans > 90 ? "emerald" : saha.performans > 70 ? "amber" : "rose"} 
-                    />
-                  </div>
+                {performansVerileri.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
-                {istatistikler.sahaPerformansi.length > 5 && (
-                  <div className="text-center mt-4 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <button 
-                      onClick={() => navigate('/sahalar')}
-                      className="text-sm text-primary-600 hover:text-primary-800 flex items-center justify-center w-full"
-                    >
-                      {istatistikler.sahaPerformansi.length - 5} saha daha göster <ArrowRight className="h-4 w-4 ml-1" />
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-6">
-                <Building className="h-8 w-8 text-gray-300 mb-2" />
-                <p className="text-gray-500 text-center">Henüz saha performans verisi bulunmuyor</p>
+              </Pie>
+              <Tooltip 
+                formatter={(value) => [`%${value}`, 'Verimlilik']}
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: 'none', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' 
+                }} 
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            {performansVerileri.map((item) => (
+              <div key={item.name} className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.fill }}></div>
+                <span className="text-sm text-gray-600">{item.name}</span>
+                <span className="text-sm font-medium">%{item.deger}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Bakım Trendleri */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Aylık Bakım Trendleri</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={bakimVerileri}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="ay" stroke="#64748b" />
+              <YAxis stroke="#64748b" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: 'none', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' 
+                }} 
+              />
+              <Bar dataKey="tamamlanan" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="planlanan" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </motion.div>
+      </div>
+
+      {/* Son Aktiviteler ve Sistem Durumu */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Son Aktiviteler */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+          className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Son Aktiviteler</h3>
+            <Link to="/arizalar" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+              Tümünü Gör
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {recentActivities.length > 0 ? recentActivities.map((activity) => (
+              <div key={activity.id} className="flex items-start space-x-4 p-4 rounded-xl hover:bg-gray-50 transition-colors">
+                <div className={`p-2 rounded-lg ${
+                  activity.priority === 'high' ? 'bg-red-100 text-red-600' :
+                  activity.priority === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                  'bg-green-100 text-green-600'
+                }`}>
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{activity.title}</p>
+                  <p className="text-sm text-gray-500 truncate">{activity.description}</p>
+                </div>
+                <span className="text-xs text-gray-400">{activity.time}</span>
+              </div>
+            )) : (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Henüz aktivite bulunmuyor</p>
               </div>
             )}
           </div>
-        </Card>
-      </div>
+        </motion.div>
 
-      {/* Önemli Bilgiler */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Kritik Stoklar */}
-        <Card className="shadow-md hover:shadow-lg transition-all duration-300">
-          <div 
-            className="flex items-center justify-between mb-4 cursor-pointer"
-            onClick={() => togglePanel('stoklar')}
-          >
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-full mr-2">
-                <Package className="h-5 w-5 text-red-600" />
+        {/* Sistem Durumu */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.4 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
+          <h3 className="text-lg font-semibold text-gray-900">Sistem Durumu</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <ThermometerSun className="h-4 w-4 text-orange-500" />
+                <span className="text-sm text-gray-600">Sıcaklık</span>
               </div>
-              <Title>Kritik Stoklar</Title>
+              <span className="text-sm font-medium">32°C</span>
             </div>
-            <button className="text-gray-400">
-              {genisletilenPanel === 'stoklar' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </button>
-          </div>
 
-          {genisletilenPanel === 'stoklar' ? (
-            <div className="space-y-4 mt-4 animate-fade-in-down">
-              {istatistikler.stokDurumu.length > 0 ? (
-                <>
-                  {istatistikler.stokDurumu.map((stok, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-700">{stok.urun}</span>
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-600">{stok.miktar} adet</span>
-                          {stok.miktar <= stok.kritikSeviye && (
-                            <Badge color="red" size="xs" className="ml-2">Kritik</Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                        <span>Kritik Seviye: {stok.kritikSeviye}</span>
-                        <span>Durum: {stok.miktar <= stok.kritikSeviye ? 'Sipariş Gerekli' : 'Yeterli'}</span>
-                      </div>
-                      <ProgressBar 
-                        value={Math.min((stok.miktar / stok.kritikSeviye) * 100, 100)} 
-                        color={stok.miktar <= stok.kritikSeviye ? "rose" : "emerald"} 
-                      />
-                    </div>
-                  ))}
-                  <div className="text-center mt-2">
-                    <button 
-                      onClick={() => navigate('/stok-kontrol')}
-                      className="text-sm text-primary-600 hover:text-primary-800 flex items-center justify-center w-full"
-                    >
-                      Tüm Stokları Görüntüle <ArrowRight className="h-4 w-4 ml-1" />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6">
-                  <Package className="h-8 w-8 text-gray-300 mb-2" />
-                  <p className="text-gray-500 text-center">Kritik stok bilgisi bulunmuyor</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">
-                {istatistikler.kritikStoklar > 0 
-                  ? `${istatistikler.kritikStoklar} ürün kritik stok seviyesinin altında`
-                  : 'Tüm stoklar yeterli seviyede'}
-              </span>
-              <Badge color={istatistikler.kritikStoklar > 0 ? "red" : "green"}>
-                {istatistikler.kritikStoklar > 0 ? 'Acil' : 'İyi'}
-              </Badge>
-            </div>
-          )}
-        </Card>
-
-        {/* Yaklaşan Bakımlar */}
-        <Card className="shadow-md hover:shadow-lg transition-all duration-300">
-          <div 
-            className="flex items-center justify-between mb-4 cursor-pointer"
-            onClick={() => togglePanel('bakimlar')}
-          >
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-full mr-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Wind className="h-4 w-4 text-blue-500" />
+                <span className="text-sm text-gray-600">Rüzgar Hızı</span>
               </div>
-              <Title>Yaklaşan Bakımlar</Title>
+              <span className="text-sm font-medium">15 km/h</span>
             </div>
-            <button className="text-gray-400">
-              {genisletilenPanel === 'bakimlar' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </button>
-          </div>
 
-          {genisletilenPanel === 'bakimlar' ? (
-            <div className="space-y-4 mt-4 animate-fade-in-down">
-              {istatistikler.sonBakimTarihi ? (
-                <>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Mekanik Bakım</span>
-                      <Badge color="amber">Yaklaşan</Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                      <span>Planlanan: {format(addMonths(new Date(), 1), 'dd MMM yyyy', { locale: tr })}</span>
-                      <span>Tip: Periyodik</span>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-600">
-                      <p>İnvertör kontrolleri, panel temizliği ve sistem kontrolü yapılacak</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Elektrik Bakım</span>
-                      <Badge color="emerald">Tamamlandı</Badge>
-                    </div>
-<div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                      <span>Tarih: {format(istatistikler.sonBakimTarihi, 'dd MMM yyyy', { locale: tr })}</span>
-                      <span>Tip: Aylık</span>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-600">
-                      <p>Kablo kontrolü, topraklama testi ve şalt sahası kontrolü yapıldı</p>
-                    </div>
-                  </div>
-
-                  <div className="text-center mt-2">
-                    <button 
-                      onClick={() => navigate('/mekanik-bakim')}
-                      className="text-sm text-primary-600 hover:text-primary-800 flex items-center justify-center w-full"
-                    >
-                      Tüm Bakımları Görüntüle <ArrowRight className="h-4 w-4 ml-1" />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6">
-                  <Calendar className="h-8 w-8 text-gray-300 mb-2" />
-                  <p className="text-gray-500 text-center">Yaklaşan bakım bilgisi bulunmuyor</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600">
-                {istatistikler.sonBakimTarihi 
-                  ? `Son bakım: ${format(istatistikler.sonBakimTarihi, 'dd MMM yyyy', { locale: tr })}`
-                  : 'Bakım bilgisi bulunamadı'}
-              </span>
-              {istatistikler.sonrakiBakimTarihi && (
-                <Badge color={new Date() > istatistikler.sonrakiBakimTarihi ? "red" : "amber"}>
-                  {new Date() > istatistikler.sonrakiBakimTarihi ? 'Gecikti' : 'Yaklaşıyor'}
-                </Badge>
-              )}
-            </div>
-          )}
-        </Card>
-
-        {/* CO2 Tasarrufu */}
-        <Card className="shadow-md hover:shadow-lg transition-all duration-300">
-          <div 
-            className="flex items-center justify-between mb-4 cursor-pointer"
-            onClick={() => togglePanel('co2')}
-          >
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-full mr-2">
-                <Leaf className="h-5 w-5 text-green-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Sun className="h-4 w-4 text-yellow-500" />
+                <span className="text-sm text-gray-600">Güneş Işığı</span>
               </div>
-              <Title>CO2 Tasarrufu</Title>
+              <span className="text-sm font-medium">850 W/m²</span>
             </div>
-            <button className="text-gray-400">
-              {genisletilenPanel === 'co2' ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-            </button>
-          </div>
 
-          {genisletilenPanel === 'co2' ? (
-            <div className="space-y-4 mt-4 animate-fade-in-down">
-              {istatistikler.toplamCO2Tasarrufu > 0 ? (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-green-50 rounded-lg text-center">
-                      <Text className="text-xs text-green-600">Toplam CO₂ Tasarrufu</Text>
-                      <Metric className="text-xl text-green-700 mt-1">
-                        {Math.round(istatistikler.toplamCO2Tasarrufu).toLocaleString('tr-TR')} kg
-                      </Metric>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-lg text-center">
-                      <Text className="text-xs text-blue-600">Ağaç Eşdeğeri</Text>
-                      <Metric className="text-xl text-blue-700 mt-1">
-                        ~ {Math.round(istatistikler.toplamCO2Tasarrufu / 21)} ağaç
-                      </Metric>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <Text className="text-sm text-gray-700 mb-2">Çevresel Katkı</Text>
-                    <div className="space-y-2">
-                      <div className="flex items-center text-xs text-gray-600">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        <span>1 ağaç yılda ortalama 21 kg CO₂ emer</span>
-                      </div>
-                      <div className="flex items-center text-xs text-gray-600">
-                        <div className="w-2 h-2 bg-amber-500 rounded-full mr-2"></div>
-                        <span>1 kWh güneş enerjisi üretimi ~0.5 kg CO₂ tasarrufu sağlar</span>
-                      </div>
-                      <div className="flex items-center text-xs text-gray-600">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                        <span>Bir araç yılda ortalama 2 ton CO₂ üretir</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-emerald-50 rounded-lg">
-                    <div className="text-center">
-                      <Text className="text-sm text-emerald-700">
-                        Sistemleriniz {Math.round(istatistikler.toplamCO2Tasarrufu / 2000)} arabanın yıllık emisyonunu engelledi
-                      </Text>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-6">
-                  <Leaf className="h-8 w-8 text-gray-300 mb-2" />
-                  <p className="text-gray-500 text-center">CO₂ tasarruf bilgisi bulunamadı</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-4 bg-emerald-50 rounded-lg">
-              <span className="text-sm text-emerald-600">
-                {istatistikler.toplamCO2Tasarrufu > 0 
-                  ? `Toplam ${Math.round(istatistikler.toplamCO2Tasarrufu).toLocaleString('tr-TR')} kg CO₂ tasarrufu sağlandı`
-                  : 'Henüz CO₂ tasarruf verisi yok'}
-              </span>
-              {istatistikler.toplamCO2Tasarrufu > 0 && (
-                <Badge color="green">
-                  Çevre Dostu
-                </Badge>
-              )}
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Son Arızalar */}
-      <Card className="shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden border border-blue-100 bg-gradient-to-br from-white to-slate-50">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center">
-            <div className="p-3 bg-blue-600 rounded-full mr-3">
-              <AlertTriangle className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <Title className="text-blue-900">Son Arızalar</Title>
-              <Text className="text-blue-600">En son kaydedilen 5 arıza kaydı</Text>
-            </div>
-          </div>
-          <button 
-            onClick={() => navigate('/arizalar')}
-            className="text-sm text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-all duration-300"
-          >
-            Tümünü Görüntüle <ArrowRight className="h-4 w-4 ml-1" />
-          </button>
-        </div>
-        <div className="divide-y divide-blue-100">
-          {arizalar.length === 0 ? (
-            <div className="py-8 text-center bg-gradient-to-r from-blue-50 to-slate-50 rounded-lg">
-              <AlertTriangle className="h-12 w-12 text-blue-200 mx-auto mb-3" />
-              <p className="text-blue-600">Henüz arıza kaydı bulunmuyor</p>
-            </div>
-          ) : (
-            arizalar.map((ariza) => (
-              <div
-                key={ariza.id}
-                onClick={() => setSeciliAriza(ariza)}
-                className="p-4 hover:bg-blue-50 cursor-pointer transition-all duration-200 rounded-lg group transform hover:scale-[1.01]"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${
-                      ariza.durum === 'cozuldu' ? 'bg-green-500 text-white' :
-                      ariza.durum === 'devam-ediyor' ? 'bg-blue-500 text-white' :
-                      'bg-red-500 text-white'
-                    }`}>
-                      {ariza.durum === 'cozuldu' && <CheckCircle className="h-3.5 w-3.5 mr-1" />}
-                      {ariza.durum === 'devam-ediyor' && <Clock className="h-3.5 w-3.5 mr-1" />}
-                      {ariza.durum === 'acik' && <AlertTriangle className="h-3.5 w-3.5 mr-1" />}
-                      {ariza.durum === 'cozuldu' ? 'Çözüldü' : 
-                       ariza.durum === 'devam-ediyor' ? 'Devam Ediyor' : 'Açık'}
-                    </span>
-                    <h3 className="text-sm font-medium text-slate-900">{ariza.baslik}</h3>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-xs text-slate-500 mr-2">
-                      {format(ariza.olusturmaTarihi.toDate(), 'dd MMM yyyy', { locale: tr })}
-                    </span>
-                    <div className="p-1.5 bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <Eye className="h-3.5 w-3.5 text-blue-600" />
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-2 sm:flex sm:justify-between">
-                  <div className="sm:flex">
-                    <p className="flex items-center text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
-                      <Building className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-blue-500" />
-                      {sahalar[ariza.saha] || 'Bilinmeyen Saha'}
-                    </p>
-                    <p className="mt-2 flex items-center text-xs text-slate-500 sm:mt-0 sm:ml-2 bg-slate-100 px-2 py-1 rounded-md">
-                      <MapPin className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-blue-500" />
-                      {ariza.konum || 'Konum belirtilmemiş'}
-                    </p>
-                  </div>
-                  <div className="mt-2 flex items-center text-xs text-slate-500 sm:mt-0 bg-slate-100 px-2 py-1 rounded-md">
-                    <User className="flex-shrink-0 mr-1.5 h-3.5 w-3.5 text-blue-500" />
-                    {ariza.olusturanAd || 'Bilinmeyen Kullanıcı'}
-                  </div>
-                </div>
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">Sistem Sağlığı</span>
+                <span className="text-sm font-medium text-green-600">%98</span>
               </div>
-            ))
-          )}
-        </div>
-        {arizalar.length > 0 && kullanici?.rol !== 'musteri' && (
-          <div className="mt-4 text-center">
-            <button
-              onClick={() => navigate('/arizalar')}
-              className="inline-flex items-center px-6 py-2.5 border border-transparent rounded-full shadow-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-all duration-300 transform hover:scale-105"
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{ width: '98%' }}></div>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-xl transition-colors flex items-center justify-center space-x-2"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Yeni Arıza Kaydı
-            </button>
+              <Settings className="h-4 w-4" />
+              <span className="text-sm">Detaylı Analiz</span>
+            </motion.button>
           </div>
-        )}
-      </Card>
-
-      {/* Çevre Etkisi */}
-      {istatistikler.toplamCO2Tasarrufu > 0 && (
-        <Card className="bg-gradient-to-r from-emerald-50 to-emerald-100 border-none shadow-md">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center mb-4 md:mb-0">
-              <div className="p-3 bg-emerald-100 rounded-full mr-4">
-                <Leaf className="h-8 w-8 text-emerald-600" />
-              </div>
-              <div>
-                <Text className="text-sm text-emerald-700">Çevresel Etki</Text>
-                <div className="flex items-center">
-                  <span className="text-xl font-bold text-emerald-800">
-                    {istatistikler.toplamCO2Tasarrufu.toLocaleString('tr-TR', {maximumFractionDigits: 0})} kg
-                  </span>
-                  <span className="ml-2 text-sm text-emerald-600">
-                    CO₂ tasarrufu
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="text-sm text-emerald-700 flex items-center">
-              <div className="mr-2 bg-white p-3 rounded-lg shadow-sm">
-                <Metric className="text-lg text-emerald-600">{Math.round(istatistikler.toplamCO2Tasarrufu / 21)}</Metric>
-                <Text className="text-xs text-emerald-500">Ağaç Eşdeğeri</Text>
-              </div>
-              <div>Bu, yaklaşık {Math.round(istatistikler.toplamCO2Tasarrufu / 21)} ağacın yıllık CO₂ emilimine eşdeğerdir.</div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Hızlı Ayarlar */}
-      {(kullanici?.rol === 'yonetici' || kullanici?.rol === 'tekniker' || kullanici?.rol === 'muhendis') && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="flex items-center mb-4">
-              <div className="p-2 bg-gray-100 rounded-full mr-3">
-                <Settings className="h-5 w-5 text-gray-600" />
-              </div>
-              <Title>Hızlı Ayarlar</Title>
-            </div>
-            <div className="space-y-3">
-              <button 
-                onClick={() => navigate('/ges-yonetimi')}
-                className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center">
-                  <Sun className="h-5 w-5 text-yellow-500 mr-2" />
-                  <span className="text-sm font-medium">Santral Yönetimi</span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </button>
-
-              <button 
-                onClick={() => navigate('/ekip')}
-                className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center">
-                  <User className="h-5 w-5 text-blue-500 mr-2" />
-                  <span className="text-sm font-medium">Ekip Yönetimi</span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </button>
-
-              <button 
-                onClick={() => navigate('/ayarlar')}
-                className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center">
-                  <Settings className="h-5 w-5 text-gray-500 mr-2" />
-                  <span className="text-sm font-medium">Sistem Ayarları</span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-400" />
-              </button>
-            </div>
-          </Card>
-
-          {(kullanici?.rol === 'yonetici' || kullanici?.rol === 'muhendis') && (
-            <Card className="shadow-sm hover:shadow-md transition-all duration-300 md:col-span-2">
-              <div className="flex items-center mb-4">
-                <div className="p-2 bg-yellow-100 rounded-full mr-3">
-                  <FileBarChart className="h-5 w-5 text-yellow-600" />
-                </div>
-                <Title>Aylık Kapsamlı Rapor</Title>
-              </div>
-              <div className="p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors">
-                <p className="text-sm text-yellow-800 mb-4">
-                  Tüm santral verilerini, arızaları, yapılan işleri ve bakım kontrollerini tek ekranda gösteren kapsamlı aylık raporu görüntüleyin ve PDF olarak indirin.
-                </p>
-                <button
-                  onClick={() => navigate('/aylik-kapsamli-rapor')}
-                  className="w-full flex items-center justify-center p-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-                >
-                  <FileBarChart className="h-5 w-5 mr-2" />
-                  <span className="text-sm font-medium">Aylık Kapsamlı Raporu Görüntüle</span>
-                </button>
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {seciliAriza && (
-        <ArizaDetayModal
-          ariza={seciliAriza}
-          sahaAdi={sahalar[seciliAriza.saha] || 'Bilinmeyen Saha'}
-          onClose={() => setSeciliAriza(null)}
-        />
-      )}
+        </motion.div>
+      </div>
     </div>
   );
-}
+};
+
+export default Anasayfa;
