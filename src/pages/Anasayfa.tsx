@@ -559,3 +559,4 @@ const Anasayfa: React.FC = () => {
 };
 
 export default Anasayfa;
+export { Anasayfa };
