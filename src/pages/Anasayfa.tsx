@@ -83,7 +83,8 @@ const Anasayfa: React.FC = () => {
 
         // Kullanıcı doğrulaması
         if (!user) {
-          console.error('Kullanıcı oturum açmamış');
+          console.log('Kullanıcı oturum açmamış');
+          setLoading(false);
           return;
         }
 
@@ -107,8 +108,8 @@ const Anasayfa: React.FC = () => {
         let arizalarRef, santrallerRef, sahalarRef, ekiplerRef, uretimRef, mekanikBakimRef, elektrikBakimRef, stokRef;
 
         if (userRole === 'superadmin') {
-          // SuperAdmin tüm verilere erişebilir - orderBy ekle
-          arizalarRef = query(collection(db, 'arizalar'), orderBy('olusturmaTarihi', 'desc'));
+          // SuperAdmin tüm verilere erişebilir
+          arizalarRef = collection(db, 'arizalar');
           santrallerRef = collection(db, 'santraller');
           sahalarRef = collection(db, 'sahalar');
           ekiplerRef = collection(db, 'ekipler');
@@ -137,10 +138,67 @@ const Anasayfa: React.FC = () => {
           stokRef = query(collection(db, 'stokKontrol'), where('companyId', '==', userCompanyId));
         }
 
-        // Arıza verileri
-        const arizalarSnapshot = await getDocs(arizalarRef);
-        console.log('Toplam arıza sayısı:', arizalarSnapshot.size);
-        
+        // Veri çekme işlemlerini tek tek try-catch ile yapıyoruz
+        let arizalarSnapshot, santrallerSnapshot, sahalarSnapshot, ekiplerSnapshot;
+        let uretimSnapshot, mekanikBakimSnapshot, elektrikBakimSnapshot, stokSnapshot;
+
+        try {
+          arizalarSnapshot = await getDocs(arizalarRef);
+          console.log('Toplam arıza sayısı:', arizalarSnapshot.size);
+        } catch (error) {
+          console.error('Arıza verileri getirme hatası:', error);
+          arizalarSnapshot = { docs: [], size: 0 };
+        }
+
+        try {
+          santrallerSnapshot = await getDocs(santrallerRef);
+        } catch (error) {
+          console.error('Santral verileri getirme hatası:', error);
+          santrallerSnapshot = { docs: [], size: 0 };
+        }
+
+        try {
+          sahalarSnapshot = await getDocs(sahalarRef);
+        } catch (error) {
+          console.error('Saha verileri getirme hatası:', error);
+          sahalarSnapshot = { docs: [], size: 0 };
+        }
+
+        try {
+          ekiplerSnapshot = await getDocs(ekiplerRef);
+        } catch (error) {
+          console.error('Ekip verileri getirme hatası:', error);
+          ekiplerSnapshot = { docs: [], size: 0 };
+        }
+
+        try {
+          uretimSnapshot = await getDocs(uretimRef);
+        } catch (error) {
+          console.error('Üretim verileri getirme hatası:', error);
+          uretimSnapshot = { docs: [], size: 0 };
+        }
+
+        try {
+          mekanikBakimSnapshot = await getDocs(mekanikBakimRef);
+        } catch (error) {
+          console.error('Mekanik bakım verileri getirme hatası:', error);
+          mekanikBakimSnapshot = { docs: [], size: 0 };
+        }
+
+        try {
+          elektrikBakimSnapshot = await getDocs(elektrikBakimRef);
+        } catch (error) {
+          console.error('Elektrik bakım verileri getirme hatası:', error);
+          elektrikBakimSnapshot = { docs: [], size: 0 };
+        }
+
+        try {
+          stokSnapshot = await getDocs(stokRef);
+        } catch (error) {
+          console.error('Stok verileri getirme hatası:', error);
+          stokSnapshot = { docs: [], size: 0 };
+        }
+
         // Aktif arızalar (açık, devam ediyor, beklemede)
         const aktifArizalar = arizalarSnapshot.docs.filter(doc => {
           const data = doc.data();
@@ -148,15 +206,6 @@ const Anasayfa: React.FC = () => {
         });
         
         console.log('Aktif arıza sayısı:', aktifArizalar.length);
-
-        // Veri çekme işlemlerini gerçekleştir
-        const santrallerSnapshot = await getDocs(santrallerRef);
-        const sahalarSnapshot = await getDocs(sahalarRef);
-        const ekiplerSnapshot = await getDocs(ekiplerRef);
-        const uretimSnapshot = await getDocs(uretimRef);
-        const mekanikBakimSnapshot = await getDocs(mekanikBakimRef);
-        const elektrikBakimSnapshot = await getDocs(elektrikBakimRef);
-        const stokSnapshot = await getDocs(stokRef);
         const kritikStoklar = stokSnapshot.docs.filter(doc => {
           const data = doc.data();
           return data.stokMiktari <= data.kritikSeviye;
