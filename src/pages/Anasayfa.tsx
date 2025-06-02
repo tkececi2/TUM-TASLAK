@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { 
   Sun, 
   Zap, 
@@ -81,10 +81,71 @@ const Anasayfa: React.FC = () => {
       try {
         setLoading(true);
 
+        // Kullanıcı doğrulaması
+        if (!user) {
+          console.error('Kullanıcı oturum açmamış');
+          return;
+        }
+
+        // Kullanıcı verilerini Firestore'dan al
+        const userDocRef = doc(db, 'kullanicilar', user.uid);
+        const userDocSnapshot = await getDoc(userDocRef);
+
+        if (!userDocSnapshot.exists()) {
+          console.error('Kullanıcı belgesi bulunamadı');
+          return;
+        }
+
+        const userData = userDocSnapshot.data();
+        const userRole = userData.rol;
+        const userCompanyId = userData.companyId;
+
+        console.log('Kullanıcı rolü:', userRole);
+        console.log('Şirket ID:', userCompanyId);
+
+        // SuperAdmin için tüm verileri, diğer kullanıcılar için şirket bazlı verileri getir
+        let arizalarRef, santrallerRef, sahalarRef, ekiplerRef, uretimRef, mekanikBakimRef, elektrikBakimRef, stokRef;
+
+        if (userRole === 'superadmin') {
+          // SuperAdmin tüm verilere erişebilir
+          arizalarRef = collection(db, 'arizalar');
+          santrallerRef = collection(db, 'santraller');
+          sahalarRef = collection(db, 'sahalar');
+          ekiplerRef = collection(db, 'ekipler');
+          uretimRef = collection(db, 'uretimVerileri');
+          mekanikBakimRef = collection(db, 'mekanikBakimlar');
+          elektrikBakimRef = collection(db, 'elektrikBakimlar');
+          stokRef = collection(db, 'stokKontrol');
+        } else {
+          // Diğer kullanıcılar sadece kendi şirketlerinin verilerine erişebilir
+          if (!userCompanyId) {
+            console.error('Kullanıcının şirket ID\'si bulunamadı');
+            return;
+          }
+
+          arizalarRef = query(collection(db, 'arizalar'), where('companyId', '==', userCompanyId));
+          santrallerRef = query(collection(db, 'santraller'), where('companyId', '==', userCompanyId));
+          sahalarRef = query(collection(db, 'sahalar'), where('companyId', '==', userCompanyId));
+          ekiplerRef = query(collection(db, 'ekipler'), where('companyId', '==', userCompanyId));
+          uretimRef = query(collection(db, 'uretimVerileri'), where('companyId', '==', userCompanyId));
+          mekanikBakimRef = query(collection(db, 'mekanikBakimlar'), where('companyId', '==', userCompanyId));
+          elektrikBakimRef = query(collection(db, 'elektrikBakimlar'), where('companyId', '==', userCompanyId));
+          stokRef = query(collection(db, 'stokKontrol'), where('companyId', '==', userCompanyId));
+        }
+
         // Arıza verileri
-        const arizalarRef = collection(db, 'arizalar');
         const arizalarSnapshot = await getDocs(arizalarRef);
-        const aktifArizalarQuery = query(arizalarRef, where('durum', '!=', 'cozuldu'));
+        // Aktif arızalar (çözülmeyen)
+        let aktifArizalarQuery;
+        if (userRole === 'superadmin') {
+          aktifArizalarQuery = query(collection(db, 'arizalar'), where('durum', '!=', 'cozuldu'));
+        } else {
+          aktifArizalarQuery = query(
+            collection(db, 'arizalar'), 
+            where('companyId', '==', userCompanyId),
+            where('durum', '!=', 'cozuldu')
+          );
+        }
         const aktifArizalarSnapshot = await getDocs(aktifArizalarQuery);
 
         // Santral verileri
@@ -165,7 +226,17 @@ const Anasayfa: React.FC = () => {
         });
 
         // Son aktiviteler (arızalar + bakımlar)
-        const recentQuery = query(arizalarRef, orderBy('olusturmaTarihi', 'desc'), limit(5));
+        let recentQuery;
+        if (userRole === 'superadmin') {
+          recentQuery = query(collection(db, 'arizalar'), orderBy('olusturmaTarihi', 'desc'), limit(5));
+        } else {
+          recentQuery = query(
+            collection(db, 'arizalar'), 
+            where('companyId', '==', userCompanyId),
+            orderBy('olusturmaTarihi', 'desc'), 
+            limit(5)
+          );
+        }
         const recentSnapshot = await getDocs(recentQuery);
 
         const activities: RecentActivity[] = recentSnapshot.docs.map(doc => {
@@ -283,7 +354,7 @@ const Anasayfa: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [user]);
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
