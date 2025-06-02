@@ -242,9 +242,46 @@ export const UretimVerileri: React.FC = () => {
   const handleYenile = async () => {
     setYenileniyor(true);
     try {
-      window.location.reload();
+      // Sadece verileri yeniden getir, sayfa yenilemeyi önle
+      if (!secilenSantral || !kullanici?.companyId) {
+        setUretimVerileri([]);
+        return;
+      }
+
+      // Seçilen yıl ve ay için tarih aralığı
+      const ayBaslangic = new Date(secilenYil, secilenAy, 1);
+      const ayBitis = endOfMonth(ayBaslangic);
+
+      // Basit sorgu - tüm üretim verilerini al ve filtrele
+      const uretimQuery = query(
+        collection(db, 'uretimVerileri'),
+        orderBy('tarih', 'desc')
+      );
+
+      const snapshot = await getDocs(uretimQuery);
+      const tumVeriler = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UretimVerisi[];
+
+      // Manuel filtreleme
+      const filtreliVeriler = tumVeriler.filter(veri => {
+        try {
+          const veriTarih = veri.tarih.toDate();
+          return veri.santralId === secilenSantral && 
+                 veri.companyId === kullanici.companyId &&
+                 veriTarih >= ayBaslangic && 
+                 veriTarih <= ayBitis;
+        } catch (err) {
+          return false;
+        }
+      });
+
+      setUretimVerileri(filtreliVeriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
+      toast.success('Veriler başarıyla yenilendi');
     } catch (error) {
-      toast.error('Sayfa yenilenirken bir hata oluştu');
+      console.error('Veri yenileme hatası:', error);
+      toast.error('Veriler yenilenirken bir hata oluştu');
     } finally {
       setYenileniyor(false);
     }
