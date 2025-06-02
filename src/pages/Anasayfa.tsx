@@ -107,8 +107,8 @@ const Anasayfa: React.FC = () => {
         let arizalarRef, santrallerRef, sahalarRef, ekiplerRef, uretimRef, mekanikBakimRef, elektrikBakimRef, stokRef;
 
         if (userRole === 'superadmin') {
-          // SuperAdmin tüm verilere erişebilir
-          arizalarRef = collection(db, 'arizalar');
+          // SuperAdmin tüm verilere erişebilir - orderBy ekle
+          arizalarRef = query(collection(db, 'arizalar'), orderBy('olusturmaTarihi', 'desc'));
           santrallerRef = collection(db, 'santraller');
           sahalarRef = collection(db, 'sahalar');
           ekiplerRef = collection(db, 'ekipler');
@@ -123,7 +123,11 @@ const Anasayfa: React.FC = () => {
             return;
           }
 
-          arizalarRef = query(collection(db, 'arizalar'), where('companyId', '==', userCompanyId));
+          arizalarRef = query(
+            collection(db, 'arizalar'), 
+            where('companyId', '==', userCompanyId),
+            orderBy('olusturmaTarihi', 'desc')
+          );
           santrallerRef = query(collection(db, 'santraller'), where('companyId', '==', userCompanyId));
           sahalarRef = query(collection(db, 'sahalar'), where('companyId', '==', userCompanyId));
           ekiplerRef = query(collection(db, 'ekipler'), where('companyId', '==', userCompanyId));
@@ -135,18 +139,15 @@ const Anasayfa: React.FC = () => {
 
         // Arıza verileri
         const arizalarSnapshot = await getDocs(arizalarRef);
-        // Aktif arızalar (çözülmeyen)
-        let aktifArizalarQuery;
-        if (userRole === 'superadmin') {
-          aktifArizalarQuery = query(collection(db, 'arizalar'), where('durum', '!=', 'cozuldu'));
-        } else {
-          aktifArizalarQuery = query(
-            collection(db, 'arizalar'), 
-            where('companyId', '==', userCompanyId),
-            where('durum', '!=', 'cozuldu')
-          );
-        }
-        const aktifArizalarSnapshot = await getDocs(aktifArizalarQuery);
+        console.log('Toplam arıza sayısı:', arizalarSnapshot.size);
+        
+        // Aktif arızalar (açık, devam ediyor, beklemede)
+        const aktifArizalar = arizalarSnapshot.docs.filter(doc => {
+          const data = doc.data();
+          return data.durum !== 'cozuldu';
+        });
+        
+        console.log('Aktif arıza sayısı:', aktifArizalar.length);
 
         // Veri çekme işlemlerini gerçekleştir
         const santrallerSnapshot = await getDocs(santrallerRef);
@@ -197,7 +198,7 @@ const Anasayfa: React.FC = () => {
 
         setStats({
           totalArizalar: arizalarSnapshot.size,
-          aktifArizalar: aktifArizalarSnapshot.size,
+          aktifArizalar: aktifArizalar.length,
           toplamUretim: Math.round(toplamUretim),
           verimlilik: Math.round(verimlilik * 10) / 10,
           toplamSantral: sahalarSnapshot.size,
@@ -206,33 +207,22 @@ const Anasayfa: React.FC = () => {
           bakimBekleyen: bekleyenBakimlar
         });
 
-        // Son aktiviteler (arızalar + bakımlar)
-        let recentQuery;
-        if (userRole === 'superadmin') {
-          recentQuery = query(collection(db, 'arizalar'), orderBy('olusturmaTarihi', 'desc'), limit(5));
-        } else {
-          recentQuery = query(
-            collection(db, 'arizalar'), 
-            where('companyId', '==', userCompanyId),
-            orderBy('olusturmaTarihi', 'desc'), 
-            limit(5)
-          );
-        }
-        const recentSnapshot = await getDocs(recentQuery);
+        // Son aktiviteler - mevcut arıza listesinden al
+        const sonArizalar = arizalarSnapshot.docs
+          .slice(0, 5)
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              type: 'ariza' as const,
+              title: data.baslik || 'Arıza Bildirimi',
+              description: data.aciklama || 'Detay bilgi yok',
+              time: data.olusturmaTarihi?.toDate?.()?.toLocaleTimeString('tr-TR') || 'Bilinmiyor',
+              priority: (data.oncelik || 'medium') as 'low' | 'medium' | 'high'
+            };
+          });
 
-        const activities: RecentActivity[] = recentSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            type: 'ariza',
-            title: data.baslik || 'Arıza Bildirimi',
-            description: data.aciklama || 'Detay bilgi yok',
-            time: data.olusturmaTarihi?.toDate?.()?.toLocaleTimeString('tr-TR') || 'Bilinmiyor',
-            priority: data.oncelik || 'medium'
-          };
-        });
-
-        setRecentActivities(activities);
+        setRecentActivities(sonArizalar);
 
         // Günlük üretim verilerini hazırla (son 7 gün)
         const gunlukUretim = [];
