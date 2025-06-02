@@ -98,9 +98,9 @@ export const GesYonetimi: React.FC = () => {
     }
   });
 
-  const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
-  const canDelete = kullanici?.rol === 'yonetici';
-  const canUploadPhotos = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
+  const canAdd = kullanici?.rol && ['superadmin', 'yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
+  const canDelete = kullanici?.rol === 'yonetici' || kullanici?.rol === 'superadmin';
+  const canUploadPhotos = kullanici?.rol && ['superadmin', 'yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
 
   const fetchSantraller = async () => {
     if (!kullanici?.companyId) {
