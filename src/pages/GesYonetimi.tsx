@@ -454,7 +454,17 @@ export const GesYonetimi: React.FC = () => {
                         setForm({
                           ...santral,
                           kurulumTarihi: format(santral.kurulumTarihi.toDate(), "yyyy-MM-dd"),
-                          fotograflar: []
+                          fotograflar: [],
+                          teknikOzellikler: santral.teknikOzellikler || {
+                            panelTipi: '',
+                            inverterTipi: '',
+                            panelGucu: 0,
+                            sistemVerimi: 0
+                          },
+                          aylikHedefler: santral.aylikHedefler || {
+                            ocak: 0, subat: 0, mart: 0, nisan: 0, mayis: 0, haziran: 0,
+                            temmuz: 0, agustos: 0, eylul: 0, ekim: 0, kasim: 0, aralik: 0
+                          }
                         });
                         setFormAcik(true);
                       }}
