@@ -26,7 +26,7 @@ import {
   Building,
   MapPin
 } from 'lucide-react';
-import { Card, Title, Text, AreaChart, Metric, Flex, ProgressBar, Grid, Col, Badge } from '@tremor/react';
+import { Card, Title, Text, AreaChart, BarChart, Metric, Flex, ProgressBar, Grid, Col, Badge } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { SilmeOnayModal } from '../components/SilmeOnayModal';
