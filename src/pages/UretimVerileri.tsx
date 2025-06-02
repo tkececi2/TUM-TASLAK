@@ -23,7 +23,8 @@ import {
   BarChart2,
   Zap,
   Target,
-  Building
+  Building,
+  MapPin
 } from 'lucide-react';
 import { Card, Title, Text, AreaChart, Metric, Flex, ProgressBar, Grid, Col, Badge } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
