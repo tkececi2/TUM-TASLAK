@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { 
   Sun, 
   Zap, 
@@ -148,32 +148,13 @@ const Anasayfa: React.FC = () => {
         }
         const aktifArizalarSnapshot = await getDocs(aktifArizalarQuery);
 
-        // Santral verileri
-        const santrallerRef = collection(db, 'santraller');
+        // Veri çekme işlemlerini gerçekleştir
         const santrallerSnapshot = await getDocs(santrallerRef);
-
-        // Sahalar verileri
-        const sahalarRef = collection(db, 'sahalar');
         const sahalarSnapshot = await getDocs(sahalarRef);
-
-        // Ekip verileri
-        const ekiplerRef = collection(db, 'ekipler');
         const ekiplerSnapshot = await getDocs(ekiplerRef);
-
-        // Üretim verileri
-        const uretimRef = collection(db, 'uretimVerileri');
         const uretimSnapshot = await getDocs(uretimRef);
-
-        // Mekanik bakım verileri
-        const mekanikBakimRef = collection(db, 'mekanikBakimlar');
         const mekanikBakimSnapshot = await getDocs(mekanikBakimRef);
-
-        // Elektrik bakım verileri
-        const elektrikBakimRef = collection(db, 'elektrikBakimlar');
         const elektrikBakimSnapshot = await getDocs(elektrikBakimRef);
-
-        // Stok kontrol verileri
-        const stokRef = collection(db, 'stokKontrol');
         const stokSnapshot = await getDocs(stokRef);
         const kritikStoklar = stokSnapshot.docs.filter(doc => {
           const data = doc.data();
