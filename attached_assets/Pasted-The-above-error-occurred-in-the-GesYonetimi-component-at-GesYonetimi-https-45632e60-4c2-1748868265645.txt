@@ -1,0 +1,52 @@
+The above error occurred in the <GesYonetimi> component:
+
+    at GesYonetimi (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/pages/GesYonetimi.tsx:51:25)
+    at RenderedRoute (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4089:5)
+    at Outlet (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4495:26)
+    at div
+    at main
+    at div
+    at div
+    at SirketProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/components/Layout.tsx:62:34)
+    at Layout (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/components/Layout.tsx:118:35)
+    at PrivateRoute (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/components/PrivateRoute.tsx:23:32)
+    at RenderedRoute (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4089:5)
+    at Routes (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4559:5)
+    at App (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/App.tsx:52:23)
+    at BildirimProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/BildirimContext.tsx:36:36)
+    at NotificationProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/NotificationContext.tsx:29:40)
+    at CompanyProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/CompanyContext.tsx:35:35)
+    at AuthProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/AuthContext.tsx:39:32)
+    at Router (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4502:15)
+    at BrowserRouter (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:5248:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+at GesYonetimi (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/pages/GesYonetimi.tsx:51:25)
+at RenderedRoute (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4089:5)
+at Outlet (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4495:26)
+at div
+at main
+at div
+at div
+at SirketProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/components/Layout.tsx:62:34)
+at Layout (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/components/Layout.tsx:118:35)
+at PrivateRoute (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/components/PrivateRoute.tsx:23:32)
+at RenderedRoute (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4089:5)
+at Routes (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4559:5)
+at App (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/App.tsx:52:23)
+at BildirimProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/BildirimContext.tsx:36:36)
+at NotificationProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/NotificationContext.tsx:29:40)
+at CompanyProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/CompanyContext.tsx:35:35)
+at AuthProvider (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/src/contexts/AuthContext.tsx:39:32)
+at Router (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:4502:15)
+at BrowserRouter (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/node_modules/.vite/deps/react-router-dom.js?v=70f92acd:5248:5)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev:3001/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Cannot read properties of undefined (reading 'panelTipi')
