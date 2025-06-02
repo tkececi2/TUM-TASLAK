@@ -85,8 +85,10 @@ export const UretimVerileri: React.FC = () => {
   const [importModalAcik, setImportModalAcik] = useState(false);
   const [silmeOnayModalAcik, setSilmeOnayModalAcik] = useState(false);
   const [silinecekVeriId, setSilinecekVeriId] = useState<string | null>(null);
+  const [aylikSilmeModalAcik, setAylikSilmeModalAcik] = useState(false);
   const [detayliTablo, setDetayliTablo] = useState(false);
   const [santralDetay, setSantralDetay] = useState<Santral | null>(null);
+  const [yillikGrafik, setYillikGrafik] = useState(true);
 
   // Yıl seçenekleri
   const yilSecenekleri = Array.from({ length: 9 }, (_, i) => 2022 + i);
@@ -239,6 +241,34 @@ export const UretimVerileri: React.FC = () => {
     }
   };
 
+  const handleAylikSil = async () => {
+    if (!canDelete) {
+      toast.error('Bu işlem için yetkiniz yok');
+      return;
+    }
+
+    if (!secilenSantral || !kullanici?.companyId) {
+      toast.error('Santral seçili değil');
+      return;
+    }
+
+    try {
+      // Ayın tüm verilerini sil
+      const silmePromises = uretimVerileri.map(veri => 
+        deleteDoc(doc(db, 'uretimVerileri', veri.id))
+      );
+
+      await Promise.all(silmePromises);
+      toast.success(`${aySecenekleri[secilenAy].label} ${secilenYil} ayının tüm verileri başarıyla silindi`);
+
+      setUretimVerileri([]);
+      setAylikSilmeModalAcik(false);
+    } catch (error) {
+      console.error('Aylık veri silme hatası:', error);
+      toast.error('Aylık veriler silinirken bir hata oluştu');
+    }
+  };
+
   const handleYenile = async () => {
     setYenileniyor(true);
     try {
@@ -346,6 +376,74 @@ export const UretimVerileri: React.FC = () => {
       grafikVerileri
     };
   };
+
+  // Yıllık veriler için ayrı bir hesaplama
+  const [yillikVeriler, setYillikVeriler] = useState<any[]>([]);
+
+  useEffect(() => {
+    const yillikVerileriGetir = async () => {
+      if (!secilenSantral || !kullanici?.companyId || !santralDetay) return;
+
+      try {
+        // Seçilen yıl için tüm ayların verilerini getir
+        const yilBaslangic = new Date(secilenYil, 0, 1);
+        const yilBitis = new Date(secilenYil, 11, 31);
+
+        const uretimQuery = query(
+          collection(db, 'uretimVerileri'),
+          orderBy('tarih', 'desc')
+        );
+
+        const snapshot = await getDocs(uretimQuery);
+        const tumVeriler = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as UretimVerisi[];
+
+        // Yıllık veriler için filtreleme
+        const yillikFiltreliVeriler = tumVeriler.filter(veri => {
+          try {
+            const veriTarih = veri.tarih.toDate();
+            return veri.santralId === secilenSantral && 
+                   veri.companyId === kullanici.companyId &&
+                   veriTarih >= yilBaslangic && 
+                   veriTarih <= yilBitis;
+          } catch (err) {
+            return false;
+          }
+        });
+
+        // Aylık gruplandırma
+        const aylikGruplar: Record<number, number> = {};
+        yillikFiltreliVeriler.forEach(veri => {
+          const ay = veri.tarih.toDate().getMonth();
+          if (!aylikGruplar[ay]) aylikGruplar[ay] = 0;
+          aylikGruplar[ay] += veri.gunlukUretim;
+        });
+
+        // Grafik verilerini hazırla
+        const yillikGrafikVerileri = aySecenekleri.map((ay, index) => {
+          const gercekUretim = aylikGruplar[index] || 0;
+          const hedefUretim = santralDetay.aylikHedefler?.[['ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran', 'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'][index]] || (santralDetay.yillikHedefUretim / 12);
+          
+          return {
+            ay: ay.label,
+            gercekUretim,
+            hedefUretim,
+            fark: gercekUretim - hedefUretim
+          };
+        });
+
+        setYillikVeriler(yillikGrafikVerileri);
+      } catch (error) {
+        console.error('Yıllık veriler getirilemedi:', error);
+      }
+    };
+
+    if (yillikGrafik && santraller.length > 0) {
+      yillikVerileriGetir();
+    }
+  }, [secilenSantral, secilenYil, kullanici?.companyId, santralDetay, yillikGrafik, santraller]);
 
   const istatistikler = hesaplaIstatistikler();
 
@@ -511,6 +609,16 @@ export const UretimVerileri: React.FC = () => {
                 Excel
               </button>
 
+              {canDelete && uretimVerileri.length > 0 && (
+                <button
+                  onClick={() => setAylikSilmeModalAcik(true)}
+                  className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Aylık Sil
+                </button>
+              )}
+
               {canAdd && (
                 <button
                   onClick={() => setImportModalAcik(true)}
@@ -627,8 +735,34 @@ export const UretimVerileri: React.FC = () => {
         </div>
       )}
 
+      {/* Grafik Geçiş Butonları */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200 inline-flex">
+          <button
+            onClick={() => setYillikGrafik(false)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              !yillikGrafik 
+                ? 'bg-blue-500 text-white shadow-sm' 
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Aylık Detay
+          </button>
+          <button
+            onClick={() => setYillikGrafik(true)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              yillikGrafik 
+                ? 'bg-blue-500 text-white shadow-sm' 
+                : 'text-gray-700 hover:text-gray-900'
+            }`}
+          >
+            Yıllık Tahmin-Gerçekleşme
+          </button>
+        </div>
+      </div>
+
       {/* Aylık Üretim Grafiği */}
-      {istatistikler && istatistikler.grafikVerileri.length > 0 && (
+      {!yillikGrafik && istatistikler && istatistikler.grafikVerileri.length > 0 && (
         <Card>
           <Title>Günlük Üretim Detayı - {aySecenekleri[secilenAy].label} {secilenYil}</Title>
           <Text>Günlük üretim performansı</Text>
@@ -643,6 +777,71 @@ export const UretimVerileri: React.FC = () => {
             showAnimation={true}
             showGradient={true}
             yAxisWidth={80}
+          />
+        </Card>
+      )}
+
+      {/* Yıllık Tahmin-Gerçekleşme Grafiği */}
+      {yillikGrafik && yillikVeriler.length > 0 && (
+        <Card>
+          <Title>Yıllık Tahmin vs Gerçekleşme - {secilenYil}</Title>
+          <Text>Aylık hedef ve gerçekleşen üretim karşılaştırması</Text>
+          <BarChart
+            className="mt-4 h-80"
+            data={yillikVeriler}
+            index="ay"
+            categories={["hedefUretim", "gercekUretim"]}
+            colors={["blue", "green"]}
+            valueFormatter={(value) => `${value.toLocaleString('tr-TR')} kWh`}
+            showLegend={true}
+            showAnimation={true}
+            yAxisWidth={80}
+            customTooltip={(props) => {
+              const { payload, active } = props;
+              if (!active || !payload) return null;
+              
+              const data = payload[0]?.payload;
+              const hedef = data?.hedefUretim || 0;
+              const gercek = data?.gercekUretim || 0;
+              const fark = data?.fark || 0;
+              const yuzde = hedef > 0 ? ((gercek / hedef) * 100).toFixed(1) : '0';
+              
+              return (
+                <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
+                  <div className="text-sm font-medium text-gray-900 mb-2">{data?.ay}</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                        <span className="text-xs text-gray-600">Hedef:</span>
+                      </div>
+                      <span className="text-xs font-medium">{hedef.toLocaleString('tr-TR')} kWh</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                        <span className="text-xs text-gray-600">Gerçekleşen:</span>
+                      </div>
+                      <span className="text-xs font-medium">{gercek.toLocaleString('tr-TR')} kWh</span>
+                    </div>
+                    <div className="pt-2 border-t border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Gerçekleşme:</span>
+                        <span className={`text-xs font-medium ${parseFloat(yuzde) >= 100 ? 'text-green-600' : parseFloat(yuzde) >= 75 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          %{yuzde}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Fark:</span>
+                        <span className={`text-xs font-medium ${fark >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {fark >= 0 ? '+' : ''}{fark.toLocaleString('tr-TR')} kWh
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }}
           />
         </Card>
       )}
@@ -781,6 +980,15 @@ export const UretimVerileri: React.FC = () => {
             setSilinecekVeriId(null);
           }}
           mesaj="Bu üretim verisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+        />
+      )}
+
+      {/* Aylık Silme Onay Modalı */}
+      {aylikSilmeModalAcik && (
+        <SilmeOnayModal
+          onConfirm={handleAylikSil}
+          onCancel={() => setAylikSilmeModalAcik(false)}
+          mesaj={`${aySecenekleri[secilenAy].label} ${secilenYil} ayının tüm üretim verilerini (${uretimVerileri.length} adet) silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
         />
       )}
     </div>
