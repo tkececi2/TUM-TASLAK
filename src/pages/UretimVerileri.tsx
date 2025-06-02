@@ -264,15 +264,8 @@ export const UretimVerileri: React.FC = () => {
         // Token yenileme - Firestore izin sorunlarını önlemek için
         if (auth.currentUser) {
           try {
-            // Yeni token yenileme fonksiyonunu kullan
-            const tokenYenilendi = await refreshAuthToken();
-            if (tokenYenilendi) {
-              console.log('Veri getirme öncesi token başarıyla yenilendi');
-            } else {
-              console.warn('Veri getirme öncesi token yenilenemedi');
-              // Token yenilenemezse kullanıcıyı bilgilendir
-              toast.warning('Oturum bilgileriniz güncellenemedi. Veriler kısıtlı görünebilir.');
-            }
+            await auth.currentUser.getIdToken(true);
+            console.log('Veri getirme öncesi token başarıyla yenilendi');
           } catch (tokenError) {
             console.warn('Token yenileme sırasında hata:', tokenError);
           }
@@ -717,53 +710,72 @@ export const UretimVerileri: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Üst Başlık ve Kontroller */}
-      <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-xl shadow-sm border border-yellow-100">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Sun className="h-7 w-7 mr-2 text-yellow-500" />
-              Üretim Verileri
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              {santralDetay?.ad} santralinin üretim performansı ve analizi
-            </p>
+          <div className="flex items-center">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl mr-4">
+              <BarChart2 className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Üretim Verileri</h1>
+              <p className="text-gray-600 mt-1">
+                {santralDetay?.ad} santralinin üretim performansı ve analizi
+              </p>
+            </div>
           </div>
           
           <div className="flex flex-wrap gap-3">
-            <select
-              value={secilenSantral}
-              onChange={(e) => setSecilenSantral(e.target.value)}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-            >
-              {santraller.map(santral => (
-                <option key={santral.id} value={santral.id}>{santral.ad}</option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Santral:</label>
+              <select
+                value={secilenSantral}
+                onChange={(e) => setSecilenSantral(e.target.value)}
+                className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm min-w-[150px]"
+              >
+                {santraller.map(santral => (
+                  <option key={santral.id} value={santral.id}>{santral.ad}</option>
+                ))}
+              </select>
+            </div>
             
-            <select
-              value={secilenYil}
-              onChange={(e) => setSecilenYil(parseInt(e.target.value))}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-            >
-              {yilSecenekleri.map(yil => (
-                <option key={yil} value={yil}>{yil}</option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Yıl:</label>
+              <select
+                value={secilenYil}
+                onChange={(e) => setSecilenYil(parseInt(e.target.value))}
+                className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+              >
+                {yilSecenekleri.map(yil => (
+                  <option key={yil} value={yil}>{yil}</option>
+                ))}
+              </select>
+            </div>
             
-            <select
-              value={secilenAy}
-              onChange={(e) => setSecilenAy(parseInt(e.target.value))}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm"
-            >
-              {aySecenekleri.map(ay => (
-                <option key={ay.value} value={ay.value}>{ay.label}</option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Ay:</label>
+              <select
+                value={secilenAy}
+                onChange={(e) => setSecilenAy(parseInt(e.target.value))}
+                className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+              >
+                {aySecenekleri.map(ay => (
+                  <option key={ay.value} value={ay.value}>{ay.label}</option>
+                ))}
+              </select>
+            </div>
             
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 ml-auto">
+              <button
+                onClick={() => navigate('/ges-yonetimi')}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <Building className="h-4 w-4 mr-2" />
+                Santral Yönetimi
+              </button>
+              
               <button
                 onClick={handleYenile}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                 disabled={yenileniyor}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${yenileniyor ? 'animate-spin' : ''}`} />
@@ -772,7 +784,7 @@ export const UretimVerileri: React.FC = () => {
               
               <button
                 onClick={handleExcelExport}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Excel
@@ -781,7 +793,7 @@ export const UretimVerileri: React.FC = () => {
               {canAdd && (
                 <button
                   onClick={() => setImportModalAcik(true)}
-                  className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
+                  className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-colors"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Veri Ekle
@@ -802,35 +814,42 @@ export const UretimVerileri: React.FC = () => {
         <>
           {/* Santral Bilgileri */}
           {santralDetay && (
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center mb-4 md:mb-0">
-                  <div className="p-3 bg-blue-100 rounded-full mr-4">
-                    <Sun className="h-8 w-8 text-blue-600" />
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-none shadow-md">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center mb-4 lg:mb-0">
+                  <div className="p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl mr-4">
+                    <Sun className="h-10 w-10 text-white" />
                   </div>
                   <div>
-                    <Title>{santralDetay.ad}</Title>
-                    <Text className="text-blue-700">
-                      {santralDetay.kapasite} kWp kurulu güç
+                    <Title className="text-xl text-gray-900">{santralDetay.ad}</Title>
+                    <Text className="text-blue-700 font-medium">
+                      {santralDetay.kapasite} kWp kurulu güç • {santralDetay.panelSayisi} Panel • {santralDetay.inverterSayisi} İnvertör
                     </Text>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <div className="bg-white px-4 py-2 rounded-lg shadow-sm flex items-center">
-                    <Battery className="h-5 w-5 text-green-500 mr-2" />
-                    <div>
-                      <p className="text-xs text-gray-500">Kurulum Tarihi</p>
-                      <p className="text-sm font-semibold">
-                        {format(santralDetay.kurulumTarihi.toDate(), 'dd MMMM yyyy', { locale: tr })}
-                      </p>
+                <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-3">
+                  <div className="bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-100">
+                    <div className="flex items-center mb-1">
+                      <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                      <p className="text-xs text-gray-500 font-medium">Kurulum Tarihi</p>
                     </div>
+                    <p className="text-sm font-bold text-gray-900">
+                      {format(santralDetay.kurulumTarihi.toDate(), 'dd MMM yyyy', { locale: tr })}
+                    </p>
                   </div>
-                  <div className="bg-white px-4 py-2 rounded-lg shadow-sm flex items-center">
-                    <BarChart2 className="h-5 w-5 text-blue-500 mr-2" />
-                    <div>
-                      <p className="text-xs text-gray-500">Yıllık Hedef</p>
-                      <p className="text-sm font-semibold">{santralDetay.yillikHedefUretim.toLocaleString('tr-TR')} kWh</p>
+                  <div className="bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-100">
+                    <div className="flex items-center mb-1">
+                      <Target className="h-4 w-4 text-gray-500 mr-2" />
+                      <p className="text-xs text-gray-500 font-medium">Yıllık Hedef</p>
                     </div>
+                    <p className="text-sm font-bold text-gray-900">{santralDetay.yillikHedefUretim.toLocaleString('tr-TR')} kWh</p>
+                  </div>
+                  <div className="bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-100">
+                    <div className="flex items-center mb-1">
+                      <MapPin className="h-4 w-4 text-gray-500 mr-2" />
+                      <p className="text-xs text-gray-500 font-medium">Konum</p>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900 truncate max-w-[150px]">{santralDetay.konum.adres}</p>
                   </div>
                 </div>
               </div>
