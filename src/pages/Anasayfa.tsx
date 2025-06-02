@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, where, orderBy, limit, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { 
   Sun, 
   Zap, 
@@ -71,301 +71,79 @@ const Anasayfa: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Real data states
-  const [uretimVerileri, setUretimVerileri] = useState<any[]>([]);
-  const [performansVerileri, setPerformansVerileri] = useState<any[]>([]);
-  const [bakimVerileri, setBakimVerileri] = useState<any[]>([]);
+  // Sample data for charts
+  const uretimVerileri = [
+    { saat: '06:00', uretim: 12, hedef: 15 },
+    { saat: '08:00', uretim: 45, hedef: 50 },
+    { saat: '10:00', uretim: 78, hedef: 85 },
+    { saat: '12:00', uretim: 95, hedef: 100 },
+    { saat: '14:00', uretim: 88, hedef: 95 },
+    { saat: '16:00', uretim: 65, hedef: 70 },
+    { saat: '18:00', uretim: 25, hedef: 30 }
+  ];
+
+  const performansVerileri = [
+    { name: 'Panel A', deger: 98, fill: '#10b981' },
+    { name: 'Panel B', deger: 95, fill: '#3b82f6' },
+    { name: 'Panel C', deger: 92, fill: '#f59e0b' },
+    { name: 'Panel D', deger: 88, fill: '#ef4444' }
+  ];
+
+  const bakimVerileri = [
+    { ay: 'Oca', tamamlanan: 24, planlanan: 28 },
+    { ay: 'Şub', tamamlanan: 32, planlanan: 35 },
+    { ay: 'Mar', tamamlanan: 28, planlanan: 30 },
+    { ay: 'Nis', tamamlanan: 35, planlanan: 40 },
+    { ay: 'May', tamamlanan: 42, planlanan: 45 }
+  ];
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
 
-        // Kullanıcı doğrulaması
-        if (!user) {
-          console.log('Kullanıcı oturum açmamış');
-          setLoading(false);
-          return;
-        }
+        // Arıza verileri
+        const arizalarRef = collection(db, 'arizalar');
+        const arizalarSnapshot = await getDocs(arizalarRef);
+        const aktifArizalarQuery = query(arizalarRef, where('durum', '!=', 'cozuldu'));
+        const aktifArizalarSnapshot = await getDocs(aktifArizalarQuery);
 
-        // Kullanıcı verilerini Firestore'dan al
-        const userDocRef = doc(db, 'kullanicilar', user.uid);
-        const userDocSnapshot = await getDoc(userDocRef);
+        // Santral verileri
+        const santrallerRef = collection(db, 'santraller');
+        const santrallerSnapshot = await getDocs(santrallerRef);
 
-        if (!userDocSnapshot.exists()) {
-          console.error('Kullanıcı belgesi bulunamadı');
-          return;
-        }
-
-        const userData = userDocSnapshot.data();
-        const userRole = userData.rol;
-        const userCompanyId = userData.companyId;
-
-        console.log('Kullanıcı rolü:', userRole);
-        console.log('Şirket ID:', userCompanyId);
-
-        // SuperAdmin için tüm verileri, diğer kullanıcılar için şirket bazlı verileri getir
-        let arizalarRef, santrallerRef, sahalarRef, ekiplerRef, uretimRef, mekanikBakimRef, elektrikBakimRef, stokRef;
-
-        if (userRole === 'superadmin') {
-          // SuperAdmin tüm verilere erişebilir
-          arizalarRef = collection(db, 'arizalar');
-          santrallerRef = collection(db, 'santraller');
-          sahalarRef = collection(db, 'sahalar');
-          ekiplerRef = collection(db, 'ekipler');
-          uretimRef = collection(db, 'uretimVerileri');
-          mekanikBakimRef = collection(db, 'mekanikBakimlar');
-          elektrikBakimRef = collection(db, 'elektrikBakimlar');
-          stokRef = collection(db, 'stokKontrol');
-        } else {
-          // Diğer kullanıcılar sadece kendi şirketlerinin verilerine erişebilir
-          if (!userCompanyId) {
-            console.error('Kullanıcının şirket ID\'si bulunamadı');
-            return;
-          }
-
-          arizalarRef = query(
-            collection(db, 'arizalar'), 
-            where('companyId', '==', userCompanyId),
-            orderBy('olusturmaTarihi', 'desc')
-          );
-          santrallerRef = query(collection(db, 'santraller'), where('companyId', '==', userCompanyId));
-          sahalarRef = query(collection(db, 'sahalar'), where('companyId', '==', userCompanyId));
-          ekiplerRef = query(collection(db, 'ekipler'), where('companyId', '==', userCompanyId));
-          uretimRef = query(collection(db, 'uretimVerileri'), where('companyId', '==', userCompanyId));
-          mekanikBakimRef = query(collection(db, 'mekanikBakimlar'), where('companyId', '==', userCompanyId));
-          elektrikBakimRef = query(collection(db, 'elektrikBakimlar'), where('companyId', '==', userCompanyId));
-          stokRef = query(collection(db, 'stokKontrol'), where('companyId', '==', userCompanyId));
-        }
-
-        // Veri çekme işlemlerini tek tek try-catch ile yapıyoruz
-        let arizalarSnapshot, santrallerSnapshot, sahalarSnapshot, ekiplerSnapshot;
-        let uretimSnapshot, mekanikBakimSnapshot, elektrikBakimSnapshot, stokSnapshot;
-
-        try {
-          arizalarSnapshot = await getDocs(arizalarRef);
-          console.log('Toplam arıza sayısı:', arizalarSnapshot.size);
-        } catch (error) {
-          console.error('Arıza verileri getirme hatası:', error);
-          arizalarSnapshot = { docs: [], size: 0 };
-        }
-
-        try {
-          santrallerSnapshot = await getDocs(santrallerRef);
-        } catch (error) {
-          console.error('Santral verileri getirme hatası:', error);
-          santrallerSnapshot = { docs: [], size: 0 };
-        }
-
-        try {
-          sahalarSnapshot = await getDocs(sahalarRef);
-        } catch (error) {
-          console.error('Saha verileri getirme hatası:', error);
-          sahalarSnapshot = { docs: [], size: 0 };
-        }
-
-        try {
-          ekiplerSnapshot = await getDocs(ekiplerRef);
-        } catch (error) {
-          console.error('Ekip verileri getirme hatası:', error);
-          ekiplerSnapshot = { docs: [], size: 0 };
-        }
-
-        try {
-          uretimSnapshot = await getDocs(uretimRef);
-        } catch (error) {
-          console.error('Üretim verileri getirme hatası:', error);
-          uretimSnapshot = { docs: [], size: 0 };
-        }
-
-        try {
-          mekanikBakimSnapshot = await getDocs(mekanikBakimRef);
-        } catch (error) {
-          console.error('Mekanik bakım verileri getirme hatası:', error);
-          mekanikBakimSnapshot = { docs: [], size: 0 };
-        }
-
-        try {
-          elektrikBakimSnapshot = await getDocs(elektrikBakimRef);
-        } catch (error) {
-          console.error('Elektrik bakım verileri getirme hatası:', error);
-          elektrikBakimSnapshot = { docs: [], size: 0 };
-        }
-
-        try {
-          stokSnapshot = await getDocs(stokRef);
-        } catch (error) {
-          console.error('Stok verileri getirme hatası:', error);
-          stokSnapshot = { docs: [], size: 0 };
-        }
-
-        // Aktif arızalar (açık, devam ediyor, beklemede)
-        const aktifArizalar = arizalarSnapshot.docs.filter(doc => {
-          const data = doc.data();
-          return data.durum !== 'cozuldu';
-        });
-        
-        console.log('Aktif arıza sayısı:', aktifArizalar.length);
-        const kritikStoklar = stokSnapshot.docs.filter(doc => {
-          const data = doc.data();
-          return data.stokMiktari <= data.kritikSeviye;
-        });
-
-        // Toplam üretim hesapla
-        let toplamUretim = 0;
-        uretimSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          if (data.uretimMiktari && typeof data.uretimMiktari === 'number') {
-            toplamUretim += data.uretimMiktari;
-          }
-        });
-
-        // Bekleyen bakımları hesapla
-        const toplamMekanikBakim = mekanikBakimSnapshot.size;
-        const toplamElektrikBakim = elektrikBakimSnapshot.size;
-        const bekleyenBakimlar = toplamMekanikBakim + toplamElektrikBakim;
-
-        // Verimlilik hesapla (sahalar bazında)
-        let toplamKapasite = 0;
-        let aktifKapasite = 0;
-        sahalarSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          if (data.kapasite) {
-            const kapasiteNumber = parseFloat(data.kapasite.toString().replace(/[^0-9.]/g, ''));
-            toplamKapasite += kapasiteNumber;
-            // Aktif sahalar için (arızası olmayan)
-            const sahaArizalari = arizalarSnapshot.docs.filter(arizaDoc => 
-              arizaDoc.data().saha === doc.id && arizaDoc.data().durum !== 'cozuldu'
-            );
-            if (sahaArizalari.length === 0) {
-              aktifKapasite += kapasiteNumber;
-            }
-          }
-        });
-
-        const verimlilik = toplamKapasite > 0 ? (aktifKapasite / toplamKapasite) * 100 : 0;
+        // Ekip verileri
+        const ekiplerRef = collection(db, 'ekipler');
+        const ekiplerSnapshot = await getDocs(ekiplerRef);
 
         setStats({
           totalArizalar: arizalarSnapshot.size,
-          aktifArizalar: aktifArizalar.length,
-          toplamUretim: Math.round(toplamUretim),
-          verimlilik: Math.round(verimlilik * 10) / 10,
-          toplamSantral: sahalarSnapshot.size,
+          aktifArizalar: aktifArizalarSnapshot.size,
+          toplamUretim: 2845,
+          verimlilik: 95.2,
+          toplamSantral: santrallerSnapshot.size,
           aktifEkip: ekiplerSnapshot.size,
-          kritikStok: kritikStoklar.length,
-          bakimBekleyen: bekleyenBakimlar
+          kritikStok: 3,
+          bakimBekleyen: 8
         });
 
-        // Son aktiviteler - mevcut arıza listesinden al
-        const sonArizalar = arizalarSnapshot.docs
-          .slice(0, 5)
-          .map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              type: 'ariza' as const,
-              title: data.baslik || 'Arıza Bildirimi',
-              description: data.aciklama || 'Detay bilgi yok',
-              time: data.olusturmaTarihi?.toDate?.()?.toLocaleTimeString('tr-TR') || 'Bilinmiyor',
-              priority: (data.oncelik || 'medium') as 'low' | 'medium' | 'high'
-            };
-          });
+        // Son aktiviteler
+        const recentQuery = query(arizalarRef, orderBy('olusturmaTarihi', 'desc'), limit(5));
+        const recentSnapshot = await getDocs(recentQuery);
 
-        setRecentActivities(sonArizalar);
-
-        // Günlük üretim verilerini hazırla (son 7 gün)
-        const gunlukUretim = [];
-        for (let i = 6; i >= 0; i--) {
-          const tarih = new Date();
-          tarih.setDate(tarih.getDate() - i);
-          const tarihStr = tarih.toISOString().split('T')[0];
-          
-          const gunlukVeri = uretimSnapshot.docs.filter(doc => {
-            const data = doc.data();
-            if (data.tarih?.toDate) {
-              const veriTarih = data.tarih.toDate().toISOString().split('T')[0];
-              return veriTarih === tarihStr;
-            }
-            return false;
-          });
-
-          let gunlukToplam = 0;
-          gunlukVeri.forEach(doc => {
-            const data = doc.data();
-            if (data.uretimMiktari) {
-              gunlukToplam += data.uretimMiktari;
-            }
-          });
-
-          gunlukUretim.push({
-            saat: tarih.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' }),
-            uretim: Math.round(gunlukToplam),
-            hedef: Math.round(gunlukToplam * 1.1) // %10 daha yüksek hedef
-          });
-        }
-
-        setUretimVerileri(gunlukUretim);
-
-        // Saha performans verilerini hazırla
-        const sahaPerformans = sahalarSnapshot.docs.slice(0, 4).map((doc, index) => {
+        const activities: RecentActivity[] = recentSnapshot.docs.map(doc => {
           const data = doc.data();
-          const sahaArizalari = arizalarSnapshot.docs.filter(arizaDoc => 
-            arizaDoc.data().saha === doc.id && arizaDoc.data().durum !== 'cozuldu'
-          );
-          
-          // Performans hesapla (arıza sayısına göre)
-          const performans = Math.max(70, 100 - (sahaArizalari.length * 5));
-          
-          const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'];
-          
           return {
-            name: data.ad || `Saha ${index + 1}`,
-            deger: performans,
-            fill: colors[index]
+            id: doc.id,
+            type: 'ariza',
+            title: data.baslik || 'Arıza Bildirimi',
+            description: data.aciklama || 'Detay bilgi yok',
+            time: data.olusturmaTarihi?.toDate?.()?.toLocaleTimeString('tr-TR') || 'Bilinmiyor',
+            priority: data.oncelik || 'medium'
           };
         });
 
-        setPerformansVerileri(sahaPerformans);
-
-        // Aylık bakım trendleri (son 5 ay)
-        const aylikBakim = [];
-        for (let i = 4; i >= 0; i--) {
-          const tarih = new Date();
-          tarih.setMonth(tarih.getMonth() - i);
-          const ay = tarih.toLocaleDateString('tr-TR', { month: 'short' });
-          
-          const aylikMekanikBakim = mekanikBakimSnapshot.docs.filter(doc => {
-            const data = doc.data();
-            if (data.tarih?.toDate) {
-              const bakimTarih = data.tarih.toDate();
-              return bakimTarih.getMonth() === tarih.getMonth() && 
-                     bakimTarih.getFullYear() === tarih.getFullYear();
-            }
-            return false;
-          });
-
-          const aylikElektrikBakim = elektrikBakimSnapshot.docs.filter(doc => {
-            const data = doc.data();
-            if (data.tarih?.toDate) {
-              const bakimTarih = data.tarih.toDate();
-              return bakimTarih.getMonth() === tarih.getMonth() && 
-                     bakimTarih.getFullYear() === tarih.getFullYear();
-            }
-            return false;
-          });
-
-          const tamamlanan = aylikMekanikBakim.length + aylikElektrikBakim.length;
-          const planlanan = Math.round(tamamlanan * 1.2); // %20 daha fazla planlanmış
-
-          aylikBakim.push({
-            ay,
-            tamamlanan,
-            planlanan
-          });
-        }
-
-        setBakimVerileri(aylikBakim);
-
+        setRecentActivities(activities);
       } catch (error) {
         console.error('Dashboard verileri yüklenirken hata:', error);
       } finally {
@@ -374,7 +152,7 @@ const Anasayfa: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, [user]);
+  }, []);
 
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -781,4 +559,3 @@ const Anasayfa: React.FC = () => {
 };
 
 export default Anasayfa;
-export { Anasayfa };
