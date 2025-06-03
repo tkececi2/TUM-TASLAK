@@ -560,6 +560,8 @@ export const YapilanIsler: React.FC = () => {
           )}
         </>
       )}
+      </>
+      )}
 
       {/* Modaller */}
       {formAcik && (
@@ -584,6 +586,7 @@ export const YapilanIsler: React.FC = () => {
           mesaj="Bu raporu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
         />
       )}
+      </div>
     </div>
   );
 };
