@@ -77,7 +77,8 @@ export const InvertorKontrolForm: React.FC<Props> = ({ onClose, sahalar }) => {
           ad: kullanici.ad,
           rol: kullanici.rol
         },
-        olusturmaTarihi: Timestamp.now()
+        olusturmaTarihi: Timestamp.now(),
+        companyId: kullanici.companyId
       });
 
       toast.success('Kontrol kaydı başarıyla oluşturuldu');
