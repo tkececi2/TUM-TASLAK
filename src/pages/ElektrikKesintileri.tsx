@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Zap,
   Trash2,
-  Clock
+  Clock,
+  Filter
 } from 'lucide-react';
 import { Card, Title, Text, Metric, Grid, Col, Badge } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -203,86 +204,99 @@ export const ElektrikKesintileri: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Elektrik Kesintileri</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Toplam {kesintiler.length} kesinti kaydı
-          </p>
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-blue-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl">
+              <Zap className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                Elektrik Kesintileri
+              </h1>
+              <p className="mt-1 text-sm text-gray-500">
+                Toplam {kesintiler.length} kesinti kaydı
+              </p>
+            </div>
+          </div>
+          {canAdd && (
+            <button
+              onClick={() => setFormAcik(true)}
+              className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:scale-105 hover:shadow-xl"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Yeni Kesinti Kaydı
+            </button>
+          )}
         </div>
-        {canAdd && (
-          <button
-            onClick={() => setFormAcik(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Yeni Kesinti Kaydı
-          </button>
-        )}
       </div>
 
       {/* İstatistikler */}
-      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-4">
-        <Card>
+      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6">
+        <Card className="bg-white border border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <Text>Toplam Kesinti</Text>
-              <Metric>{istatistikler.toplamKesinti}</Metric>
+              <Text className="text-gray-600 font-medium">Toplam Kesinti</Text>
+              <Metric className="text-blue-600 font-bold">{istatistikler.toplamKesinti}</Metric>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Zap className="h-6 w-6 text-blue-600" />
+            <div className="p-4 bg-blue-100 rounded-xl">
+              <Zap className="h-8 w-8 text-blue-600" />
             </div>
           </div>
         </Card>
         
-        <Card>
+        <Card className="bg-white border border-red-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <Text>Devam Eden</Text>
-              <Metric>{istatistikler.devamEden}</Metric>
+              <Text className="text-gray-600 font-medium">Devam Eden</Text>
+              <Metric className="text-red-600 font-bold">{istatistikler.devamEden}</Metric>
             </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <AlertTriangle className="h-6 w-6 text-red-600" />
+            <div className="p-4 bg-red-100 rounded-xl">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
           </div>
         </Card>
         
-        <Card>
+        <Card className="bg-white border border-green-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <Text>Tamamlanan</Text>
-              <Metric>{istatistikler.tamamlanan}</Metric>
+              <Text className="text-gray-600 font-medium">Tamamlanan</Text>
+              <Metric className="text-green-600 font-bold">{istatistikler.tamamlanan}</Metric>
             </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="p-4 bg-green-100 rounded-xl">
+              <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
           </div>
         </Card>
         
-        <Card>
+        <Card className="bg-white border border-orange-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <Text>Toplam Süre</Text>
-              <Metric>{formatSure(istatistikler.toplamSure)}</Metric>
+              <Text className="text-gray-600 font-medium">Toplam Süre</Text>
+              <Metric className="text-orange-600 font-bold">{formatSure(istatistikler.toplamSure)}</Metric>
             </div>
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <Clock className="h-6 w-6 text-orange-600" />
+            <div className="p-4 bg-orange-100 rounded-xl">
+              <Clock className="h-8 w-8 text-orange-600" />
             </div>
           </div>
         </Card>
       </Grid>
 
       {/* Filtreler */}
-      <Card>
+      <Card className="bg-white border border-blue-100 shadow-lg rounded-xl">
+        <div className="flex items-center space-x-2 mb-4">
+          <Filter className="h-5 w-5 text-blue-600" />
+          <Text className="font-semibold text-gray-800">Filtreler</Text>
+        </div>
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Saha</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Saha</label>
             <select
               value={secilenSaha}
               onChange={(e) => setSecilenSaha(e.target.value)}
-              className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+              className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
             >
               <option value="">Tüm Sahalar</option>
               {sahalar.map(saha => (
@@ -292,24 +306,24 @@ export const ElektrikKesintileri: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ay</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ay</label>
             <input
               type="month"
               value={secilenAy}
               onChange={(e) => setSecilenAy(e.target.value)}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+              className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Görünüm</label>
-            <div className="flex rounded-lg shadow-sm">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Görünüm</label>
+            <div className="flex rounded-lg shadow-sm border border-gray-300">
               <button
                 onClick={() => setGorunumTipi('kart')}
-                className={`p-2 text-sm font-medium rounded-l-lg border ${
+                className={`p-3 text-sm font-medium rounded-l-lg transition-all duration-200 ${
                   gorunumTipi === 'kart'
-                    ? 'bg-yellow-50 text-yellow-700 border-yellow-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-blue-50'
                 }`}
                 title="Kart Görünümü"
               >
@@ -317,10 +331,10 @@ export const ElektrikKesintileri: React.FC = () => {
               </button>
               <button
                 onClick={() => setGorunumTipi('liste')}
-                className={`p-2 text-sm font-medium rounded-r-lg border-t border-b border-r ${
+                className={`p-3 text-sm font-medium rounded-r-lg border-l transition-all duration-200 ${
                   gorunumTipi === 'liste'
-                    ? 'bg-yellow-50 text-yellow-700 border-yellow-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'bg-white text-gray-700 hover:bg-blue-50'
                 }`}
                 title="Liste Görünümü"
               >
@@ -333,28 +347,28 @@ export const ElektrikKesintileri: React.FC = () => {
 
       {/* Kesinti Listesi */}
       {kesintiler.length === 0 ? (
-        <Card>
-          <div className="text-center py-12">
-            <Zap className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Henüz kesinti kaydı yok</h3>
-            <p className="mt-1 text-sm text-gray-500">
+        <Card className="bg-white border border-blue-100 shadow-lg rounded-xl">
+          <div className="text-center py-16">
+            <div className="p-6 bg-blue-100 rounded-full w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+              <Zap className="h-12 w-12 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Henüz kesinti kaydı yok</h3>
+            <p className="text-gray-500 mb-8">
               Seçili dönem için elektrik kesintisi kaydı bulunamadı.
             </p>
             {canAdd && (
-              <div className="mt-6">
-                <button
-                  onClick={() => setFormAcik(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Kesinti Kaydı Ekle
-                </button>
-              </div>
+              <button
+                onClick={() => setFormAcik(true)}
+                className="inline-flex items-center px-6 py-3 border border-transparent shadow-lg text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 hover:scale-105"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Kesinti Kaydı Ekle
+              </button>
             )}
           </div>
         </Card>
       ) : gorunumTipi === 'liste' ? (
-        <Card>
+        <Card className="bg-white border border-blue-100 shadow-lg rounded-xl">
           <ElektrikKesintisiListesi
             kesintiler={kesintiler}
             sahalar={sahalar}
@@ -368,18 +382,21 @@ export const ElektrikKesintileri: React.FC = () => {
             <Card
               key={kesinti.id}
               onClick={() => setSeciliKesinti(kesinti)}
-              className="cursor-pointer hover:shadow-lg transition-shadow duration-200 relative"
+              className="cursor-pointer bg-white border border-blue-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 relative rounded-xl group"
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center">
-                  <Building className="h-5 w-5 text-gray-400 mr-2" />
-                  <h3 className="text-lg font-medium text-gray-900">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                    <Building className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">
                     {sahalar.find(s => s.id === kesinti.sahaId)?.ad}
                   </h3>
                 </div>
                 <Badge 
                   color={kesinti.durum === 'devam-ediyor' ? 'red' : 'green'}
                   icon={kesinti.durum === 'devam-ediyor' ? AlertTriangle : CheckCircle}
+                  className="font-medium"
                 >
                   {kesinti.durum === 'devam-ediyor' ? 'Devam Ediyor' : 'Tamamlandı'}
                 </Badge>
@@ -387,22 +404,24 @@ export const ElektrikKesintileri: React.FC = () => {
 
               <div className="space-y-3">
                 <div className="flex items-center text-sm text-gray-600">
-                  <Calendar className="h-4 w-4 mr-2" />
+                  <Calendar className="h-4 w-4 mr-2 text-blue-500" />
                   {format(kesinti.baslangicTarihi.toDate(), 'dd MMMM yyyy HH:mm', { locale: tr })}
                 </div>
 
                 {kesinti.etkiAlani && (
                   <div className="text-sm text-gray-600">
-                    <span className="font-medium">Etkilenen Alan:</span> {kesinti.etkiAlani}
+                    <span className="font-medium text-blue-600">Etkilenen Alan:</span> {kesinti.etkiAlani}
                   </div>
                 )}
 
                 <div className="flex items-center text-sm text-gray-600">
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span className="font-medium">Süre:</span> {formatSure(kesinti.sure)}
+                  <Clock className="h-4 w-4 mr-2 text-orange-500" />
+                  <span className="font-medium text-blue-600">Süre:</span> {formatSure(kesinti.sure)}
                 </div>
 
-                <p className="text-sm text-gray-600 line-clamp-2">{kesinti.aciklama}</p>
+                <p className="text-sm text-gray-600 line-clamp-2 bg-gray-50 p-3 rounded-lg">
+                  {kesinti.aciklama}
+                </p>
               </div>
 
               {/* Silme Butonu */}
@@ -412,7 +431,7 @@ export const ElektrikKesintileri: React.FC = () => {
                     e.stopPropagation();
                     setSilinecekKesinti(kesinti.id);
                   }}
-                  className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors duration-200"
+                  className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 transition-all duration-200 opacity-0 group-hover:opacity-100 hover:scale-110"
                 >
                   <Trash2 className="h-4 w-4 text-red-600" />
                 </button>
