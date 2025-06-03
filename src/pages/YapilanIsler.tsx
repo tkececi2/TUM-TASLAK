@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -8,9 +9,27 @@ import { IsRaporDetayModal } from '../components/IsRaporDetayModal';
 import { SearchInput } from '../components/SearchInput';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Building, Calendar, Clock, ImageIcon, Plus, Trash2, User, Wrench, Tag, FileText, ChevronRight, CheckCircle } from 'lucide-react';
+import { 
+  Building, 
+  Calendar, 
+  Clock, 
+  ImageIcon, 
+  Plus, 
+  Trash2, 
+  User, 
+  Wrench, 
+  Tag, 
+  FileText, 
+  ChevronRight, 
+  CheckCircle,
+  Download,
+  Filter,
+  TrendingUp,
+  Users,
+  Activity
+} from 'lucide-react';
 import { SilmeOnayModal } from '../components/SilmeOnayModal';
-import { Card, Text } from '@tremor/react';
+import { Card, Text, Title, Metric, Flex, ProgressBar, Grid, Col, Badge, AreaChart } from '@tremor/react';
 import toast from 'react-hot-toast';
 import type { IsRaporu } from '../types';
 
@@ -25,6 +44,7 @@ export const YapilanIsler: React.FC = () => {
   const [secilenAy, setSecilenAy] = useState<string>(format(new Date(), 'yyyy-MM'));
   const [secilenSaha, setSecilenSaha] = useState<string>('');
   const [silinecekRapor, setSilinecekRapor] = useState<string | null>(null);
+  const [grafikGorünümü, setGrafikGorünümü] = useState<'liste' | 'istatistik'>('liste');
 
   // Yıl seçeneklerini oluştur (son 5 yıl)
   const yilSecenekleri = Array.from({ length: 5 }, (_, i) => {
@@ -173,6 +193,37 @@ export const YapilanIsler: React.FC = () => {
     return sahalar.find(s => s.id === sahaId)?.ad || 'Bilinmeyen Saha';
   };
 
+  // İstatistik hesaplamaları
+  const getIstatistikler = () => {
+    const toplamIs = filtrelenmisRaporlar.length;
+    const benzersizSahalar = new Set(filtrelenmisRaporlar.map(r => r.saha)).size;
+    const benzersizKullanicilar = new Set(filtrelenmisRaporlar.map(r => r.olusturanKisi.ad)).size;
+    
+    // Son 7 günün verileri
+    const son7Gun = Array.from({ length: 7 }, (_, i) => {
+      const tarih = new Date();
+      tarih.setDate(tarih.getDate() - i);
+      const gunStr = format(tarih, 'dd/MM');
+      const gunIsler = filtrelenmisRaporlar.filter(r => 
+        format(r.tarih.toDate(), 'dd/MM') === gunStr
+      ).length;
+      
+      return {
+        gun: gunStr,
+        isler: gunIsler
+      };
+    }).reverse();
+
+    return {
+      toplamIs,
+      benzersizSahalar,
+      benzersizKullanicilar,
+      son7Gun
+    };
+  };
+
+  const istatistikler = getIstatistikler();
+
   if (yukleniyor) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -183,116 +234,236 @@ export const YapilanIsler: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Yapılan İşler</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Toplam {filtrelenmisRaporlar.length} rapor
-          </p>
-        </div>
-        {canAdd && (
-          <button
-            onClick={() => setFormAcik(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Yeni İş Raporu
-          </button>
-        )}
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <SearchInput
-            value={aramaMetni}
-            onChange={setAramaMetni}
-            placeholder="Rapor ara..."
-          />
-        </div>
-        <div className="flex gap-4">
-          <select
-            value={secilenSaha}
-            onChange={(e) => setSecilenSaha(e.target.value)}
-            className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-          >
-            <option value="">Tüm Sahalar</option>
-            {sahalar.map(saha => (
-              <option key={saha.id} value={saha.id}>{saha.ad}</option>
-            ))}
-          </select>
-          <input
-            type="month"
-            value={secilenAy}
-            onChange={(e) => setSecilenAy(e.target.value)}
-            className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-            min={`${yilSecenekleri[yilSecenekleri.length - 1]}-01`}
-            max={`${yilSecenekleri[0]}-12`}
-          />
-        </div>
-      </div>
-
-      {/* İş Raporu İstatistikleri */}
-      {filtrelenmisRaporlar.length > 0 && (
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center mb-4 md:mb-0">
-              <div className="p-3 bg-blue-100 rounded-full mr-4">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <Text className="text-sm text-blue-700">Aylık İş Raporu Özeti</Text>
-                <div className="flex items-center">
-                  <span className="text-xl font-bold text-blue-800">
-                    {filtrelenmisRaporlar.length} İş Tamamlandı
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="text-sm text-blue-700">
-              <div className="flex items-center">
-                <span className="font-medium mr-2">Dönem:</span>
-                <span>{format(parseISO(secilenAy + '-01'), 'MMMM yyyy', { locale: tr })}</span>
-              </div>
-              <div className="flex items-center mt-1">
-                <span className="font-medium mr-2">Saha:</span>
-                <span>{secilenSaha ? getSahaAdi(secilenSaha) : 'Tüm Sahalar'}</span>
-              </div>
-            </div>
+      {/* Başlık ve Kontroller */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Yapılan İşler</h1>
+            <p className="text-gray-600">
+              {secilenSaha ? getSahaAdi(secilenSaha) : 'Tüm Sahalar'} - {format(parseISO(secilenAy + '-01'), 'MMMM yyyy', { locale: tr })}
+            </p>
           </div>
-        </Card>
-      )}
+          <div className="flex items-center gap-3">
+            {/* Görünüm Değiştirme */}
+            <div className="bg-white rounded-lg p-1 shadow-sm">
+              <button
+                onClick={() => setGrafikGorünümü('liste')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  grafikGorünümü === 'liste'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                Liste
+              </button>
+              <button
+                onClick={() => setGrafikGorünümü('istatistik')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  grafikGorünümü === 'istatistik'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+              >
+                İstatistik
+              </button>
+            </div>
+            
+            {canAdd && (
+              <button
+                onClick={() => setFormAcik(true)}
+                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg shadow-md hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Yeni İş Raporu
+              </button>
+            )}
+          </div>
+        </div>
 
-      {filtrelenmisRaporlar.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-8 text-center">
-          <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">İş Raporu Bulunamadı</h3>
-          <p className="text-gray-500 max-w-md mx-auto">
-            Seçilen dönem ve filtreler için herhangi bir iş raporu bulunamadı. Lütfen farklı bir dönem seçin veya filtreleri değiştirin.
-          </p>
-          {canAdd && (
-            <button
-              onClick={() => setFormAcik(true)}
-              className="mt-6 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
+        {/* Filtreler */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <SearchInput
+              value={aramaMetni}
+              onChange={setAramaMetni}
+              placeholder="İş raporu ara..."
+            />
+          </div>
+          <div className="flex gap-3">
+            <select
+              value={secilenSaha}
+              onChange={(e) => setSecilenSaha(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
-              <Plus className="h-5 w-5 mr-2" />
-              Yeni İş Raporu Ekle
-            </button>
-          )}
+              <option value="">Tüm Sahalar</option>
+              {sahalar.map(saha => (
+                <option key={saha.id} value={saha.id}>{saha.ad}</option>
+              ))}
+            </select>
+            <input
+              type="month"
+              value={secilenAy}
+              onChange={(e) => setSecilenAy(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              min={`${yilSecenekleri[yilSecenekleri.length - 1]}-01`}
+              max={`${yilSecenekleri[0]}-12`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Özet Kartları */}
+      <Grid numItemsSm={2} numItemsLg={4} className="gap-6">
+        <Card decoration="top" decorationColor="blue">
+          <Flex alignItems="start">
+            <div>
+              <Text>Toplam İş</Text>
+              <Metric>{istatistikler.toplamIs}</Metric>
+            </div>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FileText className="h-6 w-6 text-blue-600" />
+            </div>
+          </Flex>
+        </Card>
+        
+        <Card decoration="top" decorationColor="green">
+          <Flex alignItems="start">
+            <div>
+              <Text>Aktif Sahalar</Text>
+              <Metric>{istatistikler.benzersizSahalar}</Metric>
+            </div>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Building className="h-6 w-6 text-green-600" />
+            </div>
+          </Flex>
+        </Card>
+        
+        <Card decoration="top" decorationColor="purple">
+          <Flex alignItems="start">
+            <div>
+              <Text>Çalışan Sayısı</Text>
+              <Metric>{istatistikler.benzersizKullanicilar}</Metric>
+            </div>
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Users className="h-6 w-6 text-purple-600" />
+            </div>
+          </Flex>
+        </Card>
+        
+        <Card decoration="top" decorationColor="orange">
+          <Flex alignItems="start">
+            <div>
+              <Text>Günlük Ortalama</Text>
+              <Metric>
+                {istatistikler.toplamIs > 0 
+                  ? Math.round(istatistikler.toplamIs / new Date(new Date(secilenAy).getFullYear(), new Date(secilenAy).getMonth() + 1, 0).getDate())
+                  : 0
+                }
+              </Metric>
+            </div>
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <TrendingUp className="h-6 w-6 text-orange-600" />
+            </div>
+          </Flex>
+        </Card>
+      </Grid>
+
+      {/* İçerik Alanı */}
+      {grafikGorünümü === 'istatistik' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Günlük İş Dağılımı */}
+          <Card>
+            <Title>Son 7 Gün İş Dağılımı</Title>
+            <AreaChart
+              className="h-72 mt-4"
+              data={istatistikler.son7Gun}
+              index="gun"
+              categories={["isler"]}
+              colors={["blue"]}
+              valueFormatter={(value) => `${value} iş`}
+              showLegend={false}
+              showGradient={true}
+              curveType="natural"
+            />
+          </Card>
+
+          {/* Saha Bazlı Dağılım */}
+          <Card>
+            <Title>Saha Bazlı İş Dağılımı</Title>
+            <div className="mt-6 space-y-4">
+              {Array.from(new Set(filtrelenmisRaporlar.map(r => r.saha)))
+                .map(sahaId => {
+                  const sahaIsleri = filtrelenmisRaporlar.filter(r => r.saha === sahaId).length;
+                  const yuzde = (sahaIsleri / filtrelenmisRaporlar.length) * 100;
+                  
+                  return (
+                    <div key={sahaId}>
+                      <Flex className="mb-2">
+                        <Text>{getSahaAdi(sahaId)}</Text>
+                        <Text>{sahaIsleri} iş</Text>
+                      </Flex>
+                      <ProgressBar value={yuzde} color="blue" className="mt-1" />
+                    </div>
+                  );
+                })
+              }
+            </div>
+          </Card>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtrelenmisRaporlar.map((rapor) => (
-            <div
-              key={rapor.id}
-              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 relative group h-64"
-            >
-              <div 
-                className="flex flex-col h-full cursor-pointer"
-                onClick={() => setSeciliRapor(rapor)}
-              >
-                {/* Üst Kısım - Fotoğraf ve Başlık */}
-                <div className="relative h-24">
-                  <div className="h-full w-full bg-gray-100">
+        <>
+          {/* Liste Görünümü */}
+          {filtrelenmisRaporlar.length === 0 ? (
+            <Card className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="h-8 w-8 text-gray-400" />
+              </div>
+              <Title>İş Raporu Bulunamadı</Title>
+              <Text className="mt-2 max-w-md mx-auto">
+                Seçilen dönem ve filtreler için herhangi bir iş raporu bulunamadı. 
+                Lütfen farklı bir dönem seçin veya filtreleri değiştirin.
+              </Text>
+              {canAdd && (
+                <button
+                  onClick={() => setFormAcik(true)}
+                  className="mt-6 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Yeni İş Raporu Ekle
+                </button>
+              )}
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filtrelenmisRaporlar.map((rapor) => (
+                <Card
+                  key={rapor.id}
+                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer relative overflow-hidden"
+                  onClick={() => setSeciliRapor(rapor)}
+                >
+                  {/* Durum Badge */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <Badge color="green" size="sm">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Tamamlandı
+                    </Badge>
+                  </div>
+
+                  {/* Silme Butonu */}
+                  {canDelete && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSilinecekRapor(rapor.id);
+                      }}
+                      className="absolute top-3 right-3 z-10 p-1.5 bg-white rounded-full shadow-sm hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </button>
+                  )}
+
+                  {/* Fotoğraf Alanı */}
+                  <div className="h-32 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 relative overflow-hidden">
                     {rapor.fotograflar?.[0] ? (
                       <img
                         src={rapor.fotograflar[0]}
@@ -300,99 +471,67 @@ export const YapilanIsler: React.FC = () => {
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder-image.png';
+                          target.style.display = 'none';
                         }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                        <ImageIcon className="h-12 w-12 text-blue-300" />
                       </div>
                     )}
                     
-                    {/* Fotoğraf Sayısı */}
                     {rapor.fotograflar && rapor.fotograflar.length > 1 && (
-                      <div className="absolute top-1 right-1 bg-black bg-opacity-60 text-white text-xs px-1.5 py-0.5 rounded-full">
-                        <div className="flex items-center">
-                          <ImageIcon className="h-3 w-3 mr-0.5" />
-                          {rapor.fotograflar.length}
-                        </div>
+                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full">
+                        +{rapor.fotograflar.length - 1}
                       </div>
                     )}
-                    
-                    {/* Başlık Overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
-                      <h3 className="text-sm font-medium text-white line-clamp-1">
-                        {rapor.baslik}
-                      </h3>
-                    </div>
                   </div>
-                </div>
-                
-                {/* Alt Kısım - Detaylar */}
-                <div className="p-3 flex-1 flex flex-col">
-                  <div className="space-y-1 mb-2">
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Building className="h-3 w-3 mr-1 text-gray-400 flex-shrink-0" />
-                      <span className="truncate">{getSahaAdi(rapor.saha)}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Calendar className="h-3 w-3 mr-1 text-gray-400 flex-shrink-0" />
-                      <span>{format(rapor.tarih.toDate(), 'dd MMM yyyy', { locale: tr })}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-xs text-gray-600">
-                      <User className="h-3 w-3 mr-1 text-gray-400 flex-shrink-0" />
-                      <span className="truncate">{rapor.olusturanKisi.ad}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Yapılan İşler Özeti */}
-                  <div className="mt-auto">
-                    <div className="flex items-center mb-1">
-                      <Wrench className="h-3 w-3 mr-1 text-yellow-500" />
-                      <h4 className="text-xs font-medium text-gray-900">Yapılan İşler</h4>
-                    </div>
-                    <p className="text-xs text-gray-600 line-clamp-2">
-                      {rapor.yapilanIsler}
-                    </p>
-                  </div>
-                  
-                  {/* Detay Butonu */}
-                  <div className="mt-2 pt-2 border-t border-gray-100 flex justify-end">
-                    <button className="text-xs text-yellow-600 hover:text-yellow-700 flex items-center">
-                      Detaylar
-                      <ChevronRight className="h-3 w-3 ml-1" />
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              {/* Tamamlandı İşareti */}
-              <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                <div className="flex items-center">
-                  <CheckCircle className="h-3 w-3 mr-0.5" />
-                  Tamamlandı
-                </div>
-              </div>
+                  {/* İçerik */}
+                  <div className="space-y-3">
+                    <div>
+                      <Title className="text-base line-clamp-1">{rapor.baslik}</Title>
+                      <Text className="text-sm mt-1 line-clamp-2">{rapor.yapilanIsler}</Text>
+                    </div>
 
-              {/* Silme Butonu */}
-              {canDelete && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSilinecekRapor(rapor.id);
-                  }}
-                  className="absolute top-1 right-1 p-1 bg-white rounded-full shadow-sm hover:bg-red-50 transition-colors duration-200 opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 className="h-3 w-3 text-red-600" />
-                </button>
-              )}
+                    <div className="space-y-2">
+                      <Flex className="text-sm">
+                        <div className="flex items-center text-gray-500">
+                          <Building className="h-4 w-4 mr-1" />
+                          <span className="truncate">{getSahaAdi(rapor.saha)}</span>
+                        </div>
+                      </Flex>
+                      
+                      <Flex className="text-sm">
+                        <div className="flex items-center text-gray-500">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          <span>{format(rapor.tarih.toDate(), 'dd MMM yyyy', { locale: tr })}</span>
+                        </div>
+                      </Flex>
+                      
+                      <Flex className="text-sm">
+                        <div className="flex items-center text-gray-500">
+                          <User className="h-4 w-4 mr-1" />
+                          <span className="truncate">{rapor.olusturanKisi.ad}</span>
+                        </div>
+                      </Flex>
+                    </div>
+
+                    <div className="pt-3 border-t border-gray-100 flex justify-end">
+                      <button className="text-sm text-blue-600 hover:text-blue-700 flex items-center font-medium">
+                        Detayları Gör
+                        <ChevronRight className="h-4 w-4 ml-1" />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
+      {/* Modaller */}
       {formAcik && (
         <YapilanIsForm
           onClose={() => setFormAcik(false)}
