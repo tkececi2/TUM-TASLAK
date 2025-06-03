@@ -233,140 +233,170 @@ export const YapilanIsler: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Başlık ve Kontroller */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Yapılan İşler</h1>
-            <p className="text-gray-600">
-              {secilenSaha ? getSahaAdi(secilenSaha) : 'Tüm Sahalar'} - {format(parseISO(secilenAy + '-01'), 'MMMM yyyy', { locale: tr })}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Görünüm Değiştirme */}
-            <div className="bg-white rounded-lg p-1 shadow-sm">
-              <button
-                onClick={() => setGrafikGorünümü('liste')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  grafikGorünümü === 'liste'
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                Liste
-              </button>
-              <button
-                onClick={() => setGrafikGorünümü('istatistik')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  grafikGorünümü === 'istatistik'
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                İstatistik
-              </button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Yapılan İşler
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  {secilenSaha ? getSahaAdi(secilenSaha) : 'Tüm Sahalar'} - {format(parseISO(secilenAy + '-01'), 'MMMM yyyy', { locale: tr })}
+                </p>
+              </div>
             </div>
-            
-            {canAdd && (
-              <button
-                onClick={() => setFormAcik(true)}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg shadow-md hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Yeni İş Raporu
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* Filtreler */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <SearchInput
-              value={aramaMetni}
-              onChange={setAramaMetni}
-              placeholder="İş raporu ara..."
-            />
-          </div>
-          <div className="flex gap-3">
-            <select
-              value={secilenSaha}
-              onChange={(e) => setSecilenSaha(e.target.value)}
-              className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="">Tüm Sahalar</option>
-              {sahalar.map(saha => (
-                <option key={saha.id} value={saha.id}>{saha.ad}</option>
-              ))}
-            </select>
-            <input
-              type="month"
-              value={secilenAy}
-              onChange={(e) => setSecilenAy(e.target.value)}
-              className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              min={`${yilSecenekleri[yilSecenekleri.length - 1]}-01`}
-              max={`${yilSecenekleri[0]}-12`}
-            />
+            <div className="flex items-center space-x-4 mt-6 lg:mt-0">
+              <div className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
+                <Activity className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-gray-700">İş Takibi Aktif</span>
+              </div>
+
+              {/* Görünüm Değiştirme */}
+              <div className="flex rounded-lg shadow-sm border border-gray-300 overflow-hidden bg-white">
+                <button
+                  onClick={() => setGrafikGorünümü('liste')}
+                  className={`px-3 py-2 text-sm font-medium transition-colors ${
+                    grafikGorünümü === 'liste'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Liste
+                </button>
+                <button
+                  onClick={() => setGrafikGorünümü('istatistik')}
+                  className={`px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                    grafikGorünümü === 'istatistik'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  İstatistik
+                </button>
+              </div>
+
+              {canAdd && (
+                <button
+                  onClick={() => setFormAcik(true)}
+                  className="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Yeni İş Raporu
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Özet Kartları */}
-      <Grid numItemsSm={2} numItemsLg={4} className="gap-6">
-        <Card decoration="top" decorationColor="blue">
-          <Flex alignItems="start">
-            <div>
-              <Text>Toplam İş</Text>
-              <Metric>{istatistikler.toplamIs}</Metric>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Filtreler */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <SearchInput
+                value={aramaMetni}
+                onChange={setAramaMetni}
+                placeholder="İş raporu ara..."
+              />
             </div>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FileText className="h-6 w-6 text-blue-600" />
+            <div className="flex gap-3">
+              <select
+                value={secilenSaha}
+                onChange={(e) => setSecilenSaha(e.target.value)}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+              >
+                <option value="">Tüm Sahalar</option>
+                {sahalar.map(saha => (
+                  <option key={saha.id} value={saha.id}>{saha.ad}</option>
+                ))}
+              </select>
+              <input
+                type="month"
+                value={secilenAy}
+                onChange={(e) => setSecilenAy(e.target.value)}
+                className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                min={`${yilSecenekleri[yilSecenekleri.length - 1]}-01`}
+                max={`${yilSecenekleri[0]}-12`}
+              />
             </div>
-          </Flex>
-        </Card>
-        
-        <Card decoration="top" decorationColor="green">
-          <Flex alignItems="start">
-            <div>
-              <Text>Aktif Sahalar</Text>
-              <Metric>{istatistikler.benzersizSahalar}</Metric>
+          </div>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              title: 'Toplam İş',
+              value: istatistikler.toplamIs,
+              change: '+8%',
+              changeType: 'positive',
+              icon: FileText,
+              color: 'blue'
+            },
+            {
+              title: 'Aktif Sahalar',
+              value: istatistikler.benzersizSahalar,
+              change: '+2%',
+              changeType: 'positive',
+              icon: Building,
+              color: 'green'
+            },
+            {
+              title: 'Çalışan Sayısı',
+              value: istatistikler.benzersizKullanicilar,
+              change: '+5%',
+              changeType: 'positive',
+              icon: Users,
+              color: 'purple'
+            },
+            {
+              title: 'Günlük Ortalama',
+              value: istatistikler.toplamIs > 0 
+                ? Math.round(istatistikler.toplamIs / new Date(new Date(secilenAy).getFullYear(), new Date(secilenAy).getMonth() + 1, 0).getDate())
+                : 0,
+              change: '+3%',
+              changeType: 'neutral',
+              icon: TrendingUp,
+              color: 'orange'
+            }
+          ].map((kpi, index) => (
+            <div key={index} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    kpi.color === 'blue' ? 'bg-blue-100' :
+                    kpi.color === 'green' ? 'bg-green-100' :
+                    kpi.color === 'purple' ? 'bg-purple-100' : 'bg-orange-100'
+                  }`}>
+                    <kpi.icon className={`w-5 h-5 ${
+                      kpi.color === 'blue' ? 'text-blue-600' :
+                      kpi.color === 'green' ? 'text-green-600' :
+                      kpi.color === 'purple' ? 'text-purple-600' : 'text-orange-600'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">{kpi.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
+                  </div>
+                </div>
+                <div className={`text-sm font-medium ${
+                  kpi.changeType === 'positive' ? 'text-green-600' :
+                  kpi.changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
+                }`}>
+                  {kpi.change}
+                </div>
+              </div>
             </div>
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Building className="h-6 w-6 text-green-600" />
-            </div>
-          </Flex>
-        </Card>
-        
-        <Card decoration="top" decorationColor="purple">
-          <Flex alignItems="start">
-            <div>
-              <Text>Çalışan Sayısı</Text>
-              <Metric>{istatistikler.benzersizKullanicilar}</Metric>
-            </div>
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Users className="h-6 w-6 text-purple-600" />
-            </div>
-          </Flex>
-        </Card>
-        
-        <Card decoration="top" decorationColor="orange">
-          <Flex alignItems="start">
-            <div>
-              <Text>Günlük Ortalama</Text>
-              <Metric>
-                {istatistikler.toplamIs > 0 
-                  ? Math.round(istatistikler.toplamIs / new Date(new Date(secilenAy).getFullYear(), new Date(secilenAy).getMonth() + 1, 0).getDate())
-                  : 0
-                }
-              </Metric>
-            </div>
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-orange-600" />
-            </div>
-          </Flex>
-        </Card>
-      </Grid>
+          ))}
+        </div>
 
       {/* İçerik Alanı */}
       {grafikGorünümü === 'istatistik' ? (
