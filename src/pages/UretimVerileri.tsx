@@ -786,7 +786,7 @@ export const UretimVerileri: React.FC = () => {
         <Card>
           <Title>Yıllık Tahmin vs Gerçekleşme - {secilenYil}</Title>
           <Text>Aylık hedef ve gerçekleşen üretim karşılaştırması</Text>
-          <BarChart
+          <AreaChart
             className="mt-4 h-80"
             data={yillikVeriler}
             index="ay"
@@ -795,7 +795,10 @@ export const UretimVerileri: React.FC = () => {
             valueFormatter={(value) => `${value.toLocaleString('tr-TR')} kWh`}
             showLegend={true}
             showAnimation={true}
+            showGradient={true}
             yAxisWidth={80}
+            curveType="natural"
+            connectNulls={true}
             customTooltip={(props) => {
               const { payload, active } = props;
               if (!active || !payload) return null;
