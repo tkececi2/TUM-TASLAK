@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -13,7 +14,10 @@ import {
   CheckCircle,
   AlertTriangle,
   Search,
-  Zap
+  Zap,
+  Settings,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ElektrikBakimForm } from '../components/ElektrikBakimForm';
@@ -228,139 +232,213 @@ export const ElektrikBakim: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Elektrik Bakım Kontrolleri</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {kullanici?.rol === 'musteri' 
-              ? 'Size ait sahaların bakım kayıtları'
-              : `Toplam ${filtrelenmisVeriler.length} bakım kaydı`}
-          </p>
-        </div>
-        {canAdd && (
-          <button
-            onClick={() => setFormAcik(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Yeni Bakım Kaydı
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Toplam Bakım"
-          value={istatistikler.toplamBakim}
-          icon={Zap}
-          color="blue"
-        />
-        <StatsCard
-          title="Sorunlu Bakım"
-          value={istatistikler.sorunluBakim}
-          icon={AlertTriangle}
-          color="red"
-        />
-        <StatsCard
-          title="Sorunsuz Bakım"
-          value={istatistikler.sorunsuzBakim}
-          icon={CheckCircle}
-          color="green"
-        />
-        <StatsCard
-          title="Sorunsuz Oranı"
-          value={`%${istatistikler.kontrolOrani.toFixed(1)}`}
-          icon={CheckCircle}
-          color="yellow"
-          progress={istatistikler.kontrolOrani}
-        />
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <SearchInput
-            value={aramaMetni}
-            onChange={setAramaMetni}
-            placeholder="Bakım kaydı ara..."
-          />
-        </div>
-        <div className="flex gap-4">
-          <select
-            value={secilenSaha}
-            onChange={(e) => setSecilenSaha(e.target.value)}
-            className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-          >
-            <option value="">Tüm Sahalar</option>
-            {sahalar.map(saha => (
-              <option key={saha.id} value={saha.id}>{saha.ad}</option>
-            ))}
-          </select>
-
-          <input
-            type="month"
-            value={secilenAy}
-            onChange={(e) => setSecilenAy(e.target.value)}
-            className="rounded-lg border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-          />
-
-          <div className="flex rounded-lg shadow-sm">
-            <button
-              onClick={() => setGorunumTipi('kart')}
-              className={`p-2 text-sm font-medium rounded-l-lg border ${
-                gorunumTipi === 'kart'
-                  ? 'bg-yellow-50 text-yellow-700 border-yellow-500'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <LayoutGrid className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setGorunumTipi('liste')}
-              className={`p-2 text-sm font-medium rounded-r-lg border-t border-b border-r ${
-                gorunumTipi === 'liste'
-                  ? 'bg-yellow-50 text-yellow-700 border-yellow-500'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <List className="h-5 w-5" />
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
+                <Zap className="h-10 w-10 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Elektrik Bakım Kontrolleri</h1>
+                <p className="text-blue-100 mt-2">
+                  {kullanici?.rol === 'musteri' 
+                    ? 'Size ait sahaların bakım kayıtları'
+                    : `Toplam ${filtrelenmisVeriler.length} bakım kaydı`}
+                </p>
+              </div>
+            </div>
+            {canAdd && (
+              <div className="mt-6 md:mt-0">
+                <button
+                  onClick={() => setFormAcik(true)}
+                  className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-lg text-sm font-medium text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-200 hover:scale-105"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Yeni Bakım Kaydı
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {gorunumTipi === 'liste' ? (
-        <ElektrikBakimListesi
-          bakimlar={filtrelenmisVeriler}
-          sahalar={sahalar}
-          onBakimTikla={(bakim) => setSeciliBakim(bakim)}
-          onBakimSil={canDelete ? (id) => setSilinecekBakim(id) : undefined}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtrelenmisVeriler.map((bakim) => (
-            <div key={bakim.id} className="relative">
-              <ElektrikBakimKart
-                bakim={bakim}
-                sahaAdi={sahalar.find(s => s.id === bakim.sahaId)?.ad || 'Bilinmeyen Saha'}
-                onClick={() => setSeciliBakim(bakim)}
-              />
-              {canDelete && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSilinecekBakim(bakim.id);
-                  }}
-                  className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors duration-200"
-                >
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                </button>
-              )}
+      {/* Stats Cards */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Toplam Bakım</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">{istatistikler.toplamBakim}</p>
+                <p className="text-xs text-gray-500 mt-1">Kayıtlı bakım sayısı</p>
+              </div>
+              <div className="bg-blue-100 rounded-xl p-3">
+                <Zap className="h-6 w-6 text-blue-600" />
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Sorunlu Bakım</p>
+                <p className="text-3xl font-bold text-red-600 mt-2">{istatistikler.sorunluBakim}</p>
+                <p className="text-xs text-gray-500 mt-1">Müdahale gereken</p>
+              </div>
+              <div className="bg-red-100 rounded-xl p-3">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Sorunsuz Bakım</p>
+                <p className="text-3xl font-bold text-green-600 mt-2">{istatistikler.sorunsuzBakim}</p>
+                <p className="text-xs text-gray-500 mt-1">Başarılı kontrollar</p>
+              </div>
+              <div className="bg-green-100 rounded-xl p-3">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Başarı Oranı</p>
+                <p className="text-3xl font-bold text-cyan-600 mt-2">%{istatistikler.kontrolOrani.toFixed(1)}</p>
+                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-cyan-600 h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${Math.min(istatistikler.kontrolOrani, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div className="bg-cyan-100 rounded-xl p-3">
+                <Activity className="h-6 w-6 text-cyan-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        {/* Controls */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex-1">
+              <SearchInput
+                value={aramaMetni}
+                onChange={setAramaMetni}
+                placeholder="Bakım kaydı ara..."
+              />
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <select
+                value={secilenSaha}
+                onChange={(e) => setSecilenSaha(e.target.value)}
+                className="rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
+              >
+                <option value="">Tüm Sahalar</option>
+                {sahalar.map(saha => (
+                  <option key={saha.id} value={saha.id}>{saha.ad}</option>
+                ))}
+              </select>
+
+              <input
+                type="month"
+                value={secilenAy}
+                onChange={(e) => setSecilenAy(e.target.value)}
+                className="rounded-xl border-gray-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-all duration-200"
+              />
+
+              <div className="flex rounded-xl shadow-sm overflow-hidden">
+                <button
+                  onClick={() => setGorunumTipi('kart')}
+                  className={`px-4 py-2 text-sm font-medium border transition-all duration-200 ${
+                    gorunumTipi === 'kart'
+                      ? 'bg-blue-50 text-blue-700 border-blue-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <LayoutGrid className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => setGorunumTipi('liste')}
+                  className={`px-4 py-2 text-sm font-medium border-t border-b border-r transition-all duration-200 ${
+                    gorunumTipi === 'liste'
+                      ? 'bg-blue-50 text-blue-700 border-blue-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <List className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        {gorunumTipi === 'liste' ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <ElektrikBakimListesi
+              bakimlar={filtrelenmisVeriler}
+              sahalar={sahalar}
+              onBakimTikla={(bakim) => setSeciliBakim(bakim)}
+              onBakimSil={canDelete ? (id) => setSilinecekBakim(id) : undefined}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtrelenmisVeriler.map((bakim) => (
+              <div key={bakim.id} className="relative">
+                <ElektrikBakimKart
+                  bakim={bakim}
+                  sahaAdi={sahalar.find(s => s.id === bakim.sahaId)?.ad || 'Bilinmeyen Saha'}
+                  onClick={() => setSeciliBakim(bakim)}
+                />
+                {canDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSilinecekBakim(bakim.id);
+                    }}
+                    className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors duration-200 z-10"
+                  >
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {filtrelenmisVeriler.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12 text-center">
+            <Zap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Bakım kaydı bulunamadı</h3>
+            <p className="text-gray-500 mb-6">Seçilen kriterlere uygun bakım kaydı bulunmuyor.</p>
+            {canAdd && (
+              <button
+                onClick={() => setFormAcik(true)}
+                className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-all duration-200"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                İlk Bakım Kaydını Oluştur
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
       {formAcik && (
         <ElektrikBakimForm
           onClose={() => setFormAcik(false)}
