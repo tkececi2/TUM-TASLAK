@@ -134,12 +134,13 @@ export const UretimVerileri: React.FC = () => {
           }
 
           console.log('UretimVerileri - Müşteri saha IDs:', sahaIds);
+          console.log('UretimVerileri - kullanici.sahalar raw:', kullanici.sahalar);
 
-          if (sahaIds.length === 0) {
-            console.log('Müşterinin sahası yok, boş liste döndürülüyor');
-            setSantraller([]);
-            return;
-          }
+        if (sahaIds.length === 0) {
+          console.log('Müşterinin sahası yok, boş liste döndürülüyor');
+          setSantraller([]);
+          return;
+        }
 
           santralQuery = query(
             collection(db, 'santraller'),
@@ -153,7 +154,7 @@ export const UretimVerileri: React.FC = () => {
           );
         }
 
-        const snapshot = await await getDocs(santralQuery);
+        const snapshot = await getDocs(santralQuery);
         const santralListesi = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
