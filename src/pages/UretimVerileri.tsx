@@ -222,10 +222,12 @@ export const UretimVerileri: React.FC = () => {
             return;
           }
 
-          // Müşteri için sadece santral ID'si ile sorgu
+          // Müşteri için santral ID'si ve tarih aralığı ile sorgu
           uretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
+            where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
+            where('tarih', '<=', Timestamp.fromDate(ayBitis)),
             orderBy('tarih', 'desc')
           );
         } else {
@@ -240,33 +242,20 @@ export const UretimVerileri: React.FC = () => {
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
             where('companyId', '==', kullanici.companyId),
+            where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
+            where('tarih', '<=', Timestamp.fromDate(ayBitis)),
             orderBy('tarih', 'desc')
           );
         }
 
         const snapshot = await getDocs(uretimQuery);
-        const tumVeriler = snapshot.docs.map(doc => ({
+        const veriler = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as UretimVerisi[];
 
-        console.log('UretimVerileri - Toplam bulunan veri sayısı:', tumVeriler.length);
-
-        // Manuel tarih filtreleme
-        const filtreliVeriler = tumVeriler.filter(veri => {
-          try {
-            const veriTarih = veri.tarih.toDate();
-            const tarihKontrol = veriTarih >= ayBaslangic && veriTarih <= ayBitis;
-            console.log('Veri tarihi:', format(veriTarih, 'dd.MM.yyyy'), 'Kontrol:', tarihKontrol);
-            return tarihKontrol;
-          } catch (err) {
-            console.error('Tarih dönüştürme hatası:', err);
-            return false;
-          }
-        });
-
-        console.log('UretimVerileri - Filtrelenmiş veri sayısı:', filtreliVeriler.length);
-        setUretimVerileri(filtreliVeriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
+        console.log('UretimVerileri - Toplam bulunan veri sayısı:', veriler.length);
+        setUretimVerileri(veriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
       } catch (error) {
         console.error('Üretim verileri getirilemedi:', error);
         toast.error('Üretim verileri yüklenirken bir hata oluştu');
@@ -362,10 +351,12 @@ export const UretimVerileri: React.FC = () => {
           return;
         }
 
-        // Müşteri için sadece santral ID'si ile sorgu
+        // Müşteri için santral ID'si ve tarih aralığı ile sorgu
         uretimQuery = query(
           collection(db, 'uretimVerileri'),
           where('santralId', '==', secilenSantral),
+          where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
+          where('tarih', '<=', Timestamp.fromDate(ayBitis)),
           orderBy('tarih', 'desc')
         );
       } else {
@@ -379,27 +370,19 @@ export const UretimVerileri: React.FC = () => {
           collection(db, 'uretimVerileri'),
           where('santralId', '==', secilenSantral),
           where('companyId', '==', kullanici.companyId),
+          where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
+          where('tarih', '<=', Timestamp.fromDate(ayBitis)),
           orderBy('tarih', 'desc')
         );
       }
 
       const snapshot = await getDocs(uretimQuery);
-      const tumVeriler = snapshot.docs.map(doc => ({
+      const veriler = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as UretimVerisi[];
 
-      // Manuel tarih filtreleme
-      const filtreliVeriler = tumVeriler.filter(veri => {
-        try {
-          const veriTarih = veri.tarih.toDate();
-          return veriTarih >= ayBaslangic && veriTarih <= ayBitis;
-        } catch (err) {
-          return false;
-        }
-      });
-
-      setUretimVerileri(filtreliVeriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
+      setUretimVerileri(veriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
       toast.success('Veriler başarıyla yenilendi');
     } catch (error) {
       console.error('Veri yenileme hatası:', error);
@@ -504,6 +487,8 @@ export const UretimVerileri: React.FC = () => {
           uretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
+            where('tarih', '>=', Timestamp.fromDate(yilBaslangic)),
+            where('tarih', '<=', Timestamp.fromDate(yilBitis)),
             orderBy('tarih', 'desc')
           );
         } else {
@@ -516,25 +501,17 @@ export const UretimVerileri: React.FC = () => {
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
             where('companyId', '==', kullanici.companyId),
+            where('tarih', '>=', Timestamp.fromDate(yilBaslangic)),
+            where('tarih', '<=', Timestamp.fromDate(yilBitis)),
             orderBy('tarih', 'desc')
           );
         }
 
         const snapshot = await getDocs(uretimQuery);
-        const tumVeriler = snapshot.docs.map(doc => ({
+        const yillikFiltreliVeriler = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as UretimVerisi[];
-
-        // Yıllık veriler için filtreleme
-        const yillikFiltreliVeriler = tumVeriler.filter(veri => {
-          try {
-            const veriTarih = veri.tarih.toDate();
-            return veriTarih >= yilBaslangic && veriTarih <= yilBitis;
-          } catch (err) {
-            return false;
-          }
-        });
 
         // Aylık gruplandırma
         const aylikGruplar: Record<number, number> = {};
