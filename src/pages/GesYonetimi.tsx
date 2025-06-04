@@ -114,13 +114,20 @@ export const GesYonetimi: React.FC = () => {
       let santralQuery;
 
       if (kullanici.rol === 'musteri') {
-        // Müşteri rolü için sadece kendisine ait santralleri getir
-        santralQuery = query(
-          collection(db, 'santraller'),
-          where('musteriId', '==', kullanici.id),
-          where('companyId', '==', kullanici.companyId),
-          orderBy('olusturmaTarihi', 'desc')
-        );
+        // Müşteri rolü için kendisine atanan santralleri getir
+        if (kullanici.santraller && kullanici.santraller.length > 0) {
+          santralQuery = query(
+            collection(db, 'santraller'),
+            where('__name__', 'in', kullanici.santraller),
+            where('companyId', '==', kullanici.companyId)
+          );
+        } else {
+          // Müşteriye atanan santral yoksa boş liste döndür
+          setSantraller([]);
+          setYukleniyor(false);
+          console.log('Müşteriye atanan santral bulunamadı');
+          return;
+        }
       } else {
         // Diğer roller için şirketteki tüm santralleri getir
         santralQuery = query(

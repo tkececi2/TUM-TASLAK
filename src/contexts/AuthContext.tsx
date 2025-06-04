@@ -35,18 +35,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const normalizeUserData = (userData: any): Kullanici => {
     // Sahalar dizisini kontrol et
     let sahalar = userData.sahalar || [];
+    let santraller = userData.santraller || [];
 
     // Eğer sahalar bir dizi değilse, dizi haline getir
     if (sahalar && !Array.isArray(sahalar)) {
-      sahalar = Object.keys(sahalar);
+      if (typeof sahalar === 'object') {
+        sahalar = Object.keys(sahalar).filter(key => sahalar[key] === true);
+      } else {
+        sahalar = [];
+      }
+    }
+
+    // Eğer santraller bir dizi değilse, dizi haline getir
+    if (santraller && !Array.isArray(santraller)) {
+      if (typeof santraller === 'object') {
+        santraller = Object.keys(santraller).filter(key => santraller[key] === true);
+      } else {
+        santraller = [];
+      }
     }
 
     // Ensure companyId exists (default to empty string if not present)
     const companyId = userData.companyId || '';
 
+    console.log('Normalize - Sahalar:', sahalar);
+    console.log('Normalize - Santraller:', santraller);
+
     return {
       ...userData,
       sahalar,
+      santraller,
       companyId
     };
   };
@@ -97,50 +115,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (userData) {
             // Müşteri sahalarını al
-            if (userData.rol === 'musteri' && userData.sahalar) {
+            if (userData.rol === 'musteri') {
               let sahaIds: string[] = [];
 
-              // Sahalar array mi object mi kontrol et
-              if (Array.isArray(userData.sahalar)) {
-                sahaIds = userData.sahalar;
-              } else if (typeof userData.sahalar === 'object') {
-                // Object formatında ise key'leri al
-                sahaIds = Object.keys(userData.sahalar).filter(key => userData.sahalar[key] === true);
+              // Sahalar var mı kontrol et
+              if (userData.sahalar) {
+                // Sahalar array mi object mi kontrol et
+                if (Array.isArray(userData.sahalar)) {
+                  sahaIds = userData.sahalar;
+                } else if (typeof userData.sahalar === 'object') {
+                  // Object formatında ise key'leri al
+                  sahaIds = Object.keys(userData.sahalar).filter(key => userData.sahalar[key] === true);
+                }
               }
 
+              console.log('Müşteri saha IDs:', sahaIds);
+
               if (sahaIds.length > 0) {
-                const sahaQuery = query(
-                  collection(db, 'sahalar'),
-                  where('__name__', 'in', sahaIds)
-                );
-                const sahaSnapshot = await getDocs(sahaQuery);
-                const sahaListesi = sahaSnapshot.docs.map(doc => doc.id);
-                userData.sahalar = sahaListesi;
+                try {
+                  const sahaQuery = query(
+                    collection(db, 'sahalar'),
+                    where('__name__', 'in', sahaIds)
+                  );
+                  const sahaSnapshot = await getDocs(sahaQuery);
+                  const sahaListesi = sahaSnapshot.docs.map(doc => doc.id);
+                  userData.sahalar = sahaListesi;
+                  console.log('Yüklenen sahalar:', sahaListesi);
+                } catch (error) {
+                  console.error('Sahalar yüklenirken hata:', error);
+                  userData.sahalar = [];
+                }
               } else {
                 userData.sahalar = [];
               }
             }
 
             // Müşteri santrallerini al
-            if (userData.rol === 'musteri' && userData.santraller) {
+            if (userData.rol === 'musteri') {
               let santralIds: string[] = [];
 
-              // Santraller array mi object mi kontrol et
-              if (Array.isArray(userData.santraller)) {
-                santralIds = userData.santraller;
-              } else if (typeof userData.santraller === 'object') {
-                // Object formatında ise key'leri al
-                santralIds = Object.keys(userData.santraller).filter(key => userData.santraller[key] === true);
+              // Santraller var mı kontrol et
+              if (userData.santraller) {
+                // Santraller array mi object mi kontrol et
+                if (Array.isArray(userData.santraller)) {
+                  santralIds = userData.santraller;
+                } else if (typeof userData.santraller === 'object') {
+                  // Object formatında ise key'leri al
+                  santralIds = Object.keys(userData.santraller).filter(key => userData.santraller[key] === true);
+                }
               }
 
+              console.log('Müşteri santral IDs:', santralIds);
+
               if (santralIds.length > 0) {
-                const santralQuery = query(
-                  collection(db, 'santraller'),
-                  where('__name__', 'in', santralIds)
-                );
-                const santralSnapshot = await getDocs(santralQuery);
-                const santralListesi = santralSnapshot.docs.map(doc => doc.id);
-                userData.santraller = santralListesi;
+                try {
+                  const santralQuery = query(
+                    collection(db, 'santraller'),
+                    where('__name__', 'in', santralIds)
+                  );
+                  const santralSnapshot = await getDocs(santralQuery);
+                  const santralListesi = santralSnapshot.docs.map(doc => doc.id);
+                  userData.santraller = santralListesi;
+                  console.log('Yüklenen santraller:', santralListesi);
+                } catch (error) {
+                  console.error('Santraller yüklenirken hata:', error);
+                  userData.santraller = [];
+                }
               } else {
                 userData.santraller = [];
               }
@@ -256,50 +296,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userData) {
         // Müşteri sahalarını al
-        if (userData.rol === 'musteri' && userData.sahalar) {
+        if (userData.rol === 'musteri') {
           let sahaIds: string[] = [];
 
-          // Sahalar array mi object mi kontrol et
-          if (Array.isArray(userData.sahalar)) {
-            sahaIds = userData.sahalar;
-          } else if (typeof userData.sahalar === 'object') {
-            // Object formatında ise key'leri al
-            sahaIds = Object.keys(userData.sahalar).filter(key => userData.sahalar[key] === true);
+          // Sahalar var mı kontrol et
+          if (userData.sahalar) {
+            // Sahalar array mi object mi kontrol et
+            if (Array.isArray(userData.sahalar)) {
+              sahaIds = userData.sahalar;
+            } else if (typeof userData.sahalar === 'object') {
+              // Object formatında ise key'leri al
+              sahaIds = Object.keys(userData.sahalar).filter(key => userData.sahalar[key] === true);
+            }
           }
 
+          console.log('Login - Müşteri saha IDs:', sahaIds);
+
           if (sahaIds.length > 0) {
-            const sahaQuery = query(
-              collection(db, 'sahalar'),
-              where('__name__', 'in', sahaIds)
-            );
-            const sahaSnapshot = await getDocs(sahaQuery);
-            const sahaListesi = sahaSnapshot.docs.map(doc => doc.id);
-            userData.sahalar = sahaListesi;
+            try {
+              const sahaQuery = query(
+                collection(db, 'sahalar'),
+                where('__name__', 'in', sahaIds)
+              );
+              const sahaSnapshot = await getDocs(sahaQuery);
+              const sahaListesi = sahaSnapshot.docs.map(doc => doc.id);
+              userData.sahalar = sahaListesi;
+              console.log('Login - Yüklenen sahalar:', sahaListesi);
+            } catch (error) {
+              console.error('Login - Sahalar yüklenirken hata:', error);
+              userData.sahalar = [];
+            }
           } else {
             userData.sahalar = [];
           }
         }
 
         // Müşteri santrallerini al
-        if (userData.rol === 'musteri' && userData.santraller) {
+        if (userData.rol === 'musteri') {
           let santralIds: string[] = [];
 
-          // Santraller array mi object mi kontrol et
-          if (Array.isArray(userData.santraller)) {
-            santralIds = userData.santraller;
-          } else if (typeof userData.santraller === 'object') {
-            // Object formatında ise key'leri al
-            santralIds = Object.keys(userData.santraller).filter(key => userData.santraller[key] === true);
+          // Santraller var mı kontrol et
+          if (userData.santraller) {
+            // Santraller array mi object mi kontrol et
+            if (Array.isArray(userData.santraller)) {
+              santralIds = userData.santraller;
+            } else if (typeof userData.santraller === 'object') {
+              // Object formatında ise key'leri al
+              santralIds = Object.keys(userData.santraller).filter(key => userData.santraller[key] === true);
+            }
           }
 
+          console.log('Login - Müşteri santral IDs:', santralIds);
+
           if (santralIds.length > 0) {
-            const santralQuery = query(
-              collection(db, 'santraller'),
-              where('__name__', 'in', santralIds)
-            );
-            const santralSnapshot = await getDocs(santralQuery);
-            const santralListesi = santralSnapshot.docs.map(doc => doc.id);
-            userData.santraller = santralListesi;
+            try {
+              const santralQuery = query(
+                collection(db, 'santraller'),
+                where('__name__', 'in', santralIds)
+              );
+              const santralSnapshot = await getDocs(santralQuery);
+              const santralListesi = santralSnapshot.docs.map(doc => doc.id);
+              userData.santraller = santralListesi;
+              console.log('Login - Yüklenen santraller:', santralListesi);
+            } catch (error) {
+              console.error('Login - Santraller yüklenirken hata:', error);
+              userData.santraller = [];
+            }
           } else {
             userData.santraller = [];
           }
