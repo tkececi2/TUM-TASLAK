@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createUserWithProfile, db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, doc, updateDoc, where } from 'firebase/firestore';
-import { X, Users, Building, MapPin, Mail, Phone, Briefcase, Home, Save, ArrowLeft } from 'lucide-react';
+import { X, Users, Building, MapPin, Mail, Phone, Briefcase, Home, Save, ArrowLeft, Sun } from 'lucide-react';
 import { LoadingSpinner } from './LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
@@ -9,6 +9,10 @@ import type { Kullanici } from '../types';
 
 interface Props {
   sahalar: Array<{
+    id: string;
+    ad: string;
+  }>;
+  santraller: Array<{
     id: string;
     ad: string;
   }>;
@@ -23,11 +27,12 @@ interface MusteriFormu {
   sirket: string;
   adres: string;
   sahalar: Record<string, boolean>; // Changed to object for Firestore compatibility
+  santraller: Record<string, boolean>; // Santral assignments
   sifre: string;
   sifreTekrar: string;
 }
 
-export const MusteriForm: React.FC<Props> = ({ sahalar, musteri, onClose }) => {
+export const MusteriForm: React.FC<Props> = ({ sahalar, santraller, musteri, onClose }) => {
   const { kullanici } = useAuth();
   const [yukleniyor, setYukleniyor] = useState(false);
   const [activeTab, setActiveTab] = useState<'basic' | 'assignments' | 'address'>('basic');
@@ -38,6 +43,7 @@ export const MusteriForm: React.FC<Props> = ({ sahalar, musteri, onClose }) => {
     sirket: musteri?.sirket || '',
     adres: musteri?.adres || '',
     sahalar: musteri?.sahalar || {}, // Changed to object
+    santraller: musteri?.santraller || {}, // Santral assignments
     sifre: '',
     sifreTekrar: ''
   });
@@ -71,6 +77,7 @@ export const MusteriForm: React.FC<Props> = ({ sahalar, musteri, onClose }) => {
           sirket: form.sirket || '',
           adres: form.adres || '',
           sahalar: form.sahalar,
+          santraller: form.santraller,
           guncellenmeTarihi: new Date()
         });
         toast.success('Müşteri bilgileri güncellendi');
@@ -83,6 +90,7 @@ export const MusteriForm: React.FC<Props> = ({ sahalar, musteri, onClose }) => {
           sirket: form.sirket || '',
           adres: form.adres || '',
           sahalar: form.sahalar,
+          santraller: form.santraller,
           rol: 'musteri',
           companyId: kullanici.companyId, // Add company ID
           fotoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(form.ad)}&background=random`
@@ -235,6 +243,49 @@ export const MusteriForm: React.FC<Props> = ({ sahalar, musteri, onClose }) => {
               </div>
               <p className="mt-2 text-xs text-neutral-500">
                 Müşterinin erişebileceği sahaları seçin. Müşteri sadece kendisine atanan sahaların verilerini görebilecektir.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                <Sun className="h-4 w-4 inline mr-2" />
+                Santral Atamaları
+              </label>
+              <div className="bg-neutral-50 p-4 rounded-lg max-h-48 overflow-y-auto">
+                <div className="space-y-2">
+                  {santraller.length > 0 ? (
+                    santraller.map((santral) => (
+                      <label key={santral.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={!!form.santraller[santral.id]}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setForm(prev => ({
+                                ...prev,
+                                santraller: { ...prev.santraller, [santral.id]: true }
+                              }));
+                            } else {
+                              const newSantraller = { ...form.santraller };
+                              delete newSantraller[santral.id];
+                              setForm(prev => ({
+                                ...prev,
+                                santraller: newSantraller
+                              }));
+                            }
+                          }}
+                          className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500 h-4 w-4"
+                        />
+                        <span className="ml-2 text-sm text-neutral-700">{santral.ad}</span>
+                      </label>
+                    ))
+                  ) : (
+                    <p className="text-sm text-neutral-500">Henüz santral bulunmuyor</p>
+                  )}
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                Müşterinin erişebileceği santralleri seçin. Müşteri sadece kendisine atanan santrallerin verilerini görebilecektir.
               </p>
             </div>
           </div>

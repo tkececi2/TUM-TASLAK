@@ -231,6 +231,7 @@ export interface Kullanici {
   rol: KullaniciRolu;
   fotoURL?: string;
   sahalar?: string[];
+  santraller?: string[];
   sirket?: string;
   adres?: string;
   saha?: string;

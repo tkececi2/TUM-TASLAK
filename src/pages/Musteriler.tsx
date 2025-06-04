@@ -209,6 +209,7 @@ export const Musteriler: React.FC = () => {
       {formAcik && (
         <MusteriForm
           sahalar={sahalar}
+          santraller={santraller}
           musteri={duzenlenecekMusteri}
           onClose={() => {
             setFormAcik(false);
