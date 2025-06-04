@@ -560,8 +560,6 @@ export const YapilanIsler: React.FC = () => {
           )}
         </>
       )}
-      </>
-      )}
 
       {/* Modaller */}
       {formAcik && (
