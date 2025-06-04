@@ -153,7 +153,7 @@ export const UretimVerileri: React.FC = () => {
           );
         }
 
-        const snapshot = await getDocs(santralQuery);
+        const snapshot = await await getDocs(santralQuery);
         const santralListesi = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -382,24 +382,8 @@ export const UretimVerileri: React.FC = () => {
         ...doc.data()
       })) as UretimVerisi[];
 
-      // Manuel filtreleme
-      const filtreliVeriler = tumVeriler.filter(veri => {
-        try {
-          const veriTarih = veri.tarih.toDate();
-          const tarihKontrol = veriTarih >= ayBaslangic && veriTarih <= ayBitis;
-
-          // Müşteri için santral kontrolü yapıyoruz
-          if (kullanici.rol === 'musteri') {
-            return veri.santralId === secilenSantral && tarihKontrol;
-          } else {
-            return veri.santralId === secilenSantral && 
-                   veri.companyId === kullanici.companyId &&
-                   tarihKontrol;
-          }
-        } catch (err) {
-          return false;
-        }
-      });
+      // Artık manuel filtrelemeye gerek yok, Firestore sorgusu zaten filtrelenmiş
+      const filtreliVeriler = tumVeriler;
 
       setUretimVerileri(filtreliVeriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
       toast.success('Veriler başarıyla yenilendi');
