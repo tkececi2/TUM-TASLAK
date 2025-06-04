@@ -38,8 +38,20 @@ export const Sahalar: React.FC = () => {
       try {
         let q;
         if (kullanici.rol === 'musteri' && kullanici.sahalar) {
-          // Convert array to object keys for consistent checking
-          const sahaIds = Object.keys(kullanici.sahalar);
+          console.log('Müşteri sahalar data:', kullanici.sahalar);
+          
+          let sahaIds: string[] = [];
+          
+          // Sahalar object mi array mi kontrol et
+          if (Array.isArray(kullanici.sahalar)) {
+            sahaIds = kullanici.sahalar;
+          } else if (typeof kullanici.sahalar === 'object' && kullanici.sahalar !== null) {
+            // Object formatında ise key'leri al
+            sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+          }
+          
+          console.log('Müşteri saha IDs:', sahaIds);
+          
           if (sahaIds.length === 0) {
             setSahalar([]);
             setYukleniyor(false);

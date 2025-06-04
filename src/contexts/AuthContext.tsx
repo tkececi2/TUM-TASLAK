@@ -117,13 +117,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Müşteri sahalarını al
             if (userData.rol === 'musteri') {
               let sahaIds: string[] = [];
+              
+              console.log('Raw userData.sahalar:', userData.sahalar);
 
               // Sahalar var mı kontrol et
               if (userData.sahalar) {
                 // Sahalar array mi object mi kontrol et
                 if (Array.isArray(userData.sahalar)) {
                   sahaIds = userData.sahalar;
-                } else if (typeof userData.sahalar === 'object') {
+                } else if (typeof userData.sahalar === 'object' && userData.sahalar !== null) {
                   // Object formatında ise key'leri al
                   sahaIds = Object.keys(userData.sahalar).filter(key => userData.sahalar[key] === true);
                 }
@@ -131,22 +133,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
               console.log('Müşteri saha IDs:', sahaIds);
 
+              // Saha IDlerini userData'da object formatında sakla
               if (sahaIds.length > 0) {
-                try {
-                  const sahaQuery = query(
-                    collection(db, 'sahalar'),
-                    where('__name__', 'in', sahaIds)
-                  );
-                  const sahaSnapshot = await getDocs(sahaQuery);
-                  const sahaListesi = sahaSnapshot.docs.map(doc => doc.id);
-                  userData.sahalar = sahaListesi;
-                  console.log('Yüklenen sahalar:', sahaListesi);
-                } catch (error) {
-                  console.error('Sahalar yüklenirken hata:', error);
-                  userData.sahalar = [];
-                }
+                const sahaObject: { [key: string]: boolean } = {};
+                sahaIds.forEach(id => {
+                  sahaObject[id] = true;
+                });
+                userData.sahalar = sahaObject;
+                console.log('Yüklenen sahalar (object format):', userData.sahalar);
               } else {
-                userData.sahalar = [];
+                userData.sahalar = {};
               }
             }
 
@@ -298,13 +294,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Müşteri sahalarını al
         if (userData.rol === 'musteri') {
           let sahaIds: string[] = [];
+          
+          console.log('Login - Raw userData.sahalar:', userData.sahalar);
 
           // Sahalar var mı kontrol et
           if (userData.sahalar) {
             // Sahalar array mi object mi kontrol et
             if (Array.isArray(userData.sahalar)) {
               sahaIds = userData.sahalar;
-            } else if (typeof userData.sahalar === 'object') {
+            } else if (typeof userData.sahalar === 'object' && userData.sahalar !== null) {
               // Object formatında ise key'leri al
               sahaIds = Object.keys(userData.sahalar).filter(key => userData.sahalar[key] === true);
             }
@@ -312,22 +310,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           console.log('Login - Müşteri saha IDs:', sahaIds);
 
+          // Saha IDlerini userData'da object formatında sakla
           if (sahaIds.length > 0) {
-            try {
-              const sahaQuery = query(
-                collection(db, 'sahalar'),
-                where('__name__', 'in', sahaIds)
-              );
-              const sahaSnapshot = await getDocs(sahaQuery);
-              const sahaListesi = sahaSnapshot.docs.map(doc => doc.id);
-              userData.sahalar = sahaListesi;
-              console.log('Login - Yüklenen sahalar:', sahaListesi);
-            } catch (error) {
-              console.error('Login - Sahalar yüklenirken hata:', error);
-              userData.sahalar = [];
-            }
+            const sahaObject: { [key: string]: boolean } = {};
+            sahaIds.forEach(id => {
+              sahaObject[id] = true;
+            });
+            userData.sahalar = sahaObject;
+            console.log('Login - Yüklenen sahalar (object format):', userData.sahalar);
           } else {
-            userData.sahalar = [];
+            userData.sahalar = {};
           }
         }
 

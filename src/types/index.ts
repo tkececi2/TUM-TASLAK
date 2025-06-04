@@ -230,8 +230,8 @@ export interface Kullanici {
   telefon?: string;
   rol: KullaniciRolu;
   fotoURL?: string;
-  sahalar?: string[] | Record<string, boolean>;
-  santraller?: string[] | Record<string, boolean>;
+  sahalar?: string[] | { [key: string]: boolean };
+  santraller?: string[] | { [key: string]: boolean };
   sirket?: string;
   adres?: string;
   saha?: string;
