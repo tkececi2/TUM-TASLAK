@@ -121,15 +121,29 @@ export const UretimVerileri: React.FC = () => {
         setYukleniyor(true);
 
         let santralQuery;
-        if (kullanici.rol === 'musteri' && kullanici.sahalar) {
-          if (kullanici.sahalar.length === 0) {
+        if (kullanici.rol === 'musteri') {
+          // Müşteri için sahalar kontrolü
+          let sahaIds: string[] = [];
+          
+          if (kullanici.sahalar) {
+            if (Array.isArray(kullanici.sahalar)) {
+              sahaIds = kullanici.sahalar;
+            } else if (typeof kullanici.sahalar === 'object') {
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+            }
+          }
+
+          console.log('UretimVerileri - Müşteri saha IDs:', sahaIds);
+
+          if (sahaIds.length === 0) {
+            console.log('Müşterinin sahası yok, boş liste döndürülüyor');
             setSantraller([]);
             return;
           }
 
           santralQuery = query(
             collection(db, 'santraller'),
-            where('__name__', 'in', kullanici.sahalar)
+            where('__name__', 'in', sahaIds.slice(0, 10)) // Firestore limiti 10
           );
         } else {
           santralQuery = query(
@@ -182,11 +196,44 @@ export const UretimVerileri: React.FC = () => {
         const ayBaslangic = new Date(secilenYil, secilenAy, 1);
         const ayBitis = endOfMonth(ayBaslangic);
 
-        // Basit sorgu - tüm üretim verilerini al ve filtrele
-        const uretimQuery = query(
-          collection(db, 'uretimVerileri'),
-          orderBy('tarih', 'desc')
-        );
+        let uretimQuery;
+
+        // Müşteri rol kontrolü
+        if (kullanici.rol === 'musteri') {
+          // Müşteri için sadece kendi santrallerinin verilerini getir
+          let sahaIds: string[] = [];
+          
+          if (kullanici.sahalar) {
+            if (Array.isArray(kullanici.sahalar)) {
+              sahaIds = kullanici.sahalar;
+            } else if (typeof kullanici.sahalar === 'object') {
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+            }
+          }
+
+          console.log('UretimVerileri - Üretim sorgusu için saha IDs:', sahaIds);
+
+          if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
+            console.log('Müşteri bu santralin verilerine erişemiyor');
+            setUretimVerileri([]);
+            return;
+          }
+
+          // Müşteri için basit sorgu
+          uretimQuery = query(
+            collection(db, 'uretimVerileri'),
+            where('santralId', '==', secilenSantral),
+            orderBy('tarih', 'desc')
+          );
+        } else {
+          // Diğer roller için normal sorgu
+          uretimQuery = query(
+            collection(db, 'uretimVerileri'),
+            where('santralId', '==', secilenSantral),
+            where('companyId', '==', kullanici.companyId),
+            orderBy('tarih', 'desc')
+          );
+        }
 
         const snapshot = await getDocs(uretimQuery);
         const tumVeriler = snapshot.docs.map(doc => ({
@@ -194,19 +241,29 @@ export const UretimVerileri: React.FC = () => {
           ...doc.data()
         })) as UretimVerisi[];
 
+        console.log('UretimVerileri - Toplam bulunan veri sayısı:', tumVeriler.length);
+
         // Manuel filtreleme
         const filtreliVeriler = tumVeriler.filter(veri => {
           try {
             const veriTarih = veri.tarih.toDate();
-            return veri.santralId === secilenSantral && 
-                   veri.companyId === kullanici.companyId &&
-                   veriTarih >= ayBaslangic && 
-                   veriTarih <= ayBitis;
+            const tarihKontrol = veriTarih >= ayBaslangic && veriTarih <= ayBitis;
+            
+            // Müşteri için companyId kontrolü yapmıyoruz, çünkü sahalar üzerinden kontrol ediyoruz
+            if (kullanici.rol === 'musteri') {
+              return veri.santralId === secilenSantral && tarihKontrol;
+            } else {
+              return veri.santralId === secilenSantral && 
+                     veri.companyId === kullanici.companyId &&
+                     tarihKontrol;
+            }
           } catch (err) {
+            console.error('Tarih filtreleme hatası:', err);
             return false;
           }
         });
 
+        console.log('UretimVerileri - Filtrelenmiş veri sayısı:', filtreliVeriler.length);
         setUretimVerileri(filtreliVeriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
       } catch (error) {
         console.error('Üretim verileri getirilemedi:', error);
@@ -282,11 +339,39 @@ export const UretimVerileri: React.FC = () => {
       const ayBaslangic = new Date(secilenYil, secilenAy, 1);
       const ayBitis = endOfMonth(ayBaslangic);
 
-      // Basit sorgu - tüm üretim verilerini al ve filtrele
-      const uretimQuery = query(
-        collection(db, 'uretimVerileri'),
-        orderBy('tarih', 'desc')
-      );
+      let uretimQuery;
+
+      // Müşteri rol kontrolü
+      if (kullanici.rol === 'musteri') {
+        // Müşteri için sadece kendi santrallerinin verilerini getir
+        let sahaIds: string[] = [];
+        
+        if (kullanici.sahalar) {
+          if (Array.isArray(kullanici.sahalar)) {
+            sahaIds = kullanici.sahalar;
+          } else if (typeof kullanici.sahalar === 'object') {
+            sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+          }
+        }
+
+        if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
+          setUretimVerileri([]);
+          return;
+        }
+
+        uretimQuery = query(
+          collection(db, 'uretimVerileri'),
+          where('santralId', '==', secilenSantral),
+          orderBy('tarih', 'desc')
+        );
+      } else {
+        uretimQuery = query(
+          collection(db, 'uretimVerileri'),
+          where('santralId', '==', secilenSantral),
+          where('companyId', '==', kullanici.companyId),
+          orderBy('tarih', 'desc')
+        );
+      }
 
       const snapshot = await getDocs(uretimQuery);
       const tumVeriler = snapshot.docs.map(doc => ({
@@ -298,10 +383,16 @@ export const UretimVerileri: React.FC = () => {
       const filtreliVeriler = tumVeriler.filter(veri => {
         try {
           const veriTarih = veri.tarih.toDate();
-          return veri.santralId === secilenSantral && 
-                 veri.companyId === kullanici.companyId &&
-                 veriTarih >= ayBaslangic && 
-                 veriTarih <= ayBitis;
+          const tarihKontrol = veriTarih >= ayBaslangic && veriTarih <= ayBitis;
+          
+          // Müşteri için companyId kontrolü yapmıyoruz
+          if (kullanici.rol === 'musteri') {
+            return veri.santralId === secilenSantral && tarihKontrol;
+          } else {
+            return veri.santralId === secilenSantral && 
+                   veri.companyId === kullanici.companyId &&
+                   tarihKontrol;
+          }
         } catch (err) {
           return false;
         }
@@ -389,10 +480,39 @@ export const UretimVerileri: React.FC = () => {
         const yilBaslangic = new Date(secilenYil, 0, 1);
         const yilBitis = new Date(secilenYil, 11, 31);
 
-        const uretimQuery = query(
-          collection(db, 'uretimVerileri'),
-          orderBy('tarih', 'desc')
-        );
+        let uretimQuery;
+
+        // Müşteri rol kontrolü
+        if (kullanici.rol === 'musteri') {
+          // Müşteri için sadece kendi santrallerinin verilerini getir
+          let sahaIds: string[] = [];
+          
+          if (kullanici.sahalar) {
+            if (Array.isArray(kullanici.sahalar)) {
+              sahaIds = kullanici.sahalar;
+            } else if (typeof kullanici.sahalar === 'object') {
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+            }
+          }
+
+          if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
+            setYillikVeriler([]);
+            return;
+          }
+
+          uretimQuery = query(
+            collection(db, 'uretimVerileri'),
+            where('santralId', '==', secilenSantral),
+            orderBy('tarih', 'desc')
+          );
+        } else {
+          uretimQuery = query(
+            collection(db, 'uretimVerileri'),
+            where('santralId', '==', secilenSantral),
+            where('companyId', '==', kullanici.companyId),
+            orderBy('tarih', 'desc')
+          );
+        }
 
         const snapshot = await getDocs(uretimQuery);
         const tumVeriler = snapshot.docs.map(doc => ({
@@ -404,10 +524,16 @@ export const UretimVerileri: React.FC = () => {
         const yillikFiltreliVeriler = tumVeriler.filter(veri => {
           try {
             const veriTarih = veri.tarih.toDate();
-            return veri.santralId === secilenSantral && 
-                   veri.companyId === kullanici.companyId &&
-                   veriTarih >= yilBaslangic && 
-                   veriTarih <= yilBitis;
+            const tarihKontrol = veriTarih >= yilBaslangic && veriTarih <= yilBitis;
+            
+            // Müşteri için companyId kontrolü yapmıyoruz
+            if (kullanici.rol === 'musteri') {
+              return veri.santralId === secilenSantral && tarihKontrol;
+            } else {
+              return veri.santralId === secilenSantral && 
+                     veri.companyId === kullanici.companyId &&
+                     tarihKontrol;
+            }
           } catch (err) {
             return false;
           }
