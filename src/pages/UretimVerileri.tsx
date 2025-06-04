@@ -124,7 +124,7 @@ export const UretimVerileri: React.FC = () => {
         if (kullanici.rol === 'musteri') {
           // Müşteri için sahalar kontrolü
           let sahaIds: string[] = [];
-          
+
           if (kullanici.sahalar) {
             if (Array.isArray(kullanici.sahalar)) {
               sahaIds = kullanici.sahalar;
@@ -202,7 +202,7 @@ export const UretimVerileri: React.FC = () => {
         if (kullanici.rol === 'musteri') {
           // Müşteri için sadece kendi santrallerinin verilerini getir
           let sahaIds: string[] = [];
-          
+
           if (kullanici.sahalar) {
             if (Array.isArray(kullanici.sahalar)) {
               sahaIds = kullanici.sahalar;
@@ -248,8 +248,8 @@ export const UretimVerileri: React.FC = () => {
           try {
             const veriTarih = veri.tarih.toDate();
             const tarihKontrol = veriTarih >= ayBaslangic && veriTarih <= ayBitis;
-            
-            // Müşteri için companyId kontrolü yapmıyoruz, çünkü sahalar üzerinden kontrol ediyoruz
+
+            // Müşteri için santral kontrolü yapıyoruz
             if (kullanici.rol === 'musteri') {
               return veri.santralId === secilenSantral && tarihKontrol;
             } else {
@@ -258,7 +258,6 @@ export const UretimVerileri: React.FC = () => {
                      tarihKontrol;
             }
           } catch (err) {
-            console.error('Tarih filtreleme hatası:', err);
             return false;
           }
         });
@@ -345,7 +344,7 @@ export const UretimVerileri: React.FC = () => {
       if (kullanici.rol === 'musteri') {
         // Müşteri için sadece kendi santrallerinin verilerini getir
         let sahaIds: string[] = [];
-        
+
         if (kullanici.sahalar) {
           if (Array.isArray(kullanici.sahalar)) {
             sahaIds = kullanici.sahalar;
@@ -384,8 +383,8 @@ export const UretimVerileri: React.FC = () => {
         try {
           const veriTarih = veri.tarih.toDate();
           const tarihKontrol = veriTarih >= ayBaslangic && veriTarih <= ayBitis;
-          
-          // Müşteri için companyId kontrolü yapmıyoruz
+
+          // Müşteri için santral kontrolü yapıyoruz
           if (kullanici.rol === 'musteri') {
             return veri.santralId === secilenSantral && tarihKontrol;
           } else {
@@ -486,7 +485,7 @@ export const UretimVerileri: React.FC = () => {
         if (kullanici.rol === 'musteri') {
           // Müşteri için sadece kendi santrallerinin verilerini getir
           let sahaIds: string[] = [];
-          
+
           if (kullanici.sahalar) {
             if (Array.isArray(kullanici.sahalar)) {
               sahaIds = kullanici.sahalar;
@@ -525,8 +524,8 @@ export const UretimVerileri: React.FC = () => {
           try {
             const veriTarih = veri.tarih.toDate();
             const tarihKontrol = veriTarih >= yilBaslangic && veriTarih <= yilBitis;
-            
-            // Müşteri için companyId kontrolü yapmıyoruz
+
+            // Müşteri için santral kontrolü yapıyoruz
             if (kullanici.rol === 'musteri') {
               return veri.santralId === secilenSantral && tarihKontrol;
             } else {
@@ -551,7 +550,7 @@ export const UretimVerileri: React.FC = () => {
         const yillikGrafikVerileri = aySecenekleri.map((ay, index) => {
           const gercekUretim = aylikGruplar[index] || 0;
           const hedefUretim = santralDetay.aylikHedefler?.[['ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran', 'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'][index]] || (santralDetay.yillikHedefUretim / 12);
-          
+
           return {
             ay: ay.label,
             gercekUretim,
@@ -585,7 +584,7 @@ export const UretimVerileri: React.FC = () => {
               </p>
             </div>
           </div>
-          
+
           <Card className="bg-yellow-50 border-yellow-200">
             <div className="flex items-center space-x-4">
               <div className="p-3 bg-yellow-100 rounded-full">
@@ -748,7 +747,7 @@ export const UretimVerileri: React.FC = () => {
               {canAdd && (
                 <button
                   onClick={() => setImportModalAcik(true)}
-                  className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-colors"
+                  className="inline-flex items-center px-3 pyy-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-colors"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Veri Ekle
@@ -928,13 +927,13 @@ export const UretimVerileri: React.FC = () => {
             customTooltip={(props) => {
               const { payload, active } = props;
               if (!active || !payload) return null;
-              
+
               const data = payload[0]?.payload;
               const hedef = data?.hedefUretim || 0;
               const gercek = data?.gercekUretim || 0;
               const fark = data?.fark || 0;
               const yuzde = hedef > 0 ? ((gercek / hedef) * 100).toFixed(1) : '0';
-              
+
               return (
                 <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
                   <div className="text-sm font-medium text-gray-900 mb-2">{data?.ay}</div>
