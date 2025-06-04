@@ -361,6 +361,8 @@ export const UretimVerileri: React.FC = () => {
         uretimQuery = query(
           collection(db, 'uretimVerileri'),
           where('santralId', '==', secilenSantral),
+          where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
+          where('tarih', '<=', Timestamp.fromDate(ayBitis)),
           orderBy('tarih', 'desc')
         );
       } else {
@@ -368,6 +370,8 @@ export const UretimVerileri: React.FC = () => {
           collection(db, 'uretimVerileri'),
           where('santralId', '==', secilenSantral),
           where('companyId', '==', kullanici.companyId),
+          where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
+          where('tarih', '<=', Timestamp.fromDate(ayBitis)),
           orderBy('tarih', 'desc')
         );
       }
@@ -737,7 +741,7 @@ export const UretimVerileri: React.FC = () => {
               {canDelete && uretimVerileri.length > 0 && (
                 <button
                   onClick={() => setAylikSilmeModalAcik(true)}
-                  className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 transition-colors"
+                  className="inline-flex items-center px-3 py-2 border border-red-300 rounded-lg shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-500 transition-colors"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Aylık Sil
