@@ -184,7 +184,7 @@ export const UretimVerileri: React.FC = () => {
   // Üretim verilerini getir
   useEffect(() => {
     const verileriGetir = async () => {
-      if (!secilenSantral || !kullanici?.companyId) {
+      if (!secilenSantral) {
         setUretimVerileri([]);
         return;
       }
@@ -199,7 +199,7 @@ export const UretimVerileri: React.FC = () => {
         let uretimQuery;
 
         // Müşteri rol kontrolü
-        if (kullanici.rol === 'musteri') {
+        if (kullanici?.rol === 'musteri') {
           // Müşteri için sadece kendi santrallerinin verilerini getir
           let sahaIds: string[] = [];
 
@@ -212,6 +212,7 @@ export const UretimVerileri: React.FC = () => {
           }
 
           console.log('UretimVerileri - Üretim sorgusu için saha IDs:', sahaIds);
+          console.log('UretimVerileri - Seçilen santral:', secilenSantral);
 
           if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
             console.log('Müşteri bu santralin verilerine erişemiyor');
@@ -220,14 +221,20 @@ export const UretimVerileri: React.FC = () => {
             return;
           }
 
-          // Müşteri için basit sorgu
+          // Müşteri için sadece santral ID'si ile sorgu
           uretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
             orderBy('tarih', 'desc')
           );
         } else {
-          // Diğer roller için normal sorgu
+          // Diğer roller için companyId ile sorgu
+          if (!kullanici?.companyId) {
+            setUretimVerileri([]);
+            setYukleniyor(false);
+            return;
+          }
+
           uretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
@@ -244,21 +251,15 @@ export const UretimVerileri: React.FC = () => {
 
         console.log('UretimVerileri - Toplam bulunan veri sayısı:', tumVeriler.length);
 
-        // Manuel filtreleme
+        // Manuel tarih filtreleme
         const filtreliVeriler = tumVeriler.filter(veri => {
           try {
             const veriTarih = veri.tarih.toDate();
             const tarihKontrol = veriTarih >= ayBaslangic && veriTarih <= ayBitis;
-
-            // Müşteri için santral kontrolü yapıyoruz
-            if (kullanici.rol === 'musteri') {
-              return veri.santralId === secilenSantral && tarihKontrol;
-            } else {
-              return veri.santralId === secilenSantral && 
-                     veri.companyId === kullanici.companyId &&
-                     tarihKontrol;
-            }
+            console.log('Veri tarihi:', format(veriTarih, 'dd.MM.yyyy'), 'Kontrol:', tarihKontrol);
+            return tarihKontrol;
           } catch (err) {
+            console.error('Tarih dönüştürme hatası:', err);
             return false;
           }
         });
@@ -277,7 +278,7 @@ export const UretimVerileri: React.FC = () => {
     if (santraller.length > 0) {
       verileriGetir();
     }
-  }, [secilenSantral, secilenYil, secilenAy, kullanici?.companyId, santraller]);
+  }, [secilenSantral, secilenYil, secilenAy, kullanici, santraller]);
 
   const handleVeriSil = async (id: string) => {
     if (!canDelete) {
@@ -330,7 +331,7 @@ export const UretimVerileri: React.FC = () => {
     setYenileniyor(true);
     try {
       // Sadece verileri yeniden getir, sayfa yenilemeyi önle
-      if (!secilenSantral || !kullanici?.companyId) {
+      if (!secilenSantral) {
         setUretimVerileri([]);
         return;
       }
@@ -342,7 +343,7 @@ export const UretimVerileri: React.FC = () => {
       let uretimQuery;
 
       // Müşteri rol kontrolü
-      if (kullanici.rol === 'musteri') {
+      if (kullanici?.rol === 'musteri') {
         // Müşteri için sadece kendi santrallerinin verilerini getir
         let sahaIds: string[] = [];
 
@@ -356,24 +357,27 @@ export const UretimVerileri: React.FC = () => {
 
         if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
           setUretimVerileri([]);
-          setYukleniyor(false);
+          setYenileniyor(false);
+          return;
+        }
+
+        // Müşteri için sadece santral ID'si ile sorgu
+        uretimQuery = query(
+          collection(db, 'uretimVerileri'),
+          where('santralId', '==', secilenSantral),
+          orderBy('tarih', 'desc')
+        );
+      } else {
+        if (!kullanici?.companyId) {
+          setUretimVerileri([]);
+          setYenileniyor(false);
           return;
         }
 
         uretimQuery = query(
           collection(db, 'uretimVerileri'),
           where('santralId', '==', secilenSantral),
-          where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
-          where('tarih', '<=', Timestamp.fromDate(ayBitis)),
-          orderBy('tarih', 'desc')
-        );
-      } else {
-        uretimQuery = query(
-          collection(db, 'uretimVerileri'),
-          where('santralId', '==', secilenSantral),
           where('companyId', '==', kullanici.companyId),
-          where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
-          where('tarih', '<=', Timestamp.fromDate(ayBitis)),
           orderBy('tarih', 'desc')
         );
       }
@@ -384,8 +388,15 @@ export const UretimVerileri: React.FC = () => {
         ...doc.data()
       })) as UretimVerisi[];
 
-      // Artık manuel filtrelemeye gerek yok, Firestore sorgusu zaten filtrelenmiş
-      const filtreliVeriler = tumVeriler;
+      // Manuel tarih filtreleme
+      const filtreliVeriler = tumVeriler.filter(veri => {
+        try {
+          const veriTarih = veri.tarih.toDate();
+          return veriTarih >= ayBaslangic && veriTarih <= ayBitis;
+        } catch (err) {
+          return false;
+        }
+      });
 
       setUretimVerileri(filtreliVeriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
       toast.success('Veriler başarıyla yenilendi');
@@ -462,7 +473,7 @@ export const UretimVerileri: React.FC = () => {
 
   useEffect(() => {
     const yillikVerileriGetir = async () => {
-      if (!secilenSantral || !kullanici?.companyId || !santralDetay) return;
+      if (!secilenSantral || !santralDetay) return;
 
       try {
         // Seçilen yıl için tüm ayların verilerini getir
@@ -472,7 +483,7 @@ export const UretimVerileri: React.FC = () => {
         let uretimQuery;
 
         // Müşteri rol kontrolü
-        if (kullanici.rol === 'musteri') {
+        if (kullanici?.rol === 'musteri') {
           // Müşteri için sadece kendi santrallerinin verilerini getir
           let sahaIds: string[] = [];
 
@@ -486,7 +497,6 @@ export const UretimVerileri: React.FC = () => {
 
           if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
             setYillikVeriler([]);
-            setYukleniyor(false);
             return;
           }
 
@@ -496,6 +506,11 @@ export const UretimVerileri: React.FC = () => {
             orderBy('tarih', 'desc')
           );
         } else {
+          if (!kullanici?.companyId) {
+            setYillikVeriler([]);
+            return;
+          }
+
           uretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
@@ -514,16 +529,7 @@ export const UretimVerileri: React.FC = () => {
         const yillikFiltreliVeriler = tumVeriler.filter(veri => {
           try {
             const veriTarih = veri.tarih.toDate();
-            const tarihKontrol = veriTarih >= yilBaslangic && veriTarih <= yilBitis;
-
-            // Müşteri için santral kontrolü yapıyoruz
-            if (kullanici.rol === 'musteri') {
-              return veri.santralId === secilenSantral && tarihKontrol;
-            } else {
-              return veri.santralId === secilenSantral && 
-                     veri.companyId === kullanici.companyId &&
-                     tarihKontrol;
-            }
+            return veriTarih >= yilBaslangic && veriTarih <= yilBitis;
           } catch (err) {
             return false;
           }
@@ -559,7 +565,7 @@ export const UretimVerileri: React.FC = () => {
     if (yillikGrafik && santraller.length > 0) {
       yillikVerileriGetir();
     }
-  }, [secilenSantral, secilenYil, kullanici?.companyId, santralDetay, yillikGrafik, santraller]);
+  }, [secilenSantral, secilenYil, kullanici, santralDetay, yillikGrafik, santraller]);
 
   const istatistikler = hesaplaIstatistikler();
 
