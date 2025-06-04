@@ -343,6 +343,39 @@ export const GesYonetimi: React.FC = () => {
     setFiyatFormAcik(true);
   };
 
+  // Yıl değiştiğinde fiyatları güncelle
+  useEffect(() => {
+    if (secilenFiyatSantral && fiyatFormAcik) {
+      const elektrikFiyatlari = secilenFiyatSantral.elektrikFiyatlari || {};
+      const yilFiyatlari = elektrikFiyatlari[fiyatForm.yil.toString()] || {};
+
+      const varsayilanAylar = {
+        ocak: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        subat: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        mart: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        nisan: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        mayis: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        haziran: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        temmuz: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        agustos: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        eylul: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        ekim: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        kasim: { birimFiyat: 5.0, dagitimBedeli: 0.5 },
+        aralik: { birimFiyat: 5.0, dagitimBedeli: 0.5 }
+      };
+
+      const aylar = { ...varsayilanAylar };
+
+      Object.keys(yilFiyatlari).forEach(ay => {
+        if (aylar[ay]) {
+          aylar[ay] = yilFiyatlari[ay];
+        }
+      });
+
+      setFiyatForm(prev => ({ ...prev, aylar }));
+    }
+  }, [fiyatForm.yil, secilenFiyatSantral, fiyatFormAcik]);
+
   if (yukleniyor && santraller.length === 0) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
