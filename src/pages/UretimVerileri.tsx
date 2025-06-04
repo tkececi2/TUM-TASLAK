@@ -205,9 +205,9 @@ export const UretimVerileri: React.FC = () => {
 
           if (kullanici.sahalar) {
             if (Array.isArray(kullanici.sahalar)) {
-              sahaIds = kullanici.sahalar;
+              sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
             } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true && key && key.trim() !== '');
             }
           }
 
@@ -216,6 +216,7 @@ export const UretimVerileri: React.FC = () => {
           if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
             console.log('Müşteri bu santralin verilerine erişemiyor');
             setUretimVerileri([]);
+            setYukleniyor(false);
             return;
           }
 
@@ -347,14 +348,15 @@ export const UretimVerileri: React.FC = () => {
 
         if (kullanici.sahalar) {
           if (Array.isArray(kullanici.sahalar)) {
-            sahaIds = kullanici.sahalar;
+            sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
           } else if (typeof kullanici.sahalar === 'object') {
-            sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+            sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true && key && key.trim() !== '');
           }
         }
 
         if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
           setUretimVerileri([]);
+          setYukleniyor(false);
           return;
         }
 
@@ -476,14 +478,15 @@ export const UretimVerileri: React.FC = () => {
 
           if (kullanici.sahalar) {
             if (Array.isArray(kullanici.sahalar)) {
-              sahaIds = kullanici.sahalar;
+              sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
             } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true && key && key.trim() !== '');
             }
           }
 
           if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
             setYillikVeriler([]);
+            setYukleniyor(false);
             return;
           }
 
