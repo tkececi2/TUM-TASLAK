@@ -123,20 +123,24 @@ export const UretimVerileri: React.FC = () => {
         let santralQuery;
         if (kullanici.rol === 'musteri') {
           // Müşteri için sahalar kontrolü
+          let sahalarObject = kullanici.sahalar || {};
           let sahaIds: string[] = [];
 
-          if (kullanici.sahalar) {
-            if (Array.isArray(kullanici.sahalar)) {
-              sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
-            } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => 
-                kullanici.sahalar[key] === true && key && key.trim() !== ''
-              );
-            }
+          console.log('UretimVerileri - Müşteri sahalar object:', sahalarObject);
+          console.log('UretimVerileri - kullanici.sahalar raw:', kullanici.sahalar);
+
+          // Sahalar kontrolü - object formatında olması gerekiyor
+          if (sahalarObject && typeof sahalarObject === 'object') {
+            // Object ise key'leri al
+            sahaIds = Object.keys(sahalarObject).filter(key => 
+              sahalarObject[key] === true && key && key.trim() !== ''
+            );
+          } else if (Array.isArray(sahalarObject)) {
+            // Array ise direkt kullan
+            sahaIds = sahalarObject.filter(id => id && id.trim() !== '');
           }
 
           console.log('UretimVerileri - Müşteri saha IDs:', sahaIds);
-          console.log('UretimVerileri - kullanici.sahalar raw:', kullanici.sahalar);
 
           if (sahaIds.length === 0) {
             console.log('Müşterinin sahası yok, boş liste döndürülüyor');
