@@ -127,20 +127,22 @@ export const UretimVerileri: React.FC = () => {
 
           if (kullanici.sahalar) {
             if (Array.isArray(kullanici.sahalar)) {
-              sahaIds = kullanici.sahalar;
+              sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
             } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true);
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => 
+                kullanici.sahalar[key] === true && key && key.trim() !== ''
+              );
             }
           }
 
           console.log('UretimVerileri - Müşteri saha IDs:', sahaIds);
           console.log('UretimVerileri - kullanici.sahalar raw:', kullanici.sahalar);
 
-        if (sahaIds.length === 0) {
-          console.log('Müşterinin sahası yok, boş liste döndürülüyor');
-          setSantraller([]);
-          return;
-        }
+          if (sahaIds.length === 0) {
+            console.log('Müşterinin sahası yok, boş liste döndürülüyor');
+            setSantraller([]);
+            return;
+          }
 
           santralQuery = query(
             collection(db, 'santraller'),
@@ -208,15 +210,25 @@ export const UretimVerileri: React.FC = () => {
             if (Array.isArray(kullanici.sahalar)) {
               sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
             } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true && key && key.trim() !== '');
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => 
+                kullanici.sahalar[key] === true && key && key.trim() !== ''
+              );
             }
           }
 
           console.log('UretimVerileri - Üretim sorgusu için saha IDs:', sahaIds);
           console.log('UretimVerileri - Seçilen santral:', secilenSantral);
+          console.log('UretimVerileri - Santral erişim kontrolü:', sahaIds.includes(secilenSantral));
 
-          if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
-            console.log('Müşteri bu santralin verilerine erişemiyor');
+          if (sahaIds.length === 0) {
+            console.log('Müşterinin hiç sahası yok');
+            setUretimVerileri([]);
+            setYukleniyor(false);
+            return;
+          }
+
+          if (!sahaIds.includes(secilenSantral)) {
+            console.log('Müşteri bu santralin verilerine erişemiyor:', secilenSantral);
             setUretimVerileri([]);
             setYukleniyor(false);
             return;
@@ -341,11 +353,24 @@ export const UretimVerileri: React.FC = () => {
           if (Array.isArray(kullanici.sahalar)) {
             sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
           } else if (typeof kullanici.sahalar === 'object') {
-            sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true && key && key.trim() !== '');
+            sahaIds = Object.keys(kullanici.sahalar).filter(key => 
+              kullanici.sahalar[key] === true && key && key.trim() !== ''
+            );
           }
         }
 
-        if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
+        console.log('Yenileme - Müşteri saha IDs:', sahaIds);
+        console.log('Yenileme - Seçilen santral:', secilenSantral);
+
+        if (sahaIds.length === 0) {
+          console.log('Yenileme - Müşterinin hiç sahası yok');
+          setUretimVerileri([]);
+          setYenileniyor(false);
+          return;
+        }
+
+        if (!sahaIds.includes(secilenSantral)) {
+          console.log('Yenileme - Müşteri bu santralin verilerine erişemiyor');
           setUretimVerileri([]);
           setYenileniyor(false);
           return;
@@ -475,11 +500,23 @@ export const UretimVerileri: React.FC = () => {
             if (Array.isArray(kullanici.sahalar)) {
               sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
             } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => kullanici.sahalar[key] === true && key && key.trim() !== '');
+              sahaIds = Object.keys(kullanici.sahalar).filter(key => 
+                kullanici.sahalar[key] === true && key && key.trim() !== ''
+              );
             }
           }
 
-          if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
+          console.log('Yıllık veriler - Müşteri saha IDs:', sahaIds);
+          console.log('Yıllık veriler - Seçilen santral:', secilenSantral);
+
+          if (sahaIds.length === 0) {
+            console.log('Yıllık veriler - Müşterinin hiç sahası yok');
+            setYillikVeriler([]);
+            return;
+          }
+
+          if (!sahaIds.includes(secilenSantral)) {
+            console.log('Yıllık veriler - Müşteri bu santralin verilerine erişemiyor');
             setYillikVeriler([]);
             return;
           }
