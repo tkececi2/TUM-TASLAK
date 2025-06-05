@@ -204,18 +204,21 @@ export const UretimVerileri: React.FC = () => {
         // Müşteri rol kontrolü
         if (kullanici?.rol === 'musteri') {
           // Müşteri için sadece kendi santrallerinin verilerini getir
+          let sahalarObject = kullanici.sahalar || {};
           let sahaIds: string[] = [];
 
-          if (kullanici.sahalar) {
-            if (Array.isArray(kullanici.sahalar)) {
-              sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
-            } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => 
-                kullanici.sahalar[key] === true && key && key.trim() !== ''
-              );
-            }
+          // Sahalar kontrolü - object formatında olması gerekiyor
+          if (sahalarObject && typeof sahalarObject === 'object') {
+            // Object ise key'leri al
+            sahaIds = Object.keys(sahalarObject).filter(key => 
+              sahalarObject[key] === true && key && key.trim() !== ''
+            );
+          } else if (Array.isArray(sahalarObject)) {
+            // Array ise direkt kullan
+            sahaIds = sahalarObject.filter(id => id && id.trim() !== '');
           }
 
+          console.log('UretimVerileri - Müşteri sahalar object:', sahalarObject);
           console.log('UretimVerileri - Üretim sorgusu için saha IDs:', sahaIds);
           console.log('UretimVerileri - Seçilen santral:', secilenSantral);
           console.log('UretimVerileri - Santral erişim kontrolü:', sahaIds.includes(secilenSantral));
@@ -347,18 +350,21 @@ export const UretimVerileri: React.FC = () => {
       // Müşteri rol kontrolü
       if (kullanici?.rol === 'musteri') {
         // Müşteri için sadece kendi santrallerinin verilerini getir
+        let sahalarObject = kullanici.sahalar || {};
         let sahaIds: string[] = [];
 
-        if (kullanici.sahalar) {
-          if (Array.isArray(kullanici.sahalar)) {
-            sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
-          } else if (typeof kullanici.sahalar === 'object') {
-            sahaIds = Object.keys(kullanici.sahalar).filter(key => 
-              kullanici.sahalar[key] === true && key && key.trim() !== ''
-            );
-          }
+        // Sahalar kontrolü - object formatında olması gerekiyor
+        if (sahalarObject && typeof sahalarObject === 'object') {
+          // Object ise key'leri al
+          sahaIds = Object.keys(sahalarObject).filter(key => 
+            sahalarObject[key] === true && key && key.trim() !== ''
+          );
+        } else if (Array.isArray(sahalarObject)) {
+          // Array ise direkt kullan
+          sahaIds = sahalarObject.filter(id => id && id.trim() !== '');
         }
 
+        console.log('Yenileme - Müşteri sahalar object:', sahalarObject);
         console.log('Yenileme - Müşteri saha IDs:', sahaIds);
         console.log('Yenileme - Seçilen santral:', secilenSantral);
 
@@ -494,18 +500,21 @@ export const UretimVerileri: React.FC = () => {
         // Müşteri rol kontrolü
         if (kullanici?.rol === 'musteri') {
           // Müşteri için sadece kendi santrallerinin verilerini getir
+          let sahalarObject = kullanici.sahalar || {};
           let sahaIds: string[] = [];
 
-          if (kullanici.sahalar) {
-            if (Array.isArray(kullanici.sahalar)) {
-              sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
-            } else if (typeof kullanici.sahalar === 'object') {
-              sahaIds = Object.keys(kullanici.sahalar).filter(key => 
-                kullanici.sahalar[key] === true && key && key.trim() !== ''
-              );
-            }
+          // Sahalar kontrolü - object formatında olması gerekiyor
+          if (sahalarObject && typeof sahalarObject === 'object') {
+            // Object ise key'leri al
+            sahaIds = Object.keys(sahalarObject).filter(key => 
+              sahalarObject[key] === true && key && key.trim() !== ''
+            );
+          } else if (Array.isArray(sahalarObject)) {
+            // Array ise direkt kullan
+            sahaIds = sahalarObject.filter(id => id && id.trim() !== '');
           }
 
+          console.log('Yıllık veriler - Müşteri sahalar object:', sahalarObject);
           console.log('Yıllık veriler - Müşteri saha IDs:', sahaIds);
           console.log('Yıllık veriler - Seçilen santral:', secilenSantral);
 
