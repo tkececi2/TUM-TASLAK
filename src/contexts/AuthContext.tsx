@@ -125,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Müşteri sahalarını ve santrallerini al
             if (userData.rol === 'musteri') {
               console.log('Müşteri verileri yükleniyor:', {
+                userId: userData.id,
                 sahalar: userData.sahalar,
                 santraller: userData.santraller,
                 atananSahalar: userData.atananSahalar,
@@ -134,76 +135,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               let sahaIds: string[] = [];
               let santralIds: string[] = [];
 
-              // Tüm olası alanları öncelik sırasına göre kontrol et
-              const allFields = [
-                { field: userData.sahalar, name: 'sahalar' },
-                { field: userData.atananSahalar, name: 'atananSahalar' },
-                { field: userData.santraller, name: 'santraller' },
-                { field: userData.atananSantraller, name: 'atananSantraller' }
+              // Tüm olası alanları kontrol et ve birleştir
+              const possibleSahaFields = [
+                userData.sahalar,
+                userData.atananSahalar,
+                userData.santraller,
+                userData.atananSantraller
               ];
 
-              for (const { field, name } of allFields) {
-                if (field && sahaIds.length === 0) {
+              for (const field of possibleSahaFields) {
+                if (field) {
                   if (Array.isArray(field)) {
-                    sahaIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
-                    if (sahaIds.length > 0) {
-                      console.log(`Sahalar ${name} alanından alındı (array):`, sahaIds);
-                      break;
-                    }
+                    const validIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
+                    sahaIds = [...sahaIds, ...validIds];
                   } else if (typeof field === 'object' && field !== null) {
-                    sahaIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
-                    if (sahaIds.length > 0) {
-                      console.log(`Sahalar ${name} alanından alındı (object):`, sahaIds);
-                      break;
-                    }
+                    const validIds = Object.keys(field).filter(key => 
+                      field[key] === true && key && key.trim() !== ''
+                    );
+                    sahaIds = [...sahaIds, ...validIds];
                   }
                 }
               }
 
-              // Santrallar için de aynı işlemi yap
-              for (const { field, name } of allFields) {
-                if (field && santralIds.length === 0) {
-                  if (Array.isArray(field)) {
-                    santralIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
-                    if (santralIds.length > 0) {
-                      console.log(`Santraller ${name} alanından alındı (array):`, santralIds);
-                      break;
-                    }
-                  } else if (typeof field === 'object' && field !== null) {
-                    santralIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
-                    if (santralIds.length > 0) {
-                      console.log(`Santraller ${name} alanından alındı (object):`, santralIds);
-                      break;
-                    }
-                  }
+              // Müşteri ID'sine göre atanmış santralleri kontrol et
+              if (sahaIds.length === 0) {
+                console.log('Direkten atanmış sahalar bulunamadı, müşteri ID ile atanmış santralleri arıyoruz');
+                try {
+                  // Müşteriye özel atanmış santralleri bul
+                  const musteriSantralleriQuery = query(
+                    collection(db, 'santraller'),
+                    where('companyId', '==', userData.companyId),
+                    where('musteriId', '==', userData.id)
+                  );
+                  
+                  const musteriSantralleriSnapshot = await getDocs(musteriSantralleriQuery);
+                  const musteriSantralleri = musteriSantralleriSnapshot.docs.map(doc => doc.id);
+                  
+                  console.log('Müşteri ID ile bulunan santraller:', musteriSantralleri);
+                  sahaIds = [...sahaIds, ...musteriSantralleri];
+                } catch (error) {
+                  console.error('Müşteri santrallerini arama hatası:', error);
                 }
               }
 
-              // Eğer sahalar boşsa santralları saha olarak kullan
-              if (sahaIds.length === 0 && santralIds.length > 0) {
-                sahaIds = [...santralIds];
-                console.log('Sahalar boş, santralları saha olarak kullanıyoruz:', sahaIds);
-              }
+              // Tekrarları kaldır
+              sahaIds = [...new Set(sahaIds)];
+              santralIds = [...new Set([...sahaIds])]; // Santraller ve sahalar aynı olacak
 
-              // Eğer santraller boşsa sahaları santral olarak kullan
-              if (santralIds.length === 0 && sahaIds.length > 0) {
-                santralIds = [...sahaIds];
-                console.log('Santraller boş, sahaları santral olarak kullanıyoruz:', santralIds);
-              }
+              console.log('Müşteri final saha/santral IDs:', sahaIds);
 
-              console.log('Müşteri saha IDs:', sahaIds);
-              console.log('Müşteri santral IDs:', santralIds);
-
-              // Array formatında sakla (daha kolay kullanım için)
+              // Array formatında sakla
               userData.sahalar = sahaIds;
               userData.santraller = santralIds;
 
-              console.log('Müşteri final sahalar:', userData.sahalar);
-              console.log('Müşteri final santraller:', userData.santraller);
-
-              if (sahaIds.length === 0 && santralIds.length === 0) {
+              if (sahaIds.length === 0) {
                 console.warn('UYARI: Müşteriye hiçbir saha/santral atanmamış!');
-                console.warn('Database\'te bu müşteri için sahalar veya santraller alanını kontrol edin.');
+                console.warn('Lütfen müşteri yönetimi sayfasından bu müşteriye sahalar/santraller atayın.');
+                console.warn('Veya santralleri eklerken musteriId alanını bu müşterinin ID\'si ile güncelleyin.');
+              } else {
+                console.log(`Müşteriye ${sahaIds.length} adet saha/santral atanmış.`);
               }
             }
 

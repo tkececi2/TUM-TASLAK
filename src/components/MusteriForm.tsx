@@ -66,6 +66,17 @@ export const MusteriForm: React.FC<Props> = ({ sahalar, santraller, musteri, onC
       return;
     }
 
+    // Seçilen sahalar ve santrallerin array formatına çevrilmesi
+    const secilenSahalar = Object.keys(form.sahalar).filter(key => form.sahalar[key]);
+    const secilenSantraller = Object.keys(form.santraller).filter(key => form.santraller[key]);
+
+    console.log('Müşteri atamaları kaydediliyor:', {
+      sahalar: secilenSahalar,
+      santraller: secilenSantraller,
+      sahaObject: form.sahalar,
+      santralObject: form.santraller
+    });
+
     setYukleniyor(true);
 
     try {

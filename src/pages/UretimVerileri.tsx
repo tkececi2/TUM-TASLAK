@@ -157,14 +157,17 @@ export const UretimVerileri: React.FC = () => {
   const getMusteriSahaIds = (): string[] => {
     if (!kullanici || kullanici.rol !== 'musteri') return [];
 
-    console.log('Müşteri saha verisi kontrolü:', kullanici.sahalar);
-    console.log('Müşteri santraller verisi:', kullanici.santraller);
-    console.log('Müşteri atananSahalar verisi:', kullanici.atananSahalar);
-    console.log('Müşteri atananSantraller verisi:', kullanici.atananSantraller);
+    console.log('UretimVerileri - Müşteri saha verisi kontrolü:', {
+      userId: kullanici.id,
+      sahalar: kullanici.sahalar,
+      santraller: kullanici.santraller,
+      atananSahalar: kullanici.atananSahalar,
+      atananSantraller: kullanici.atananSantraller
+    });
     
     let sahaIds: string[] = [];
     
-    // Tüm olası alanları kontrol et
+    // Tüm olası alanları kontrol et ve birleştir
     const possibleFields = [
       kullanici.sahalar,
       kullanici.santraller,
@@ -173,27 +176,29 @@ export const UretimVerileri: React.FC = () => {
     ];
     
     for (const field of possibleFields) {
-      if (field && sahaIds.length === 0) {
+      if (field) {
         if (Array.isArray(field)) {
-          // Array formatında: ["sahaId1", "sahaId2"]
-          sahaIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
+          const validIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
+          sahaIds = [...sahaIds, ...validIds];
         } else if (typeof field === 'object' && field !== null) {
-          // Object formatında: { sahaId: true, sahaId2: true }
-          sahaIds = Object.keys(field).filter(key => 
+          const validIds = Object.keys(field).filter(key => 
             field[key] === true && key && key.trim() !== ''
           );
-        }
-        
-        if (sahaIds.length > 0) {
-          console.log(`Sahalar ${possibleFields.indexOf(field) === 0 ? 'sahalar' : 
-                      possibleFields.indexOf(field) === 1 ? 'santraller' :
-                      possibleFields.indexOf(field) === 2 ? 'atananSahalar' : 'atananSantraller'} alanından alındı:`, sahaIds);
-          break;
+          sahaIds = [...sahaIds, ...validIds];
         }
       }
     }
     
+    // Tekrarları kaldır
+    sahaIds = [...new Set(sahaIds)];
+    
     console.log('UretimVerileri - Müşteri erişebilir saha/santral IDs:', sahaIds);
+    
+    if (sahaIds.length === 0) {
+      console.warn('UretimVerileri - Müşteriye atanmış santral bulunamadı!');
+      console.warn('Müşteri yönetimi sayfasından bu müşteriye santral ataması yapın.');
+    }
+    
     return sahaIds;
   };
 

@@ -117,15 +117,33 @@ export const GesYonetimi: React.FC = () => {
         // Müşteri rolü için kendisine atanan santralleri getir
         let musteriSantralIds: string[] = [];
         
-        // Santraller kontrolü
+        // Önce direkt atanmış santralleri kontrol et
         if (kullanici.santraller && Array.isArray(kullanici.santraller) && kullanici.santraller.length > 0) {
           musteriSantralIds = kullanici.santraller;
         } else if (kullanici.sahalar && Array.isArray(kullanici.sahalar) && kullanici.sahalar.length > 0) {
-          // Eğer santraller yoksa sahalar alanını kullan
           musteriSantralIds = kullanici.sahalar;
         }
 
-        console.log('GesYonetimi - Müşteri santral IDs:', musteriSantralIds);
+        // Eğer hala boşsa, müşteri ID'sine göre santralleri ara
+        if (musteriSantralIds.length === 0) {
+          console.log('GesYonetimi - Müşteri ID ile santral aranıyor:', kullanici.id);
+          try {
+            const musteriSantralleriQuery = query(
+              collection(db, 'santraller'),
+              where('companyId', '==', kullanici.companyId),
+              where('musteriId', '==', kullanici.id),
+              orderBy('olusturmaTarihi', 'desc')
+            );
+            
+            const musteriSantralleriSnapshot = await getDocs(musteriSantralleriQuery);
+            musteriSantralIds = musteriSantralleriSnapshot.docs.map(doc => doc.id);
+            console.log('GesYonetimi - Müşteri ID ile bulunan santraller:', musteriSantralIds);
+          } catch (error) {
+            console.error('GesYonetimi - Müşteri santral arama hatası:', error);
+          }
+        }
+
+        console.log('GesYonetimi - Final müşteri santral IDs:', musteriSantralIds);
 
         if (musteriSantralIds.length > 0) {
           // Firestore 'in' operatörü maksimum 10 element kabul eder
@@ -133,15 +151,17 @@ export const GesYonetimi: React.FC = () => {
           santralQuery = query(
             collection(db, 'santraller'),
             where('__name__', 'in', limitedIds),
-            where('companyId', '==', kullanici.companyId),
             orderBy('olusturmaTarihi', 'desc')
           );
         } else {
-          // Müşteriye atanan santral yoksa boş liste döndür
-          setSantraller([]);
-          setYukleniyor(false);
-          console.warn('GesYonetimi - Müşteriye atanan santral bulunamadı');
-          return;
+          // Müşteriye atanan santral yoksa müşteri ID'si ile eşleşenleri bul
+          console.log('GesYonetimi - Son deneme: müşteri ID ile tüm santralleri kontrol et');
+          santralQuery = query(
+            collection(db, 'santraller'),
+            where('companyId', '==', kullanici.companyId),
+            where('musteriId', '==', kullanici.id),
+            orderBy('olusturmaTarihi', 'desc')
+          );
         }
       } else {
         // Diğer roller için şirketteki tüm santralleri getir
