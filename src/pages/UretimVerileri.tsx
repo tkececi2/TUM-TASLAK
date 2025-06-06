@@ -158,8 +158,11 @@ export const UretimVerileri: React.FC = () => {
     if (!kullanici || kullanici.rol !== 'musteri') return [];
 
     console.log('Müşteri saha verisi kontrolü:', kullanici.sahalar);
+    console.log('Müşteri santraller verisi:', kullanici.santraller);
     
     let sahaIds: string[] = [];
+    
+    // Önce sahalar alanını kontrol et
     if (kullanici.sahalar) {
       if (typeof kullanici.sahalar === 'object' && !Array.isArray(kullanici.sahalar)) {
         // Object formatında: { sahaId: true, sahaId2: true }
@@ -172,7 +175,18 @@ export const UretimVerileri: React.FC = () => {
       }
     }
     
-    console.log('Müşteri erişebilir saha IDs:', sahaIds);
+    // Eğer sahalar boşsa, santraller alanını kontrol et (santralId genellikle sahaId ile aynı)
+    if (sahaIds.length === 0 && kullanici.santraller) {
+      if (Array.isArray(kullanici.santraller)) {
+        sahaIds = kullanici.santraller.filter(id => id && id.trim() !== '');
+      } else if (typeof kullanici.santraller === 'object') {
+        sahaIds = Object.keys(kullanici.santraller).filter(key => 
+          kullanici.santraller[key] === true && key && key.trim() !== ''
+        );
+      }
+    }
+    
+    console.log('Müşteri erişebilir saha/santral IDs:', sahaIds);
     return sahaIds;
   };
 
@@ -202,10 +216,17 @@ export const UretimVerileri: React.FC = () => {
           const limitedSahaIds = sahaIds.slice(0, 10);
           console.log('Sorgulanacak sahalar:', limitedSahaIds);
           
-          santralQuery = query(
-            collection(db, 'santraller'),
-            where('__name__', 'in', limitedSahaIds)
-          );
+          try {
+            santralQuery = query(
+              collection(db, 'santraller'),
+              where('__name__', 'in', limitedSahaIds)
+            );
+          } catch (error) {
+            console.error('Müşteri santral sorgusu oluşturma hatası:', error);
+            setSantraller([]);
+            setYukleniyor(false);
+            return;
+          }
         } else {
           santralQuery = query(
             collection(db, 'santraller'),
@@ -289,25 +310,37 @@ export const UretimVerileri: React.FC = () => {
             }
             
             console.log('Tek santral için sorgu oluşturuluyor:', secilenSantral);
-            uretimQuery = query(
-              collection(db, 'uretimVerileri'),
-              where('santralId', '==', secilenSantral),
-              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-              orderBy('tarih', 'desc')
-            );
+            try {
+              uretimQuery = query(
+                collection(db, 'uretimVerileri'),
+                where('santralId', '==', secilenSantral),
+                where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
+                where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
+                orderBy('tarih', 'desc')
+              );
+            } catch (error) {
+              console.error('Tek santral sorgusu oluşturma hatası:', error);
+              setUretimVerileri([]);
+              return;
+            }
           } else {
             // Tüm sahalar için sorgu
             const limitedSahaIds = sahaIds.slice(0, 10);
             console.log('Tüm sahalar için sorgu oluşturuluyor:', limitedSahaIds);
             
-            uretimQuery = query(
-              collection(db, 'uretimVerileri'),
-              where('santralId', 'in', limitedSahaIds),
-              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-              orderBy('tarih', 'desc')
-            );
+            try {
+              uretimQuery = query(
+                collection(db, 'uretimVerileri'),
+                where('santralId', 'in', limitedSahaIds),
+                where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
+                where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
+                orderBy('tarih', 'desc')
+              );
+            } catch (error) {
+              console.error('Çoklu santral sorgusu oluşturma hatası:', error);
+              setUretimVerileri([]);
+              return;
+            }
           }
         } else {
           if (secilenSantral !== 'tumu') {
@@ -330,7 +363,10 @@ export const UretimVerileri: React.FC = () => {
           }
         }
 
+        console.log('Sorgu çalıştırılıyor...');
         const snapshot = await getDocs(uretimQuery);
+        console.log('Sorgu tamamlandı, döküman sayısı:', snapshot.docs.length);
+        
         const veriler = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -339,9 +375,30 @@ export const UretimVerileri: React.FC = () => {
         console.log('Getirilen üretim verileri sayısı:', veriler.length);
         console.log('İlk 3 veri:', veriler.slice(0, 3));
         
+        if (kullanici.rol === 'musteri') {
+          console.log('Müşteri üretim verileri detayı:');
+          console.log('- Sorgu döküman sayısı:', snapshot.docs.length);
+          console.log('- İşlenen veri sayısı:', veriler.length);
+          console.log('- Kullanıcı sahalar:', kullanici.sahalar);
+          console.log('- Kullanıcı santraller:', kullanici.santraller);
+          
+          if (veriler.length === 0) {
+            console.warn('Müşteri için üretim verisi bulunamadı!');
+            console.warn('Kontrol edilecek durumlar:');
+            console.warn('1. Firestore rules müşteri erişimine izin veriyor mu?');
+            console.warn('2. Üretim verilerinde santralId doğru mu?');
+            console.warn('3. Müşteri sahalar/santraller doğru atanmış mı?');
+          }
+        }
+        
         setUretimVerileri(veriler);
       } catch (error) {
         console.error('Üretim verileri getirme hatası:', error);
+        console.error('Hata detayı:', {
+          code: error.code,
+          message: error.message,
+          stack: error.stack
+        });
         toast.error('Üretim verileri yüklenirken bir hata oluştu');
         setUretimVerileri([]);
       }
