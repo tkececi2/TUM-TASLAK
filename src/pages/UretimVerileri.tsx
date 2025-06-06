@@ -85,10 +85,8 @@ export const UretimVerileri: React.FC = () => {
   const [importModalAcik, setImportModalAcik] = useState(false);
   const [silmeOnayModalAcik, setSilmeOnayModalAcik] = useState(false);
   const [silinecekVeriId, setSilinecekVeriId] = useState<string | null>(null);
-  const [aylikSilmeModalAcik, setAylikSilmeModalAcik] = useState(false);
   const [detayliTablo, setDetayliTablo] = useState(false);
   const [santralDetay, setSantralDetay] = useState<Santral | null>(null);
-  const [yillikGrafik, setYillikGrafik] = useState(true);
 
   // Yıl seçenekleri
   const yilSecenekleri = Array.from({ length: 9 }, (_, i) => 2022 + i);
@@ -101,10 +99,10 @@ export const UretimVerileri: React.FC = () => {
     { value: 3, label: 'Nisan' },
     { value: 4, label: 'Mayıs' },
     { value: 5, label: 'Haziran' },
-    { value: 6, label: 'Haziran' },
-    { value: 7, label: 'Temmuz' },
-    { value: 8, label: 'Ağustos' },
-    { value: 9, label: 'Eylül' },
+    { value: 6, label: 'Temmuz' },
+    { value: 7, label: 'Ağustos' },
+    { value: 8, label: 'Eylül' },
+    { value: 9, label: 'Ekim' },
     { value: 10, label: 'Kasım' },
     { value: 11, label: 'Aralık' }
   ];
@@ -112,27 +110,27 @@ export const UretimVerileri: React.FC = () => {
   const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
   const canDelete = kullanici?.rol === 'yonetici' || kullanici?.rol === 'superadmin';
 
-  // Müşteri sahalarını normalize et
+  // Müşteri sahalarını al
   const getMusteriSahaIds = (): string[] => {
     if (!kullanici || kullanici.rol !== 'musteri') return [];
 
-    console.log('DEBUG - Kullanıcı sahalar:', kullanici.sahalar);
+    console.log('DEBUG - Müşteri sahalar:', kullanici.sahalar);
 
     let sahaIds: string[] = [];
 
     if (kullanici.sahalar) {
       if (typeof kullanici.sahalar === 'object' && !Array.isArray(kullanici.sahalar)) {
-        // Object formatında: {"sahaId": true}
+        // Object format: {"sahaId": true}
         sahaIds = Object.keys(kullanici.sahalar).filter(key => 
           kullanici.sahalar[key] === true && key && key.trim() !== ''
         );
       } else if (Array.isArray(kullanici.sahalar)) {
-        // Array formatında: ["sahaId1", "sahaId2"]
+        // Array format: ["sahaId1", "sahaId2"]
         sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
       }
     }
 
-    console.log('DEBUG - Normalize edilmiş saha IDs:', sahaIds);
+    console.log('DEBUG - Normalized saha IDs:', sahaIds);
     return sahaIds;
   };
 
@@ -141,17 +139,20 @@ export const UretimVerileri: React.FC = () => {
     const santralleriGetir = async () => {
       if (!kullanici?.companyId) {
         console.log('DEBUG - CompanyId yok');
+        setYukleniyor(false);
         return;
       }
 
       try {
-        setYukleniyor(true);
         console.log('DEBUG - Santraller getiriliyor...');
+        console.log('DEBUG - Kullanıcı rol:', kullanici.rol);
+        console.log('DEBUG - Company ID:', kullanici.companyId);
 
         let santralQuery;
 
         if (kullanici.rol === 'musteri') {
           const sahaIds = getMusteriSahaIds();
+          console.log('DEBUG - Müşteri saha IDs:', sahaIds);
 
           if (sahaIds.length === 0) {
             console.log('DEBUG - Müşterinin sahası yok');
@@ -160,11 +161,8 @@ export const UretimVerileri: React.FC = () => {
             return;
           }
 
-          console.log('DEBUG - Müşteri sahaları için sorgu:', sahaIds);
-
-          // Firestore max 10 item limit
-          const limitedSahaIds = sahaIds.slice(0, 10);
-
+          // Müşteri sahalarını direkt santral olarak sorgula
+          const limitedSahaIds = sahaIds.slice(0, 10); // Firestore limit
           santralQuery = query(
             collection(db, 'santraller'),
             where('__name__', 'in', limitedSahaIds)
@@ -178,29 +176,27 @@ export const UretimVerileri: React.FC = () => {
           );
         }
 
+        console.log('DEBUG - Sorgu çalıştırılıyor...');
         const snapshot = await getDocs(santralQuery);
         const santralListesi = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Santral[];
 
-        console.log('DEBUG - Getirilen santraller:', santralListesi);
+        console.log('DEBUG - Bulunan santral sayısı:', santralListesi.length);
+        console.log('DEBUG - Santral listesi:', santralListesi.map(s => ({ id: s.id, ad: s.ad })));
+
         setSantraller(santralListesi);
 
         // İlk santralı seç
-        if (!secilenSantral && santralListesi.length > 0) {
+        if (santralListesi.length > 0 && !secilenSantral) {
           const ilkSantral = santralListesi[0];
           setSecilenSantral(ilkSantral.id);
           setSantralDetay(ilkSantral);
-          console.log('DEBUG - İlk santral seçildi:', ilkSantral.id);
-        } else if (secilenSantral) {
-          const seciliSantral = santralListesi.find(s => s.id === secilenSantral);
-          if (seciliSantral) {
-            setSantralDetay(seciliSantral);
-          }
+          console.log('DEBUG - İlk santral seçildi:', ilkSantral.id, ilkSantral.ad);
         }
       } catch (error) {
-        console.error('DEBUG - Santraller getirilemedi:', error);
+        console.error('DEBUG - Santral getirme hatası:', error);
         toast.error('Santraller yüklenirken bir hata oluştu');
       } finally {
         setYukleniyor(false);
@@ -208,7 +204,7 @@ export const UretimVerileri: React.FC = () => {
     };
 
     santralleriGetir();
-  }, [kullanici]);
+  }, [kullanici, secilenSantral]);
 
   // Üretim verilerini getir
   useEffect(() => {
@@ -220,7 +216,6 @@ export const UretimVerileri: React.FC = () => {
       }
 
       try {
-        setYukleniyor(true);
         console.log('DEBUG - Üretim verileri getiriliyor...');
         console.log('DEBUG - Seçilen santral:', secilenSantral);
         console.log('DEBUG - Kullanıcı rol:', kullanici.rol);
@@ -229,28 +224,23 @@ export const UretimVerileri: React.FC = () => {
         const ayBaslangic = new Date(secilenYil, secilenAy, 1);
         const ayBitis = endOfMonth(ayBaslangic);
 
+        console.log('DEBUG - Tarih aralığı:', {
+          baslangic: ayBaslangic,
+          bitis: ayBitis
+        });
+
         let uretimQuery;
 
         if (kullanici.rol === 'musteri') {
-          // Müşteri için saha kontrolü
           const sahaIds = getMusteriSahaIds();
 
-          console.log('DEBUG - Müşteri saha kontrolü:', sahaIds);
-          console.log('DEBUG - Seçilen santral erişim:', sahaIds.includes(secilenSantral));
-
-          if (sahaIds.length === 0) {
-            console.log('DEBUG - Müşterinin sahası yok, boş döndürülüyor');
-            setUretimVerileri([]);
-            return;
-          }
-
-          if (!sahaIds.includes(secilenSantral)) {
+          if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
             console.log('DEBUG - Müşteri bu santralin verilerine erişemiyor');
             setUretimVerileri([]);
             return;
           }
 
-          // Müşteri için basit sorgu (companyId kontrolü yok)
+          // Müşteri için basit sorgu - companyId kontrolü yok
           uretimQuery = query(
             collection(db, 'uretimVerileri'),
             where('santralId', '==', secilenSantral),
@@ -258,6 +248,8 @@ export const UretimVerileri: React.FC = () => {
             where('tarih', '<=', Timestamp.fromDate(ayBitis)),
             orderBy('tarih', 'desc')
           );
+
+          console.log('DEBUG - Müşteri sorgusu hazırlandı');
         } else {
           // Diğer roller için companyId ile sorgu
           uretimQuery = query(
@@ -268,9 +260,11 @@ export const UretimVerileri: React.FC = () => {
             where('tarih', '<=', Timestamp.fromDate(ayBitis)),
             orderBy('tarih', 'desc')
           );
+
+          console.log('DEBUG - Normal sorgu hazırlandı');
         }
 
-        console.log('DEBUG - Sorgu hazırlandı, çalıştırılıyor...');
+        console.log('DEBUG - Sorgu çalıştırılıyor...');
         const snapshot = await getDocs(uretimQuery);
         const veriler = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -278,24 +272,35 @@ export const UretimVerileri: React.FC = () => {
         })) as UretimVerisi[];
 
         console.log('DEBUG - Bulunan veri sayısı:', veriler.length);
-        console.log('DEBUG - İlk 3 veri:', veriler.slice(0, 3));
+        console.log('DEBUG - İlk 3 veri:', veriler.slice(0, 3).map(v => ({
+          tarih: v.tarih.toDate().toLocaleDateString('tr-TR'),
+          uretim: v.gunlukUretim
+        })));
 
         const siraliVeriler = veriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime());
         setUretimVerileri(siraliVeriler);
 
       } catch (error) {
-        console.error('DEBUG - Üretim verileri getirilemedi:', error);
+        console.error('DEBUG - Üretim verileri getirme hatası:', error);
         toast.error('Üretim verileri yüklenirken bir hata oluştu');
         setUretimVerileri([]);
-      } finally {
-        setYukleniyor(false);
       }
     };
 
-    if (santraller.length > 0) {
+    if (santraller.length > 0 && secilenSantral) {
       verileriGetir();
     }
   }, [secilenSantral, secilenYil, secilenAy, kullanici, santraller]);
+
+  // Santral değişikliği
+  const handleSantralChange = (santralId: string) => {
+    setSecilenSantral(santralId);
+    const santral = santraller.find(s => s.id === santralId);
+    if (santral) {
+      setSantralDetay(santral);
+      console.log('DEBUG - Santral değiştirildi:', santralId, santral.ad);
+    }
+  };
 
   const handleVeriSil = async (id: string) => {
     if (!canDelete) {
@@ -315,117 +320,51 @@ export const UretimVerileri: React.FC = () => {
     }
   };
 
-  const handleAylikSil = async () => {
-    if (!canDelete) {
-      toast.error('Bu işlem için yetkiniz yok');
-      return;
-    }
-
-    try {
-      const silmePromises = uretimVerileri.map(veri => 
-        deleteDoc(doc(db, 'uretimVerileri', veri.id))
-      );
-      await Promise.all(silmePromises);
-      toast.success(`${aySecenekleri[secilenAy].label} ${secilenYil} ayının tüm verileri silindi`);
-      setUretimVerileri([]);
-      setAylikSilmeModalAcik(false);
-    } catch (error) {
-      console.error('Aylık veri silme hatası:', error);
-      toast.error('Aylık veriler silinirken bir hata oluştu');
-    }
-  };
-
   const handleYenile = async () => {
     setYenileniyor(true);
 
     // Santralleri yeniden getir
-    const santralleriYenile = async () => {
-      if (!kullanici?.companyId) return;
-
-      try {
+    try {
+      if (kullanici?.companyId) {
         let santralQuery;
 
         if (kullanici.rol === 'musteri') {
           const sahaIds = getMusteriSahaIds();
-          if (sahaIds.length === 0) {
-            setSantraller([]);
-            return;
-          }
+          if (sahaIds.length > 0) {
+            santralQuery = query(
+              collection(db, 'santraller'),
+              where('__name__', 'in', sahaIds.slice(0, 10))
+            );
 
-          santralQuery = query(
-            collection(db, 'santraller'),
-            where('__name__', 'in', sahaIds.slice(0, 10))
-          );
+            const snapshot = await getDocs(santralQuery);
+            const santralListesi = snapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as Santral[];
+
+            setSantraller(santralListesi);
+          }
         } else {
           santralQuery = query(
             collection(db, 'santraller'),
             where('companyId', '==', kullanici.companyId),
             orderBy('ad')
           );
+
+          const snapshot = await getDocs(santralQuery);
+          const santralListesi = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Santral[];
+
+          setSantraller(santralListesi);
         }
-
-        const snapshot = await getDocs(santralQuery);
-        const santralListesi = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Santral[];
-
-        setSantraller(santralListesi);
-      } catch (error) {
-        console.error('Santraller yenilenemedi:', error);
       }
-    };
 
-    await santralleriYenile();
-
-    // Üretim verilerini yenile
-    if (secilenSantral) {
-      try {
-        const ayBaslangic = new Date(secilenYil, secilenAy, 1);
-        const ayBitis = endOfMonth(ayBaslangic);
-
-        let uretimQuery;
-
-        if (kullanici?.rol === 'musteri') {
-          const sahaIds = getMusteriSahaIds();
-
-          if (sahaIds.length === 0 || !sahaIds.includes(secilenSantral)) {
-            setUretimVerileri([]);
-            return;
-          }
-
-          uretimQuery = query(
-            collection(db, 'uretimVerileri'),
-            where('santralId', '==', secilenSantral),
-            where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
-            where('tarih', '<=', Timestamp.fromDate(ayBitis)),
-            orderBy('tarih', 'desc')
-          );
-        } else {
-          if (!kullanici?.companyId) return;
-
-          uretimQuery = query(
-            collection(db, 'uretimVerileri'),
-            where('santralId', '==', secilenSantral),
-            where('companyId', '==', kullanici.companyId),
-            where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
-            where('tarih', '<=', Timestamp.fromDate(ayBitis)),
-            orderBy('tarih', 'desc')
-          );
-        }
-
-        const snapshot = await getDocs(uretimQuery);
-        const veriler = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as UretimVerisi[];
-
-        setUretimVerileri(veriler.sort((a, b) => a.tarih.toDate().getTime() - b.tarih.toDate().getTime()));
-        toast.success('Veriler başarıyla yenilendi');
-      } catch (error) {
-        console.error('Veri yenileme hatası:', error);
-        toast.error('Veriler yenilenirken bir hata oluştu');
-      }
+      toast.success('Veriler başarıyla yenilendi');
+    } catch (error) {
+      console.error('Yenileme hatası:', error);
+      toast.error('Veriler yenilenirken bir hata oluştu');
     }
 
     setYenileniyor(false);
@@ -493,45 +432,6 @@ export const UretimVerileri: React.FC = () => {
 
   const istatistikler = hesaplaIstatistikler();
 
-    // Santral kapasitesi yoksa uyarı göster
-    if (santralDetay && santralDetay.kapasite === 0) {
-      return (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Üretim Verileri</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                {santralDetay.ad} santralinin üretim verileri
-              </p>
-            </div>
-          </div>
-  
-          <Card className="bg-yellow-50 border-yellow-200">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <AlertTriangle className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-yellow-800">Santral Kapasitesi Tanımlanmamış</h3>
-                <p className="mt-1 text-sm text-yellow-700">
-                  Bu santral için kapasite bilgisi tanımlanmamış. Performans hesaplamaları için santral kapasitesinin tanımlanması gerekiyor.
-                </p>
-                {canAdd && (
-                  <button
-                    onClick={() => navigate('/ges-yonetimi')}
-                    className="mt-3 inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium text-yellow-700 bg-yellow-100 hover:bg-yellow-200"
-                  >
-                    <ArrowRight className="h-4 w-4 mr-1.5" />
-                    Santral Yönetimine Git
-                  </button>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-      );
-    }
-
   if (yukleniyor) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -597,7 +497,7 @@ export const UretimVerileri: React.FC = () => {
               <label className="text-sm font-medium text-gray-700">Santral:</label>
               <select
                 value={secilenSantral}
-                onChange={(e) => setSecilenSantral(e.target.value)}
+                onChange={(e) => handleSantralChange(e.target.value)}
                 className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm min-w-[150px]"
               >
                 {santraller.map(santral => (
@@ -633,14 +533,6 @@ export const UretimVerileri: React.FC = () => {
             </div>
 
             <div className="flex space-x-2 ml-auto">
-              <button
-                onClick={() => navigate('/ges-yonetimi')}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              >
-                <Building className="h-4 w-4 mr-2" />
-                Santral Yönetimi
-              </button>
-
               <button
                 onClick={handleYenile}
                 className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
@@ -800,7 +692,7 @@ export const UretimVerileri: React.FC = () => {
           <Title>Üretim Verileri Tablosu</Title>
           <button
             onClick={() => setDetayliTablo(!detayliTablo)}
-            className="text-sm text-primary-600 hover:text-primary-800 flex items-center"
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
           >
             {detayliTablo ? (
               <>
@@ -927,14 +819,6 @@ export const UretimVerileri: React.FC = () => {
             setSilinecekVeriId(null);
           }}
           mesaj="Bu üretim verisini silmek istediğinizden emin misiniz?"
-        />
-      )}
-
-      {aylikSilmeModalAcik && (
-        <SilmeOnayModal
-          onConfirm={handleAylikSil}
-          onCancel={() => setAylikSilmeModalAcik(false)}
-          mesaj={`${aySecenekleri[secilenAy].label} ${secilenYil} ayının tüm verilerini silmek istediğiniz emin misiniz?`}
         />
       )}
     </div>
