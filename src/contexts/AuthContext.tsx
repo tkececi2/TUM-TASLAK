@@ -134,8 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               let sahaIds: string[] = [];
               let santralIds: string[] = [];
 
-              // Sahalar alanını kontrol et
-              const sahaFields = [userData.sahalar, userData.atananSahalar];
+              // Sahalar alanını kontrol et - tüm olası alanları kontrol et
+              const sahaFields = [userData.sahalar, userData.atananSahalar, userData.santraller, userData.atananSantraller];
               for (const field of sahaFields) {
                 if (field && sahaIds.length === 0) {
                   if (Array.isArray(field)) {
@@ -147,8 +147,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
               }
 
-              // Santraller alanını kontrol et
-              const santralFields = [userData.santraller, userData.atananSantraller];
+              // Santraller alanını kontrol et - sahalarla aynı olabilir
+              const santralFields = [userData.santraller, userData.atananSantraller, userData.sahalar, userData.atananSahalar];
               for (const field of santralFields) {
                 if (field && santralIds.length === 0) {
                   if (Array.isArray(field)) {
@@ -166,28 +166,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log('Sahalar boş, santralları saha olarak kullanıyoruz:', sahaIds);
               }
 
+              // Eğer santraller boşsa sahaları santral olarak kullan
+              if (santralIds.length === 0 && sahaIds.length > 0) {
+                santralIds = [...sahaIds];
+                console.log('Santraller boş, sahaları santral olarak kullanıyoruz:', santralIds);
+              }
+
               console.log('Müşteri saha IDs:', sahaIds);
               console.log('Müşteri santral IDs:', santralIds);
 
-              // Object formatında sakla
-              const sahaObject: { [key: string]: boolean } = {};
-              const santralObject: { [key: string]: boolean } = {};
-
-              sahaIds.forEach(id => {
-                sahaObject[id] = true;
-              });
-
-              santralIds.forEach(id => {
-                santralObject[id] = true;
-              });
-
-              userData.sahalar = sahaObject;
-              userData.santraller = santralObject;
+              // Array formatında sakla (daha kolay kullanım için)
+              userData.sahalar = sahaIds;
+              userData.santraller = santralIds;
 
               console.log('Müşteri final sahalar:', userData.sahalar);
               console.log('Müşteri final santraller:', userData.santraller);
 
-              if (Object.keys(userData.sahalar).length === 0 && Object.keys(userData.santraller).length === 0) {
+              if (sahaIds.length === 0 && santralIds.length === 0) {
                 console.warn('UYARI: Müşteriye hiçbir saha/santral atanmamış!');
                 console.warn('Database\'te bu müşteri için sahalar veya santraller alanını kontrol edin.');
               }

@@ -115,17 +115,32 @@ export const GesYonetimi: React.FC = () => {
 
       if (kullanici.rol === 'musteri') {
         // Müşteri rolü için kendisine atanan santralleri getir
-        if (kullanici.santraller && kullanici.santraller.length > 0) {
+        let musteriSantralIds: string[] = [];
+        
+        // Santraller kontrolü
+        if (kullanici.santraller && Array.isArray(kullanici.santraller) && kullanici.santraller.length > 0) {
+          musteriSantralIds = kullanici.santraller;
+        } else if (kullanici.sahalar && Array.isArray(kullanici.sahalar) && kullanici.sahalar.length > 0) {
+          // Eğer santraller yoksa sahalar alanını kullan
+          musteriSantralIds = kullanici.sahalar;
+        }
+
+        console.log('GesYonetimi - Müşteri santral IDs:', musteriSantralIds);
+
+        if (musteriSantralIds.length > 0) {
+          // Firestore 'in' operatörü maksimum 10 element kabul eder
+          const limitedIds = musteriSantralIds.slice(0, 10);
           santralQuery = query(
             collection(db, 'santraller'),
-            where('__name__', 'in', kullanici.santraller),
-            where('companyId', '==', kullanici.companyId)
+            where('__name__', 'in', limitedIds),
+            where('companyId', '==', kullanici.companyId),
+            orderBy('olusturmaTarihi', 'desc')
           );
         } else {
           // Müşteriye atanan santral yoksa boş liste döndür
           setSantraller([]);
           setYukleniyor(false);
-          console.log('Müşteriye atanan santral bulunamadı');
+          console.warn('GesYonetimi - Müşteriye atanan santral bulunamadı');
           return;
         }
       } else {

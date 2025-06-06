@@ -58,11 +58,23 @@ service cloud.firestore {
 
     function hasAccessToSantral(santralId) {
       let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
-      return user.sahalar != null && (
-        (santralId in user.sahalar && user.sahalar[santralId] == true) ||
-        (user.santraller != null && santralId in user.santraller && user.santraller[santralId] == true) ||
-        (user.sahalar.hasAny && user.sahalar.hasAny([santralId])) ||
-        (user.santraller != null && user.santraller.hasAny && user.santraller.hasAny([santralId]))
+      return (
+        (user.sahalar != null && (
+          (santralId in user.sahalar && user.sahalar[santralId] == true) ||
+          (user.sahalar is list && santralId in user.sahalar)
+        )) ||
+        (user.santraller != null && (
+          (santralId in user.santraller && user.santraller[santralId] == true) ||
+          (user.santraller is list && santralId in user.santraller)
+        )) ||
+        (user.atananSahalar != null && (
+          (santralId in user.atananSahalar && user.atananSahalar[santralId] == true) ||
+          (user.atananSahalar is list && santralId in user.atananSahalar)
+        )) ||
+        (user.atananSantraller != null && (
+          (santralId in user.atananSantraller && user.atananSantraller[santralId] == true) ||
+          (user.atananSantraller is list && santralId in user.atananSantraller)
+        ))
       );
     }
 
@@ -225,10 +237,14 @@ service cloud.firestore {
     match /santraller/{santralId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() ||
+        (resource.data.companyId == getUserCompanyId() && (isAdmin() || isTechnician())) ||
+        (isCustomer() && resource.data.companyId == getUserCompanyId() && hasAccessToSantral(santralId))
+      );
+      allow list: if isAuthenticated() && (
+        isSuperAdmin() ||
         isAdmin() || 
         isTechnician() || 
-        (isCustomer() && hasAccessToSantral(santralId)) ||
-        (resource.data.companyId == getUserCompanyId())
+        isCustomer()
       );
       allow create: if hasManagementAccess() && request.resource.data.companyId == getUserCompanyId();
       allow update: if hasManagementAccess() && resource.data.companyId == getUserCompanyId();

@@ -164,14 +164,14 @@ export const UretimVerileri: React.FC = () => {
     
     // Önce sahalar alanını kontrol et
     if (kullanici.sahalar) {
-      if (typeof kullanici.sahalar === 'object' && !Array.isArray(kullanici.sahalar)) {
+      if (Array.isArray(kullanici.sahalar)) {
+        // Array formatında: ["sahaId1", "sahaId2"]
+        sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
+      } else if (typeof kullanici.sahalar === 'object' && !Array.isArray(kullanici.sahalar)) {
         // Object formatında: { sahaId: true, sahaId2: true }
         sahaIds = Object.keys(kullanici.sahalar).filter(key => 
           kullanici.sahalar[key] === true && key && key.trim() !== ''
         );
-      } else if (Array.isArray(kullanici.sahalar)) {
-        // Array formatında: ["sahaId1", "sahaId2"]
-        sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
       }
     }
     
@@ -186,7 +186,7 @@ export const UretimVerileri: React.FC = () => {
       }
     }
     
-    console.log('Müşteri erişebilir saha/santral IDs:', sahaIds);
+    console.log('UretimVerileri - Müşteri erişebilir saha/santral IDs:', sahaIds);
     return sahaIds;
   };
 
