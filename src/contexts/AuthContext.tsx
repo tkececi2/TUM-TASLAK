@@ -34,8 +34,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Kullanıcı verilerini normalize et
   const normalizeUserData = (userData: any): Kullanici => {
     // Sahalar dizisini kontrol et
-    let sahalar = userData.sahalar || [];
-    let santraller = userData.santraller || [];
+    let sahalar = userData.sahalar || userData.sahalar || userData.atananSahalar || [];
+    let santraller = userData.santraller || userData.santraller || userData.atananSantraller || [];
+
+    console.log('Raw userData for normalization:', {
+      sahalar: userData.sahalar,
+      santraller: userData.santraller,
+      atananSahalar: userData.atananSahalar,
+      atananSantraller: userData.atananSantraller,
+      rol: userData.rol
+    });
 
     // Eğer sahalar bir dizi değilse, dizi haline getir
     if (sahalar && !Array.isArray(sahalar)) {
@@ -58,8 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Ensure companyId exists (default to empty string if not present)
     const companyId = userData.companyId || '';
 
-    console.log('Normalize - Sahalar:', sahalar);
-    console.log('Normalize - Santraller:', santraller);
+    console.log('Normalize - Final Sahalar:', sahalar);
+    console.log('Normalize - Final Santraller:', santraller);
 
     return {
       ...userData,
@@ -118,20 +126,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (userData.rol === 'musteri') {
               let sahaIds: string[] = [];
               
-              console.log('Raw userData.sahalar:', userData.sahalar);
+              console.log('Customer saha field check:', {
+                sahalar: userData.sahalar,
+                atananSahalar: userData.atananSahalar,
+                santraller: userData.santraller,
+                atananSantraller: userData.atananSantraller
+              });
 
-              // Sahalar var mı kontrol et
-              if (userData.sahalar) {
-                // Sahalar array mi object mi kontrol et
-                if (Array.isArray(userData.sahalar)) {
-                  sahaIds = userData.sahalar;
-                } else if (typeof userData.sahalar === 'object' && userData.sahalar !== null) {
-                  // Object formatında ise key'leri al
-                  sahaIds = Object.keys(userData.sahalar).filter(key => userData.sahalar[key] === true);
+              // Farklı alan isimlerini kontrol et
+              const sahaFields = [userData.sahalar, userData.atananSahalar, userData.santraller, userData.atananSantraller];
+              
+              for (const field of sahaFields) {
+                if (field && sahaIds.length === 0) {
+                  if (Array.isArray(field)) {
+                    sahaIds = field.filter(id => id && id.trim() !== '');
+                    console.log('Found sahalar as array:', sahaIds);
+                    break;
+                  } else if (typeof field === 'object' && field !== null) {
+                    sahaIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
+                    console.log('Found sahalar as object:', sahaIds);
+                    break;
+                  }
                 }
               }
 
-              console.log('Müşteri saha IDs:', sahaIds);
+              console.log('Final müşteri saha IDs:', sahaIds);
 
               // Saha IDlerini userData'da object formatında sakla
               if (sahaIds.length > 0) {
@@ -143,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log('Yüklenen sahalar (object format):', userData.sahalar);
               } else {
                 userData.sahalar = {};
+                console.warn('Müşteriye hiçbir saha atanmamış! Database\'te sahalar alanını kontrol edin.');
               }
             }
 
@@ -150,35 +170,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (userData.rol === 'musteri') {
               let santralIds: string[] = [];
 
-              // Santraller var mı kontrol et
-              if (userData.santraller) {
-                // Santraller array mi object mi kontrol et
-                if (Array.isArray(userData.santraller)) {
-                  santralIds = userData.santraller;
-                } else if (typeof userData.santraller === 'object') {
-                  // Object formatında ise key'leri al
-                  santralIds = Object.keys(userData.santraller).filter(key => userData.santraller[key] === true);
+              // Farklı alan isimlerini kontrol et (eğer sahalar boşsa santraller alanını kullan)
+              const santralFields = [userData.santraller, userData.atananSantraller];
+              
+              // Eğer sahalar boşsa, santralId'leri saha olarak kullan
+              if (!userData.sahalar || Object.keys(userData.sahalar).length === 0) {
+                santralFields.unshift(userData.sahalar, userData.atananSahalar);
+              }
+
+              for (const field of santralFields) {
+                if (field && santralIds.length === 0) {
+                  if (Array.isArray(field)) {
+                    santralIds = field.filter(id => id && id.trim() !== '');
+                    console.log('Found santraller as array:', santralIds);
+                    break;
+                  } else if (typeof field === 'object' && field !== null) {
+                    santralIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
+                    console.log('Found santraller as object:', santralIds);
+                    break;
+                  }
                 }
               }
 
-              console.log('Müşteri santral IDs:', santralIds);
+              console.log('Final müşteri santral IDs:', santralIds);
 
               if (santralIds.length > 0) {
                 try {
                   const santralQuery = query(
                     collection(db, 'santraller'),
-                    where('__name__', 'in', santralIds)
+                    where('__name__', 'in', santralIds.slice(0, 10)) // Firestore limit
                   );
                   const santralSnapshot = await getDocs(santralQuery);
                   const santralListesi = santralSnapshot.docs.map(doc => doc.id);
                   userData.santraller = santralListesi;
                   console.log('Yüklenen santraller:', santralListesi);
+                  
+                  // Eğer sahalar boşsa, santralları saha olarak da ayarla
+                  if (!userData.sahalar || Object.keys(userData.sahalar).length === 0) {
+                    const sahaObject: { [key: string]: boolean } = {};
+                    santralListesi.forEach(id => {
+                      sahaObject[id] = true;
+                    });
+                    userData.sahalar = sahaObject;
+                    console.log('Santrallar sahalar olarak da ayarlandı:', userData.sahalar);
+                  }
                 } catch (error) {
                   console.error('Santraller yüklenirken hata:', error);
                   userData.santraller = [];
                 }
               } else {
                 userData.santraller = [];
+                console.warn('Müşteriye hiçbir santral atanmamış! Database\'te santraller alanını kontrol edin.');
               }
             }
 
