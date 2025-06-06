@@ -122,105 +122,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userData = await fetchUserProfile(user.uid);
 
           if (userData) {
-            // Müşteri sahalarını al
+            // Müşteri sahalarını ve santrallerini al
             if (userData.rol === 'musteri') {
-              let sahaIds: string[] = [];
-              
-              console.log('Customer saha field check:', {
+              console.log('Müşteri verileri yükleniyor:', {
                 sahalar: userData.sahalar,
-                atananSahalar: userData.atananSahalar,
                 santraller: userData.santraller,
+                atananSahalar: userData.atananSahalar,
                 atananSantraller: userData.atananSantraller
               });
 
-              // Farklı alan isimlerini kontrol et
-              const sahaFields = [userData.sahalar, userData.atananSahalar, userData.santraller, userData.atananSantraller];
-              
+              let sahaIds: string[] = [];
+              let santralIds: string[] = [];
+
+              // Sahalar alanını kontrol et
+              const sahaFields = [userData.sahalar, userData.atananSahalar];
               for (const field of sahaFields) {
                 if (field && sahaIds.length === 0) {
                   if (Array.isArray(field)) {
                     sahaIds = field.filter(id => id && id.trim() !== '');
-                    console.log('Found sahalar as array:', sahaIds);
-                    break;
                   } else if (typeof field === 'object' && field !== null) {
                     sahaIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
-                    console.log('Found sahalar as object:', sahaIds);
-                    break;
                   }
+                  if (sahaIds.length > 0) break;
                 }
               }
 
-              console.log('Final müşteri saha IDs:', sahaIds);
-
-              // Saha IDlerini userData'da object formatında sakla
-              if (sahaIds.length > 0) {
-                const sahaObject: { [key: string]: boolean } = {};
-                sahaIds.forEach(id => {
-                  sahaObject[id] = true;
-                });
-                userData.sahalar = sahaObject;
-                console.log('Yüklenen sahalar (object format):', userData.sahalar);
-              } else {
-                userData.sahalar = {};
-                console.warn('Müşteriye hiçbir saha atanmamış! Database\'te sahalar alanını kontrol edin.');
-              }
-            }
-
-            // Müşteri santrallerini al
-            if (userData.rol === 'musteri') {
-              let santralIds: string[] = [];
-
-              // Farklı alan isimlerini kontrol et (eğer sahalar boşsa santraller alanını kullan)
+              // Santraller alanını kontrol et
               const santralFields = [userData.santraller, userData.atananSantraller];
-              
-              // Eğer sahalar boşsa, santralId'leri saha olarak kullan
-              if (!userData.sahalar || Object.keys(userData.sahalar).length === 0) {
-                santralFields.unshift(userData.sahalar, userData.atananSahalar);
-              }
-
               for (const field of santralFields) {
                 if (field && santralIds.length === 0) {
                   if (Array.isArray(field)) {
                     santralIds = field.filter(id => id && id.trim() !== '');
-                    console.log('Found santraller as array:', santralIds);
-                    break;
                   } else if (typeof field === 'object' && field !== null) {
                     santralIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
-                    console.log('Found santraller as object:', santralIds);
-                    break;
                   }
+                  if (santralIds.length > 0) break;
                 }
               }
 
-              console.log('Final müşteri santral IDs:', santralIds);
+              // Eğer sahalar boşsa santralları saha olarak kullan
+              if (sahaIds.length === 0 && santralIds.length > 0) {
+                sahaIds = [...santralIds];
+                console.log('Sahalar boş, santralları saha olarak kullanıyoruz:', sahaIds);
+              }
 
-              if (santralIds.length > 0) {
-                try {
-                  const santralQuery = query(
-                    collection(db, 'santraller'),
-                    where('__name__', 'in', santralIds.slice(0, 10)) // Firestore limit
-                  );
-                  const santralSnapshot = await getDocs(santralQuery);
-                  const santralListesi = santralSnapshot.docs.map(doc => doc.id);
-                  userData.santraller = santralListesi;
-                  console.log('Yüklenen santraller:', santralListesi);
-                  
-                  // Eğer sahalar boşsa, santralları saha olarak da ayarla
-                  if (!userData.sahalar || Object.keys(userData.sahalar).length === 0) {
-                    const sahaObject: { [key: string]: boolean } = {};
-                    santralListesi.forEach(id => {
-                      sahaObject[id] = true;
-                    });
-                    userData.sahalar = sahaObject;
-                    console.log('Santrallar sahalar olarak da ayarlandı:', userData.sahalar);
-                  }
-                } catch (error) {
-                  console.error('Santraller yüklenirken hata:', error);
-                  userData.santraller = [];
-                }
-              } else {
-                userData.santraller = [];
-                console.warn('Müşteriye hiçbir santral atanmamış! Database\'te santraller alanını kontrol edin.');
+              console.log('Müşteri saha IDs:', sahaIds);
+              console.log('Müşteri santral IDs:', santralIds);
+
+              // Object formatında sakla
+              const sahaObject: { [key: string]: boolean } = {};
+              const santralObject: { [key: string]: boolean } = {};
+
+              sahaIds.forEach(id => {
+                sahaObject[id] = true;
+              });
+
+              santralIds.forEach(id => {
+                santralObject[id] = true;
+              });
+
+              userData.sahalar = sahaObject;
+              userData.santraller = santralObject;
+
+              console.log('Müşteri final sahalar:', userData.sahalar);
+              console.log('Müşteri final santraller:', userData.santraller);
+
+              if (Object.keys(userData.sahalar).length === 0 && Object.keys(userData.santraller).length === 0) {
+                console.warn('UYARI: Müşteriye hiçbir saha/santral atanmamış!');
+                console.warn('Database\'te bu müşteri için sahalar veya santraller alanını kontrol edin.');
               }
             }
 
@@ -336,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Müşteri sahalarını al
         if (userData.rol === 'musteri') {
           let sahaIds: string[] = [];
-          
+
           console.log('Login - Raw userData.sahalar:', userData.sahalar);
 
           // Sahalar var mı kontrol et

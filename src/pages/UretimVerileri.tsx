@@ -294,6 +294,7 @@ export const UretimVerileri: React.FC = () => {
           console.log('Müşteri için üretim verileri sorgusu - Saha IDs:', sahaIds);
           console.log('Seçilen santral:', secilenSantral);
           console.log('Tarih aralığı:', tarihBaslangic, 'ile', tarihBitis);
+          console.log('Müşteri companyId:', kullanici.companyId);
           
           if (sahaIds.length === 0) {
             console.warn('Müşteriye atanmış saha bulunamadı - üretim verileri boş');
@@ -313,6 +314,7 @@ export const UretimVerileri: React.FC = () => {
             try {
               uretimQuery = query(
                 collection(db, 'uretimVerileri'),
+                where('companyId', '==', kullanici.companyId),
                 where('santralId', '==', secilenSantral),
                 where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
                 where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
@@ -324,13 +326,14 @@ export const UretimVerileri: React.FC = () => {
               return;
             }
           } else {
-            // Tüm sahalar için sorgu
+            // Tüm sahalar için sorgu - companyId ile birlikte
             const limitedSahaIds = sahaIds.slice(0, 10);
             console.log('Tüm sahalar için sorgu oluşturuluyor:', limitedSahaIds);
             
             try {
               uretimQuery = query(
                 collection(db, 'uretimVerileri'),
+                where('companyId', '==', kullanici.companyId),
                 where('santralId', 'in', limitedSahaIds),
                 where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
                 where('tarih', '<=', Timestamp.fromDate(tarihBitis)),

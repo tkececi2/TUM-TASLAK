@@ -58,7 +58,12 @@ service cloud.firestore {
 
     function hasAccessToSantral(santralId) {
       let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
-      return user.sahalar != null && (santralId in user.sahalar || user.sahalar.hasAny([santralId]));
+      return user.sahalar != null && (
+        (santralId in user.sahalar && user.sahalar[santralId] == true) ||
+        (user.santraller != null && santralId in user.santraller && user.santraller[santralId] == true) ||
+        (user.sahalar.hasAny && user.sahalar.hasAny([santralId])) ||
+        (user.santraller != null && user.santraller.hasAny && user.santraller.hasAny([santralId]))
+      );
     }
 
     function isSameCompany(resourceCompanyId) {
@@ -152,10 +157,8 @@ service cloud.firestore {
     match /uretimVerileri/{veriId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() ||
-        isAdmin() || 
-        isTechnician() ||
-        (isCustomer() && hasAccessToSantral(resource.data.santralId)) ||
-        (resource.data.companyId == getUserCompanyId())
+        (resource.data.companyId == getUserCompanyId() && (isAdmin() || isTechnician())) ||
+        (isCustomer() && resource.data.companyId == getUserCompanyId() && hasAccessToSantral(resource.data.santralId))
       );
       allow create: if hasManagementAccess() && request.resource.data.companyId == getUserCompanyId();
       allow update: if hasManagementAccess() && resource.data.companyId == getUserCompanyId();
