@@ -134,29 +134,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               let sahaIds: string[] = [];
               let santralIds: string[] = [];
 
-              // Sahalar alanını kontrol et - tüm olası alanları kontrol et
-              const sahaFields = [userData.sahalar, userData.atananSahalar, userData.santraller, userData.atananSantraller];
-              for (const field of sahaFields) {
+              // Tüm olası alanları öncelik sırasına göre kontrol et
+              const allFields = [
+                { field: userData.sahalar, name: 'sahalar' },
+                { field: userData.atananSahalar, name: 'atananSahalar' },
+                { field: userData.santraller, name: 'santraller' },
+                { field: userData.atananSantraller, name: 'atananSantraller' }
+              ];
+
+              for (const { field, name } of allFields) {
                 if (field && sahaIds.length === 0) {
                   if (Array.isArray(field)) {
-                    sahaIds = field.filter(id => id && id.trim() !== '');
+                    sahaIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
+                    if (sahaIds.length > 0) {
+                      console.log(`Sahalar ${name} alanından alındı (array):`, sahaIds);
+                      break;
+                    }
                   } else if (typeof field === 'object' && field !== null) {
                     sahaIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
+                    if (sahaIds.length > 0) {
+                      console.log(`Sahalar ${name} alanından alındı (object):`, sahaIds);
+                      break;
+                    }
                   }
-                  if (sahaIds.length > 0) break;
                 }
               }
 
-              // Santraller alanını kontrol et - sahalarla aynı olabilir
-              const santralFields = [userData.santraller, userData.atananSantraller, userData.sahalar, userData.atananSahalar];
-              for (const field of santralFields) {
+              // Santrallar için de aynı işlemi yap
+              for (const { field, name } of allFields) {
                 if (field && santralIds.length === 0) {
                   if (Array.isArray(field)) {
-                    santralIds = field.filter(id => id && id.trim() !== '');
+                    santralIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
+                    if (santralIds.length > 0) {
+                      console.log(`Santraller ${name} alanından alındı (array):`, santralIds);
+                      break;
+                    }
                   } else if (typeof field === 'object' && field !== null) {
                     santralIds = Object.keys(field).filter(key => field[key] === true && key && key.trim() !== '');
+                    if (santralIds.length > 0) {
+                      console.log(`Santraller ${name} alanından alındı (object):`, santralIds);
+                      break;
+                    }
                   }
-                  if (santralIds.length > 0) break;
                 }
               }
 

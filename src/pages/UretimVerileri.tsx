@@ -159,30 +159,37 @@ export const UretimVerileri: React.FC = () => {
 
     console.log('Müşteri saha verisi kontrolü:', kullanici.sahalar);
     console.log('Müşteri santraller verisi:', kullanici.santraller);
+    console.log('Müşteri atananSahalar verisi:', kullanici.atananSahalar);
+    console.log('Müşteri atananSantraller verisi:', kullanici.atananSantraller);
     
     let sahaIds: string[] = [];
     
-    // Önce sahalar alanını kontrol et
-    if (kullanici.sahalar) {
-      if (Array.isArray(kullanici.sahalar)) {
-        // Array formatında: ["sahaId1", "sahaId2"]
-        sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
-      } else if (typeof kullanici.sahalar === 'object' && !Array.isArray(kullanici.sahalar)) {
-        // Object formatında: { sahaId: true, sahaId2: true }
-        sahaIds = Object.keys(kullanici.sahalar).filter(key => 
-          kullanici.sahalar[key] === true && key && key.trim() !== ''
-        );
-      }
-    }
+    // Tüm olası alanları kontrol et
+    const possibleFields = [
+      kullanici.sahalar,
+      kullanici.santraller,
+      kullanici.atananSahalar,
+      kullanici.atananSantraller
+    ];
     
-    // Eğer sahalar boşsa, santraller alanını kontrol et (santralId genellikle sahaId ile aynı)
-    if (sahaIds.length === 0 && kullanici.santraller) {
-      if (Array.isArray(kullanici.santraller)) {
-        sahaIds = kullanici.santraller.filter(id => id && id.trim() !== '');
-      } else if (typeof kullanici.santraller === 'object') {
-        sahaIds = Object.keys(kullanici.santraller).filter(key => 
-          kullanici.santraller[key] === true && key && key.trim() !== ''
-        );
+    for (const field of possibleFields) {
+      if (field && sahaIds.length === 0) {
+        if (Array.isArray(field)) {
+          // Array formatında: ["sahaId1", "sahaId2"]
+          sahaIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
+        } else if (typeof field === 'object' && field !== null) {
+          // Object formatında: { sahaId: true, sahaId2: true }
+          sahaIds = Object.keys(field).filter(key => 
+            field[key] === true && key && key.trim() !== ''
+          );
+        }
+        
+        if (sahaIds.length > 0) {
+          console.log(`Sahalar ${possibleFields.indexOf(field) === 0 ? 'sahalar' : 
+                      possibleFields.indexOf(field) === 1 ? 'santraller' :
+                      possibleFields.indexOf(field) === 2 ? 'atananSahalar' : 'atananSantraller'} alanından alındı:`, sahaIds);
+          break;
+        }
       }
     }
     
