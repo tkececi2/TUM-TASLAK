@@ -758,7 +758,7 @@ export const UretimVerileri: React.FC = () => {
                   <option value="tumu">Tüm Performans</option>
                   <option value="yuksek">Yüksek (≥%20)</option>
                   <option value="orta">Orta (%15-%20)</option>
-                  <option value="dusuk">Düşük (<%15)</option>
+                  <option value="dusuk">Düşük (&lt;%15)</option>
                 </select>
               </div>
 
