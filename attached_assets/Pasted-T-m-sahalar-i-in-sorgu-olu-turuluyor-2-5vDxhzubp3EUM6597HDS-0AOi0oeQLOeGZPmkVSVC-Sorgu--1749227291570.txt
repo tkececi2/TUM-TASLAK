@@ -1,0 +1,45 @@
+Tüm sahalar için sorgu oluşturuluyor: 
+(2) ["5vDxhzubp3EUM6597HDS", "0AOi0oeQLOeGZPmkVSVC"]
+Sorgu çalıştırılıyor...
+Üretim verileri getirme hatası: 
+_FirebaseError {code: "permission-denied", customData: undefined, name: "FirebaseError", toString: ƒ}
+
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Hata detayı: 
+Object {code: "permission-denied", message: "Missing or insufficient permissions.", stack: "FirebaseError: Missing or insufficient permissions."}
+
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Üretim verileri getirme hatası: 
+_FirebaseError {code: "permission-denied", customData: undefined, name: "FirebaseError", toString: ƒ}
+
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Hata detayı: 
+Object {code: "permission-denied", message: "Missing or insufficient permissions.", stack: "FirebaseError: Missing or insufficient permissions."}
+
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Üretim verileri getirme hatası: 
+_FirebaseError {code: "permission-denied", customData: undefined, name: "FirebaseError", toString: ƒ}
+
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Hata detayı: 
+Object {code: "permission-denied", message: "Missing or insufficient permissions.", stack: "FirebaseError: Missing or insufficient permissions."}
+
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://45632e60-4c2f-4a77-a23f-e3723504e195-00-20eqc0e5k2twn.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
