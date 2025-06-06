@@ -59,22 +59,22 @@ service cloud.firestore {
     function hasAccessToSantral(santralId) {
       let user = get(/databases/$(database)/documents/kullanicilar/$(request.auth.uid)).data;
       return (
-        (user.sahalar != null && (
-          (santralId in user.sahalar && user.sahalar[santralId] == true) ||
-          (user.sahalar is list && santralId in user.sahalar)
-        )) ||
-        (user.santraller != null && (
-          (santralId in user.santraller && user.santraller[santralId] == true) ||
-          (user.santraller is list && santralId in user.santraller)
-        )) ||
-        (user.atananSahalar != null && (
-          (santralId in user.atananSahalar && user.atananSahalar[santralId] == true) ||
-          (user.atananSahalar is list && santralId in user.atananSahalar)
-        )) ||
-        (user.atananSantraller != null && (
-          (santralId in user.atananSantraller && user.atananSantraller[santralId] == true) ||
-          (user.atananSantraller is list && santralId in user.atananSantraller)
-        ))
+        // Check sahalar field (object format)
+        (user.sahalar != null && user.sahalar is map && santralId in user.sahalar && user.sahalar[santralId] == true) ||
+        // Check sahalar field (array format)
+        (user.sahalar != null && user.sahalar is list && santralId in user.sahalar) ||
+        // Check santraller field (object format)
+        (user.santraller != null && user.santraller is map && santralId in user.santraller && user.santraller[santralId] == true) ||
+        // Check santraller field (array format)
+        (user.santraller != null && user.santraller is list && santralId in user.santraller) ||
+        // Check atananSahalar field (object format)
+        (user.atananSahalar != null && user.atananSahalar is map && santralId in user.atananSahalar && user.atananSahalar[santralId] == true) ||
+        // Check atananSahalar field (array format)
+        (user.atananSahalar != null && user.atananSahalar is list && santralId in user.atananSahalar) ||
+        // Check atananSantraller field (object format)
+        (user.atananSantraller != null && user.atananSantraller is map && santralId in user.atananSantraller && user.atananSantraller[santralId] == true) ||
+        // Check atananSantraller field (array format)
+        (user.atananSantraller != null && user.atananSantraller is list && santralId in user.atananSantraller)
       );
     }
 
@@ -172,6 +172,11 @@ service cloud.firestore {
         (resource.data.companyId == getUserCompanyId() && (isAdmin() || isTechnician())) ||
         (isCustomer() && resource.data.companyId == getUserCompanyId() && hasAccessToSantral(resource.data.santralId))
       );
+      allow list: if isAuthenticated() && (
+        isSuperAdmin() ||
+        (getUserCompanyId() != null && (isAdmin() || isTechnician())) ||
+        isCustomer()
+      );
       allow create: if hasManagementAccess() && request.resource.data.companyId == getUserCompanyId();
       allow update: if hasManagementAccess() && resource.data.companyId == getUserCompanyId();
       allow delete: if hasManagementAccess() && resource.data.companyId == getUserCompanyId();
@@ -242,8 +247,7 @@ service cloud.firestore {
       );
       allow list: if isAuthenticated() && (
         isSuperAdmin() ||
-        isAdmin() || 
-        isTechnician() || 
+        (getUserCompanyId() != null && (isAdmin() || isTechnician())) ||
         isCustomer()
       );
       allow create: if hasManagementAccess() && request.resource.data.companyId == getUserCompanyId();
