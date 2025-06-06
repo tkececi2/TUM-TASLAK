@@ -157,16 +157,22 @@ export const UretimVerileri: React.FC = () => {
   const getMusteriSahaIds = (): string[] => {
     if (!kullanici || kullanici.rol !== 'musteri') return [];
 
+    console.log('Müşteri saha verisi kontrolü:', kullanici.sahalar);
+    
     let sahaIds: string[] = [];
     if (kullanici.sahalar) {
       if (typeof kullanici.sahalar === 'object' && !Array.isArray(kullanici.sahalar)) {
+        // Object formatında: { sahaId: true, sahaId2: true }
         sahaIds = Object.keys(kullanici.sahalar).filter(key => 
           kullanici.sahalar[key] === true && key && key.trim() !== ''
         );
       } else if (Array.isArray(kullanici.sahalar)) {
+        // Array formatında: ["sahaId1", "sahaId2"]
         sahaIds = kullanici.sahalar.filter(id => id && id.trim() !== '');
       }
     }
+    
+    console.log('Müşteri erişebilir saha IDs:', sahaIds);
     return sahaIds;
   };
 
@@ -183,17 +189,22 @@ export const UretimVerileri: React.FC = () => {
 
         if (kullanici.rol === 'musteri') {
           const sahaIds = getMusteriSahaIds();
+          console.log('Müşteri için santral sorgusu - Saha IDs:', sahaIds);
+          
           if (sahaIds.length === 0) {
+            console.warn('Müşteriye atanmış saha bulunamadı');
             setSantraller([]);
             setYukleniyor(false);
             return;
           }
 
+          // Firestore 'in' operatörü maksimum 10 element kabul eder
           const limitedSahaIds = sahaIds.slice(0, 10);
+          console.log('Sorgulanacak sahalar:', limitedSahaIds);
+          
           santralQuery = query(
             collection(db, 'santraller'),
-            where('__name__', 'in', limitedSahaIds),
-            orderBy('ad')
+            where('__name__', 'in', limitedSahaIds)
           );
         } else {
           santralQuery = query(
@@ -259,16 +270,25 @@ export const UretimVerileri: React.FC = () => {
 
         if (kullanici.rol === 'musteri') {
           const sahaIds = getMusteriSahaIds();
+          console.log('Müşteri için üretim verileri sorgusu - Saha IDs:', sahaIds);
+          console.log('Seçilen santral:', secilenSantral);
+          console.log('Tarih aralığı:', tarihBaslangic, 'ile', tarihBitis);
+          
           if (sahaIds.length === 0) {
+            console.warn('Müşteriye atanmış saha bulunamadı - üretim verileri boş');
             setUretimVerileri([]);
             return;
           }
 
           if (secilenSantral !== 'tumu') {
+            // Seçilen santralın müşteriye ait olup olmadığını kontrol et
             if (!sahaIds.includes(secilenSantral)) {
+              console.warn('Seçilen santral müşteriye ait değil:', secilenSantral);
               setUretimVerileri([]);
               return;
             }
+            
+            console.log('Tek santral için sorgu oluşturuluyor:', secilenSantral);
             uretimQuery = query(
               collection(db, 'uretimVerileri'),
               where('santralId', '==', secilenSantral),
@@ -277,9 +297,13 @@ export const UretimVerileri: React.FC = () => {
               orderBy('tarih', 'desc')
             );
           } else {
+            // Tüm sahalar için sorgu
+            const limitedSahaIds = sahaIds.slice(0, 10);
+            console.log('Tüm sahalar için sorgu oluşturuluyor:', limitedSahaIds);
+            
             uretimQuery = query(
               collection(db, 'uretimVerileri'),
-              where('santralId', 'in', sahaIds.slice(0, 10)),
+              where('santralId', 'in', limitedSahaIds),
               where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
               where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
               orderBy('tarih', 'desc')
@@ -312,6 +336,9 @@ export const UretimVerileri: React.FC = () => {
           ...doc.data()
         })) as UretimVerisi[];
 
+        console.log('Getirilen üretim verileri sayısı:', veriler.length);
+        console.log('İlk 3 veri:', veriler.slice(0, 3));
+        
         setUretimVerileri(veriler);
       } catch (error) {
         console.error('Üretim verileri getirme hatası:', error);
