@@ -34,7 +34,9 @@ import {
   Activity,
   Thermometer,
   Cloud,
-  Wind
+  Wind,
+  DollarSign,
+  X
 } from 'lucide-react';
 import { Card, Title, Text, AreaChart, BarChart, LineChart, Metric, Flex, ProgressBar, Grid, Col, Badge, BadgeDelta } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
