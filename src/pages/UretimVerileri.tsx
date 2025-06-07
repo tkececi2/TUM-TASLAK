@@ -922,69 +922,208 @@ export const UretimVerileri: React.FC = () => {
           </Card>
         </div>
 
-        {/* Yeni Performans Trend Analizi */}
+        {/* Yeniden Tasarlanmış Performans Trend Analizi */}
         <Card>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <Title>Performans Trend Analizi</Title>
               <Text className="text-sm text-gray-500">Aylık başarı oranları ve trendler</Text>
             </div>
             <div className="flex items-center space-x-2">
+              <Badge 
+                color={performansOzeti.basariOrani >= 90 ? "green" : 
+                       performansOzeti.basariOrani >= 70 ? "yellow" : "red"}
+                className="text-xs"
+              >
+                Ortalama: %{performansOzeti.basariOrani.toFixed(1)}
+              </Badge>
               <Badge color="blue" className="text-xs">
-                Trend Analizi
+                {secilenYil}
               </Badge>
             </div>
           </div>
-          <LineChart
-            className="mt-4 h-80"
-            data={aylikVeriler.map((veri, index) => ({
-              ay: veri.ay,
-              basariOrani: veri.basariOrani,
-              hareketliOrtalama: index >= 2 ? 
-                aylikVeriler.slice(Math.max(0, index - 2), index + 1)
-                  .reduce((sum, v) => sum + v.basariOrani, 0) / 3 : veri.basariOrani,
-              birimFiyat: veri.birimFiyat,
-              verimlilik: veri.gerceklesen > 0 ? (veri.netGelir / veri.gerceklesen) * 1000 : 0
-            }))}
-            index="ay"
-            categories={["basariOrani", "hareketliOrtalama"]}
-            colors={["blue", "orange"]}
-            valueFormatter={(value) => `%${value.toFixed(1)}`}
-            showAnimation={true}
-            showLegend={true}
-            showGridLines={true}
-            connectNulls={false}
-            customTooltip={(props) => {
-              const { payload, active } = props;
-              if (!active || !payload || !payload[0]) return null;
-              
-              const data = payload[0].payload;
-              
-              return (
-                <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-lg">
-                  <div className="font-semibold text-gray-900 mb-2">{data.ay} {secilenYil}</div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-blue-600 text-sm">Başarı Oranı:</span>
-                      <span className="font-medium">%{data.basariOrani.toFixed(1)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-orange-600 text-sm">3 Aylık Ortalama:</span>
-                      <span className="font-medium">%{data.hareketliOrtalama.toFixed(1)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 text-sm">Birim Fiyat:</span>
-                      <span className="font-medium">₺{data.birimFiyat.toFixed(3)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-green-600 text-sm">Verimlilik:</span>
-                      <span className="font-medium">₺{data.verimlilik.toFixed(2)}/MWh</span>
-                    </div>
+
+          {/* Trend İstatistikleri */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-blue-600 uppercase tracking-wide font-medium">En Yüksek</div>
+                  <div className="text-lg font-bold text-blue-900">
+                    %{Math.max(...aylikVeriler.map(v => v.basariOrani)).toFixed(1)}
+                  </div>
+                  <div className="text-xs text-blue-600">
+                    {aylikVeriler.find(v => v.basariOrani === Math.max(...aylikVeriler.map(v => v.basariOrani)))?.ay}
                   </div>
                 </div>
-              );
-            }}
-          />
+                <TrendingUp className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-red-600 uppercase tracking-wide font-medium">En Düşük</div>
+                  <div className="text-lg font-bold text-red-900">
+                    %{Math.min(...aylikVeriler.map(v => v.basariOrani)).toFixed(1)}
+                  </div>
+                  <div className="text-xs text-red-600">
+                    {aylikVeriler.find(v => v.basariOrani === Math.min(...aylikVeriler.map(v => v.basariOrani)))?.ay}
+                  </div>
+                </div>
+                <TrendingDown className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-emerald-600 uppercase tracking-wide font-medium">Standart Sapma</div>
+                  <div className="text-lg font-bold text-emerald-900">
+                    ±{(() => {
+                      const ortalama = aylikVeriler.reduce((sum, v) => sum + v.basariOrani, 0) / aylikVeriler.length;
+                      const varyans = aylikVeriler.reduce((sum, v) => sum + Math.pow(v.basariOrani - ortalama, 2), 0) / aylikVeriler.length;
+                      return Math.sqrt(varyans).toFixed(1);
+                    })()}%
+                  </div>
+                  <div className="text-xs text-emerald-600">Tutarlılık</div>
+                </div>
+                <Activity className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-amber-600 uppercase tracking-wide font-medium">Trend Eğilimi</div>
+                  <div className="text-lg font-bold text-amber-900">
+                    {(() => {
+                      const sonUcAy = aylikVeriler.slice(-3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
+                      const ilkUcAy = aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
+                      const trend = sonUcAy - ilkUcAy;
+                      return trend > 0 ? `+${trend.toFixed(1)}%` : `${trend.toFixed(1)}%`;
+                    })()}
+                  </div>
+                  <div className="text-xs text-amber-600">
+                    {(() => {
+                      const sonUcAy = aylikVeriler.slice(-3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
+                      const ilkUcAy = aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
+                      return sonUcAy > ilkUcAy ? 'Yükseliş' : 'Düşüş';
+                    })()}
+                  </div>
+                </div>
+                <BarChart2 className="h-6 w-6 text-amber-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Gelişmiş Trend Grafiği */}
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200">
+            <LineChart
+              className="h-80"
+              data={aylikVeriler.map((veri, index) => ({
+                ay: veri.ay,
+                basariOrani: veri.basariOrani,
+                hareketliOrtalama: index >= 2 ? 
+                  aylikVeriler.slice(Math.max(0, index - 2), index + 1)
+                    .reduce((sum, v) => sum + v.basariOrani, 0) / 3 : veri.basariOrani,
+                hedefCizgi: 90, // Hedef başarı çizgisi
+                minimumEsik: 70 // Minimum kabul edilebilir seviye
+              }))}
+              index="ay"
+              categories={["basariOrani", "hareketliOrtalama", "hedefCizgi", "minimumEsik"]}
+              colors={["red", "orange", "green", "gray"]}
+              valueFormatter={(value) => `%${value.toFixed(1)}`}
+              showAnimation={true}
+              showLegend={true}
+              showGridLines={true}
+              connectNulls={false}
+              strokeWidth={3}
+              customTooltip={(props) => {
+                const { payload, active } = props;
+                if (!active || !payload || !payload[0]) return null;
+                
+                const data = payload[0].payload;
+                const trendDurum = data.basariOrani >= 90 ? 'Mükemmel' : 
+                                   data.basariOrani >= 70 ? 'İyi' : 'Gelişim Gerekli';
+                
+                return (
+                  <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-lg max-w-xs">
+                    <div className="font-semibold text-gray-900 mb-3 text-center">{data.ay} {secilenYil}</div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
+                        <span className="text-red-700 text-sm font-medium">Başarı Oranı:</span>
+                        <span className="font-bold text-red-900">%{data.basariOrani.toFixed(1)}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
+                        <span className="text-orange-700 text-sm font-medium">3 Aylık Ortalama:</span>
+                        <span className="font-bold text-orange-900">%{data.hareketliOrtalama.toFixed(1)}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                        <span className="text-blue-700 text-sm font-medium">Durum:</span>
+                        <Badge 
+                          color={data.basariOrani >= 90 ? "green" : 
+                                 data.basariOrani >= 70 ? "yellow" : "red"}
+                          className="text-xs"
+                        >
+                          {trendDurum}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }}
+              yAxisConfig={{
+                domain: [0, 100],
+                tickFormatter: (value) => `%${value}`
+              }}
+            />
+          </div>
+
+          {/* Performans Analiz Önerileri */}
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+              <div className="flex items-center mb-2">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <h4 className="font-semibold text-green-900">Güçlü Yönler</h4>
+              </div>
+              <ul className="text-sm text-green-700 space-y-1">
+                {aylikVeriler.filter(v => v.basariOrani >= 90).length > 0 && (
+                  <li>• {aylikVeriler.filter(v => v.basariOrani >= 90).length} ay mükemmel performans</li>
+                )}
+                {(() => {
+                  const sonUcAy = aylikVeriler.slice(-3);
+                  const ortalama = sonUcAy.reduce((sum, v) => sum + v.basariOrani, 0) / 3;
+                  return ortalama > performansOzeti.basariOrani && (
+                    <li>• Son 3 ayda pozitif trend (%{ortalama.toFixed(1)})</li>
+                  );
+                })()}
+                <li>• Tutarlı {(aylikVeriler.filter(v => v.basariOrani >= 70).length / 12 * 100).toFixed(0)}% başarı oranı</li>
+              </ul>
+            </div>
+            
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
+              <div className="flex items-center mb-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600 mr-2" />
+                <h4 className="font-semibold text-orange-900">Gelişim Alanları</h4>
+              </div>
+              <ul className="text-sm text-orange-700 space-y-1">
+                {aylikVeriler.filter(v => v.basariOrani < 70).length > 0 && (
+                  <li>• {aylikVeriler.filter(v => v.basariOrani < 70).length} ay hedefin altında performans</li>
+                )}
+                {(() => {
+                  const enDusukAy = aylikVeriler.reduce((prev, current) => 
+                    (prev.basariOrani < current.basariOrani) ? prev : current
+                  );
+                  return <li>• {enDusukAy.ay} ayında %{enDusukAy.basariOrani.toFixed(1)} ile en düşük</li>;
+                })()}
+                <li>• Hedef %90 başarı oranına ulaşmak için optimizasyon</li>
+              </ul>
+            </div>
+          </div>
         </Card>
 
         {/* Yeni Çok Boyutlu Analiz Paneli */}
