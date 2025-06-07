@@ -556,7 +556,7 @@ export const UretimVerileri: React.FC = () => {
       toast.error('Bu işlem için yetkiniz yok');
       return;
     }
-  
+
     try {
       await deleteDoc(doc(db, 'uretimVerileri', id));
       toast.success('Üretim verisi başarıyla silindi');
@@ -568,7 +568,7 @@ export const UretimVerileri: React.FC = () => {
       toast.error('Veri silinirken bir hata oluştu');
     }
   };
-  
+
   if (yukleniyor) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -828,10 +828,10 @@ export const UretimVerileri: React.FC = () => {
               customTooltip={(props) => {
                 const { payload, active } = props;
                 if (!active || !payload || !payload[0]) return null;
-                
+
                 const data = payload[0].payload;
                 const basariOrani = data.hedef > 0 ? (data.gerceklesen / data.hedef) * 100 : 0;
-                
+
                 return (
                   <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-lg">
                     <div className="font-semibold text-gray-900 mb-2">{data.ay} {secilenYil}</div>
@@ -890,10 +890,10 @@ export const UretimVerileri: React.FC = () => {
               customTooltip={(props) => {
                 const { payload, active } = props;
                 if (!active || !payload || !payload[0]) return null;
-                
+
                 const data = payload[0].payload;
                 const karMarji = data.gelir > 0 ? ((data.netGelir / data.gelir) * 100) : 0;
-                
+
                 return (
                   <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-lg">
                     <div className="font-semibold text-gray-900 mb-2">{data.ay} {secilenYil}</div>
@@ -959,7 +959,7 @@ export const UretimVerileri: React.FC = () => {
                 <TrendingUp className="h-6 w-6 text-blue-600" />
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -974,7 +974,7 @@ export const UretimVerileri: React.FC = () => {
                 <TrendingDown className="h-6 w-6 text-red-600" />
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -991,7 +991,7 @@ export const UretimVerileri: React.FC = () => {
                 <Activity className="h-6 w-6 text-emerald-600" />
               </div>
             </div>
-            
+
             <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
               <div className="flex items-center justify-between">
                 <div>
@@ -1042,26 +1042,26 @@ export const UretimVerileri: React.FC = () => {
               customTooltip={(props) => {
                 const { payload, active } = props;
                 if (!active || !payload || !payload[0]) return null;
-                
+
                 const data = payload[0].payload;
                 const trendDurum = data.basariOrani >= 90 ? 'Mükemmel' : 
                                    data.basariOrani >= 70 ? 'İyi' : 'Gelişim Gerekli';
-                
+
                 return (
                   <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-lg max-w-xs">
                     <div className="font-semibold text-gray-900 mb-3 text-center">{data.ay} {secilenYil}</div>
-                    
+
                     <div className="space-y-2">
                       <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
                         <span className="text-red-700 text-sm font-medium">Başarı Oranı:</span>
                         <span className="font-bold text-red-900">%{data.basariOrani.toFixed(1)}</span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between p-2 bg-orange-50 rounded-lg">
                         <span className="text-orange-700 text-sm font-medium">3 Aylık Ortalama:</span>
                         <span className="font-bold text-orange-900">%{data.hareketliOrtalama.toFixed(1)}</span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
                         <span className="text-blue-700 text-sm font-medium">Durum:</span>
                         <Badge 
@@ -1104,7 +1104,7 @@ export const UretimVerileri: React.FC = () => {
                 <li>• Tutarlı {(aylikVeriler.filter(v => v.basariOrani >= 70).length / 12 * 100).toFixed(0)}% başarı oranı</li>
               </ul>
             </div>
-            
+
             <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
               <div className="flex items-center mb-2">
                 <AlertTriangle className="h-5 w-5 text-orange-600 mr-2" />
@@ -1178,7 +1178,7 @@ export const UretimVerileri: React.FC = () => {
                 const oncekiVeri = index > 0 ? arr[index - 1] : null;
                 const degisim = oncekiVeri ? 
                   ((veri.netGelir - oncekiVeri.netGelir) / oncekiVeri.netGelir) * 100 : 0;
-                
+
                 return (
                   <div key={veri.ay} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
@@ -1221,7 +1221,7 @@ export const UretimVerileri: React.FC = () => {
                 </div>
                 <div className="text-sm text-gray-500">₺/MWh Net Gelir</div>
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Kapasite Kullanımı</span>
@@ -1239,7 +1239,7 @@ export const UretimVerileri: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Finansal Verim</span>
                   <div className="flex items-center">
@@ -1256,7 +1256,7 @@ export const UretimVerileri: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Fiyat Optimizasyonu</span>
                   <div className="flex items-center">
@@ -1348,42 +1348,43 @@ export const UretimVerileri: React.FC = () => {
               <Text className="text-sm text-gray-500">Mevsim bazında karşılaştırma</Text>
             </div>
           </div>
+
           
-          <BarChart
-            className="mt-4 h-64"
-            data={[
-              {
-                mevsim: "Kış (Ara-Şub)",
-                hedef: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.hedef, 0),
-                gerceklesen: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.gerceklesen, 0),
-                gelir: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.netGelir, 0)
-              },
-              {
-                mevsim: "İlkbahar (Mar-May)",
-                hedef: aylikVeriler.slice(2, 5).reduce((sum, v) => sum + v.hedef, 0),
-                gerceklesen: aylikVeriler.slice(2, 5).reduce((sum, v) => sum + v.gerceklesen, 0),
-                gelir: aylikVeriler.slice(2, 5).reduce((sum, v) => sum + v.netGelir, 0)
-              },
-              {
-                mevsim: "Yaz (Haz-Ağu)",
-                hedef: aylikVeriler.slice(5, 8).reduce((sum, v) => sum + v.hedef, 0),
-                gerceklesen: aylikVeriler.slice(5, 8).reduce((sum, v) => sum + v.gerceklesen, 0),
-                gelir: aylikVeriler.slice(5, 8).reduce((sum, v) => sum + v.netGelir, 0)
-              },
-              {
-                mevsim: "Sonbahar (Eyl-Kas)",
-                hedef: aylikVeriler.slice(8, 11).reduce((sum, v) => sum + v.hedef, 0),
-                gerceklesen: aylikVeriler.slice(8, 11).reduce((sum, v) => sum + v.gerceklesen, 0),
-                gelir: aylikVeriler.slice(8, 11).reduce((sum, v) => sum + v.netGelir, 0)
-              }
-            ]}
-            index="mevsim"
-            categories={["hedef", "gerceklesen"]}
-            colors={["blue", "green"]}
-            valueFormatter={(value) => `${(value / 1000).toFixed(1)} MWh`}
-            showAnimation={true}
-            showLegend={true}
-          />
+<BarChart
+              className="mt-4 h-64"
+              data={[
+                {
+                  mevsim: "Kış (Ara-Şub)",
+                  hedef: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.hedef, 0),
+                  gerceklesen: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.gerceklesen, 0),
+                  gelir: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.netGelir, 0)
+                },
+                {
+                  mevsim: "İlkbahar (Mar-May)",
+                  hedef: aylikVeriler.slice(2, 5).reduce((sum, v) => sum + v.hedef, 0),
+                  gerceklesen: aylikVeriler.slice(2, 5).reduce((sum, v) => sum + v.gerceklesen, 0),
+                  gelir: aylikVeriler.slice(2, 5).reduce((sum, v) => sum + v.netGelir, 0)
+                },
+                {
+                  mevsim: "Yaz (Haz-Ağu)",
+                  hedef: aylikVeriler.slice(5, 8).reduce((sum, v) => sum + v.hedef, 0),
+                  gerceklesen: aylikVeriler.slice(5, 8).reduce((sum, v) => sum + v.gerceklesen, 0),
+                  gelir: aylikVeriler.slice(5, 8).reduce((sum, v) => sum + v.netGelir, 0)
+                },
+                {
+                  mevsim: "Sonbahar (Eyl-Kas)",
+                  hedef: aylikVeriler.slice(8, 11).reduce((sum, v) => sum + v.hedef, 0),
+                  gerceklesen: aylikVeriler.slice(8, 11).reduce((sum, v) => sum + v.gerceklesen, 0),
+                  gelir: aylikVeriler.slice(8, 11).reduce((sum, v) => sum + v.netGelir, 0)
+                }
+              ]}
+              index="mevsim"
+              categories={["hedef", "gerceklesen"]}
+              colors={["sky", "emerald"]}
+              valueFormatter={(value) => `${(value / 1000).toFixed(1)} MWh`}
+              showAnimation={true}
+              showLegend={true}
+            />
         </Card>
 
         {/* Çeyreklik Finansal Analiz */}
@@ -1394,43 +1395,44 @@ export const UretimVerileri: React.FC = () => {
               <Text className="text-sm text-gray-500">Üç aylık dönemler karşılaştırması</Text>
             </div>
           </div>
+
           
-          <AreaChart
-            className="mt-4 h-64"
-            data={[
-              {
-                ceyrek: "Q1",
-                gelir: aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.gelir, 0),
-                gider: aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.dagitimBedeli, 0),
-                netGelir: aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.netGelir, 0)
-              },
-              {
-                ceyrek: "Q2",
-                gelir: aylikVeriler.slice(3, 6).reduce((sum, v) => sum + v.gelir, 0),
-                gider: aylikVeriler.slice(3, 6).reduce((sum, v) => sum + v.dagitimBedeli, 0),
-                netGelir: aylikVeriler.slice(3, 6).reduce((sum, v) => sum + v.netGelir, 0)
-              },
-              {
-                ceyrek: "Q3",
-                gelir: aylikVeriler.slice(6, 9).reduce((sum, v) => sum + v.gelir, 0),
-                gider: aylikVeriler.slice(6, 9).reduce((sum, v) => sum + v.dagitimBedeli, 0),
-                netGelir: aylikVeriler.slice(6, 9).reduce((sum, v) => sum + v.netGelir, 0)
-              },
-              {
-                ceyrek: "Q4",
-                gelir: aylikVeriler.slice(9, 12).reduce((sum, v) => sum + v.gelir, 0),
-                gider: aylikVeriler.slice(9, 12).reduce((sum, v) => sum + v.dagitimBedeli, 0),
-                netGelir: aylikVeriler.slice(9, 12).reduce((sum, v) => sum + v.netGelir, 0)
-              }
-            ]}
-            index="ceyrek"
-            categories={["gelir", "netGelir"]}
-            colors={["amber", "emerald"]}
-            valueFormatter={(value) => `₺${value.toLocaleString('tr-TR', {maximumFractionDigits: 0})}`}
-            showAnimation={true}
-            showLegend={true}
-            showGradient={true}
-          />
+<AreaChart
+              className="mt-4 h-64"
+              data={[
+                {
+                  ceyrek: "Q1",
+                  gelir: aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.gelir, 0),
+                  gider: aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.dagitimBedeli, 0),
+                  netGelir: aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.netGelir, 0)
+                },
+                {
+                  ceyrek: "Q2",
+                  gelir: aylikVeriler.slice(3, 6).reduce((sum, v) => sum + v.gelir, 0),
+                  gider: aylikVeriler.slice(3, 6).reduce((sum, v) => sum + v.dagitimBedeli, 0),
+                  netGelir: aylikVeriler.slice(3, 6).reduce((sum, v) => sum + v.netGelir, 0)
+                },
+                {
+                  ceyrek: "Q3",
+                  gelir: aylikVeriler.slice(6, 9).reduce((sum, v) => sum + v.gelir, 0),
+                  gider: aylikVeriler.slice(6, 9).reduce((sum, v) => sum + v.dagitimBedeli, 0),
+                  netGelir: aylikVeriler.slice(6, 9).reduce((sum, v) => sum + v.netGelir, 0)
+                },
+                {
+                  ceyrek: "Q4",
+                  gelir: aylikVeriler.slice(9, 12).reduce((sum, v) => sum + v.gelir, 0),
+                  gider: aylikVeriler.slice(9, 12).reduce((sum, v) => sum + v.dagitimBedeli, 0),
+                  netGelir: aylikVeriler.slice(9, 12).reduce((sum, v) => sum + v.netGelir, 0)
+                }
+              ]}
+              index="ceyrek"
+              categories={["gelir", "netGelir"]}
+              colors={["orange", "green"]}
+              valueFormatter={(value) => `₺${value.toLocaleString('tr-TR', {maximumFractionDigits: 0})}`}
+              showAnimation={true}
+              showLegend={true}
+              showGradient={true}
+            />
         </Card>
       </div>
 
@@ -1465,7 +1467,7 @@ export const UretimVerileri: React.FC = () => {
                 <p className="text-xs text-gray-600">AI destekli analiz</p>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               {/* En İyi Performans Ayı */}
               {(() => {
@@ -1543,7 +1545,7 @@ export const UretimVerileri: React.FC = () => {
                 <p className="text-xs text-gray-600">Gelir optimizasyonu</p>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               {/* En Karlı Ay */}
               {(() => {
