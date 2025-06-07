@@ -245,66 +245,80 @@ export const UretimVerileri: React.FC = () => {
   };
 
   // Santralleri getir
-  useEffect(() => {
-    const santralleriGetir = async () => {
-      if (!kullanici?.companyId) {
-        setYukleniyor(false);
-        return;
-      }
+  const santralleriGetir = async () => {
+    if (!kullanici?.companyId) {
+      setYukleniyor(false);
+      return;
+    }
 
-      try {
-        let santralQuery;
+    try {
+      let santralQuery;
 
-        if (kullanici.rol === 'musteri') {
-          const sahaIds = getMusteriSahaIds();
-          console.log('Müşteri için santral sorgusu - Saha IDs:', sahaIds);
+      if (kullanici.rol === 'musteri') {
+        const sahaIds = getMusteriSahaIds();
+        console.log('Müşteri için santral sorgusu - Saha IDs:', sahaIds);
 
-          if (sahaIds.length === 0) {
-            console.warn('Müşteriye atanmış saha bulunamadı');
-            setSantraller([]);
-            setYukleniyor(false);
-            return;
-          }
-
-          const limitedSahaIds = sahaIds.slice(0, 10);
-          console.log('Sorgulanacak sahalar:', limitedSahaIds);
-
-          try {
-            santralQuery = query(
-              collection(db, 'santraller'),
-              where('__name__', 'in', limitedSahaIds)
-            );
-          } catch (error) {
-            console.error('Müşteri santral sorgusu oluşturma hatası:', error);
-            setSantraller([]);
-            setYukleniyor(false);
-            return;
-          }
-        } else {
-          santralQuery = query(
-            collection(db, 'santraller'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('ad')
-          );
+        if (sahaIds.length === 0) {
+          console.warn('Müşteriye atanmış saha bulunamadı');
+          setSantraller([]);
+          setYukleniyor(false);
+          return;
         }
 
-        const snapshot = await getDocs(santralQuery);
-        const santralListesi = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Santral[];
+        const limitedSahaIds = sahaIds.slice(0, 10);
+        console.log('Sorgulanacak sahalar:', limitedSahaIds);
 
-        setSantraller(santralListesi);
-      } catch (error) {
-        console.error('Santral getirme hatası:', error);
-        toast.error('Santraller yüklenirken bir hata oluştu');
-      } finally {
-        setYukleniyor(false);
+        try {
+          santralQuery = query(
+            collection(db, 'santraller'),
+            where('__name__', 'in', limitedSahaIds)
+          );
+        } catch (error) {
+          console.error('Müşteri santral sorgusu oluşturma hatası:', error);
+          setSantraller([]);
+          setYukleniyor(false);
+          return;
+        }
+      } else {
+        santralQuery = query(
+          collection(db, 'santraller'),
+          where('companyId', '==', kullanici.companyId),
+          orderBy('ad')
+        );
+      }
+
+      const snapshot = await getDocs(santralQuery);
+      const santralListesi = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Santral[];
+
+      setSantraller(santralListesi);
+      console.log('Santraller güncellendi:', santralListesi.length);
+    } catch (error) {
+      console.error('Santral getirme hatası:', error);
+      toast.error('Santraller yüklenirken bir hata oluştu');
+    } finally {
+      setYukleniyor(false);
+    }
+  };
+
+  useEffect(() => {
+    santralleriGetir();
+  }, [kullanici]);
+
+  // Sayfa odaklandığında verileri yenile (başka sekmeden dönüldüğünde)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!yukleniyor && !yenileniyor && santraller.length > 0) {
+        console.log('Sayfa odaklandı, santral verilerini yenileniyor...');
+        santralleriGetir();
       }
     };
 
-    santralleriGetir();
-  }, [kullanici]);
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [yukleniyor, yenileniyor, santraller.length]);
 
   // Üretim verilerini getir
   useEffect(() => {
@@ -591,43 +605,12 @@ export const UretimVerileri: React.FC = () => {
     setYenileniyor(true);
 
     try {
-      if (kullanici?.companyId) {
-        let santralQuery;
-
-        if (kullanici.rol === 'musteri') {
-          const sahaIds = getMusteriSahaIds();
-          if (sahaIds.length > 0) {
-            santralQuery = query(
-              collection(db, 'santraller'),
-              where('__name__', 'in', sahaIds.slice(0, 10)),
-              orderBy('ad')
-            );
-
-            const snapshot = await getDocs(santralQuery);
-            const santralListesi = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            })) as Santral[];
-
-            setSantraller(santralListesi);
-          }
-        } else {
-          santralQuery = query(
-            collection(db, 'santraller'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('ad')
-          );
-
-          const snapshot = await getDocs(santralQuery);
-          const santralListesi = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Santral[];
-
-          setSantraller(santralListesi);
-        }
-      }
-
+      // Santral verilerini yenile
+      await santralleriGetir();
+      
+      // Üretim verilerini de tetikle (useEffect dependency'leri sayesinde otomatik çalışacak)
+      // Bu sayede hem santral bilgileri hem de hesaplamalar güncellenecek
+      
       toast.success('Veriler başarıyla yenilendi');
     } catch (error) {
       console.error('Yenileme hatası:', error);
