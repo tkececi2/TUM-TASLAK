@@ -30,7 +30,6 @@ import {
   ArrowUp,
   ArrowDown,
   Minus,
-  Leaf,
   Edit2,
   DollarSign,
   FileText,
@@ -83,6 +82,14 @@ interface Santral {
     kasim: number;
     aralik: number;
   };
+  elektrikFiyatlari?: {
+    [yil: string]: {
+      [ay: string]: {
+        birimFiyat: number;
+        dagitimBedeli: number;
+      }
+    }
+  };
   kurulumTarihi: Timestamp;
   companyId: string;
   konum: {
@@ -120,7 +127,10 @@ interface AylikVeri {
   basariOrani: number;
   gelir: number;
   co2Tasarrufu: number;
+  birimFiyat: number;
 }
+
+type GorunumTipi = 'yillik' | 'aylik';
 
 export const UretimVerileri: React.FC = () => {
   const { kullanici } = useAuth();
@@ -133,7 +143,8 @@ export const UretimVerileri: React.FC = () => {
   const [yenileniyor, setYenileniyor] = useState(false);
   const [secilenSantral, setSecilenSantral] = useState<string>('tumu');
   const [secilenYil, setSecilenYil] = useState<number>(new Date().getFullYear());
-  const [birimEnerjiSatisFiyati, setBirimEnerjiSatisFiyati] = useState<number>(0.85); // TL/kWh
+  const [secilenAy, setSecilenAy] = useState<number>(new Date().getMonth());
+  const [gorunumTipi, setGorunumTipi] = useState<GorunumTipi>('yillik');
 
   // Modal states
   const [importModalAcik, setImportModalAcik] = useState(false);
@@ -144,8 +155,23 @@ export const UretimVerileri: React.FC = () => {
   const [detayModalAcik, setDetayModalAcik] = useState(false);
   const [secilenVeriDetay, setSecilenVeriDetay] = useState<UretimVerisi | null>(null);
 
-  // Yıl seçenekleri
+  // Yıl ve ay seçenekleri
   const yilSecenekleri = Array.from({ length: 10 }, (_, i) => 2020 + i);
+  const aySecenekleri = [
+    { value: 0, label: 'Ocak', key: 'ocak' },
+    { value: 1, label: 'Şubat', key: 'subat' },
+    { value: 2, label: 'Mart', key: 'mart' },
+    { value: 3, label: 'Nisan', key: 'nisan' },
+    { value: 4, label: 'Mayıs', key: 'mayis' },
+    { value: 5, label: 'Haziran', key: 'haziran' },
+    { value: 6, label: 'Temmuz', key: 'temmuz' },
+    { value: 7, label: 'Ağustos', key: 'agustos' },
+    { value: 8, label: 'Eylül', key: 'eylul' },
+    { value: 9, label: 'Ekim', key: 'ekim' },
+    { value: 10, label: 'Kasım', key: 'kasim' },
+    { value: 11, label: 'Aralık', key: 'aralik' }
+  ];
+
   const aylar = [
     { key: 'ocak', label: 'Ocak', index: 0 },
     { key: 'subat', label: 'Şubat', index: 1 },
@@ -202,6 +228,19 @@ export const UretimVerileri: React.FC = () => {
       return santral.aylikHedefler[ayKey] || (santral.yillikHedefUretim / 12);
     }
     return santral.yillikHedefUretim;
+  };
+
+  // Elektrik fiyatını santraldan al
+  const getElektrikFiyati = (santral: Santral, yil: number, ayIndex: number): number => {
+    if (!santral.elektrikFiyatlari) return 2.5; // Varsayılan fiyat
+    
+    const yilFiyatlari = santral.elektrikFiyatlari[yil.toString()];
+    if (!yilFiyatlari) return 2.5;
+    
+    const ayKey = aylar[ayIndex]?.key;
+    if (!yilFiyatlari[ayKey]) return 2.5;
+    
+    return yilFiyatlari[ayKey].birimFiyat || 2.5;
   };
 
   // Santralleri getir
@@ -283,8 +322,16 @@ export const UretimVerileri: React.FC = () => {
       }
 
       try {
-        const tarihBaslangic = startOfYear(new Date(secilenYil, 0, 1));
-        const tarihBitis = endOfYear(new Date(secilenYil, 0, 1));
+        let tarihBaslangic: Date;
+        let tarihBitis: Date;
+
+        if (gorunumTipi === 'yillik') {
+          tarihBaslangic = startOfYear(new Date(secilenYil, 0, 1));
+          tarihBitis = endOfYear(new Date(secilenYil, 0, 1));
+        } else {
+          tarihBaslangic = startOfMonth(new Date(secilenYil, secilenAy, 1));
+          tarihBitis = endOfMonth(new Date(secilenYil, secilenAy, 1));
+        }
 
         let uretimQuery;
 
@@ -360,7 +407,7 @@ export const UretimVerileri: React.FC = () => {
     if (santraller.length > 0) {
       verileriGetir();
     }
-  }, [secilenSantral, secilenYil, santraller, kullanici]);
+  }, [secilenSantral, secilenYil, secilenAy, gorunumTipi, santraller, kullanici]);
 
   // Performans özetini hesapla
   const performansOzeti = useMemo((): PerformansOzeti => {
@@ -373,17 +420,39 @@ export const UretimVerileri: React.FC = () => {
       : santraller;
 
     // Hedef hesaplama
-    const toplamHedef = ilgiliSantraller.reduce((total, santral) => {
-      return total + (santral.yillikHedefUretim || 0);
-    }, 0);
+    let toplamHedef = 0;
+    if (gorunumTipi === 'yillik') {
+      toplamHedef = ilgiliSantraller.reduce((total, santral) => {
+        return total + (santral.yillikHedefUretim || 0);
+      }, 0);
+    } else {
+      toplamHedef = ilgiliSantraller.reduce((total, santral) => {
+        return total + getSantralHedef(santral, secilenAy);
+      }, 0);
+    }
 
     // Gerçekleşen hesaplama
     const toplamGerceklesen = filtrelenmisVeriler.reduce((total, veri) => {
       return total + veri.gunlukUretim;
     }, 0);
 
-    // Gelir hesaplama
-    const toplamGelir = toplamGerceklesen * birimEnerjiSatisFiyati;
+    // Gelir hesaplama - santral elektrik fiyatlarından
+    let toplamGelir = 0;
+    let toplamBirimFiyat = 0;
+    let fiyatSayisi = 0;
+
+    filtrelenmisVeriler.forEach(veri => {
+      const santral = santraller.find(s => s.id === veri.santralId);
+      if (santral) {
+        const veriTarihi = veri.tarih.toDate();
+        const birimFiyat = getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth());
+        toplamGelir += veri.gunlukUretim * birimFiyat;
+        toplamBirimFiyat += birimFiyat;
+        fiyatSayisi++;
+      }
+    });
+
+    const ortalamaBirimFiyat = fiyatSayisi > 0 ? toplamBirimFiyat / fiyatSayisi : 2.5;
 
     // CO2 tasarrufu hesaplama
     const toplamCO2Tasarrufu = filtrelenmisVeriler.reduce((total, veri) => {
@@ -400,12 +469,12 @@ export const UretimVerileri: React.FC = () => {
       toplamGerceklesen,
       basariOrani: toplamHedef > 0 ? (toplamGerceklesen / toplamHedef) * 100 : 0,
       toplamGelir,
-      ortalamaBirimFiyat: birimEnerjiSatisFiyati,
+      ortalamaBirimFiyat,
       aktifSantralSayisi: ilgiliSantraller.length,
       veriGunSayisi: uniqueTarihler.size,
       toplamCO2Tasarrufu
     };
-  }, [uretimVerileri, santraller, secilenSantral, birimEnerjiSatisFiyati]);
+  }, [uretimVerileri, santraller, secilenSantral, secilenYil, secilenAy, gorunumTipi]);
 
   // Aylık veri hesaplama
   const aylikVeriler = useMemo((): AylikVeri[] => {
@@ -413,42 +482,131 @@ export const UretimVerileri: React.FC = () => {
       ? santraller.filter(s => s.id === secilenSantral)
       : santraller;
 
-    return aylar.map(ay => {
-      const ayBaslangic = new Date(secilenYil, ay.index, 1);
-      const ayBitis = endOfMonth(ayBaslangic);
+    if (gorunumTipi === 'aylik') {
+      // Aylık görünümde günlük veriler
+      const ayBaslangic = startOfMonth(new Date(secilenYil, secilenAy, 1));
+      const ayBitis = endOfMonth(new Date(secilenYil, secilenAy, 1));
+      const gunSayisi = ayBitis.getDate();
 
-      const ayVerileri = uretimVerileri.filter(v => {
-        const veriTarihi = v.tarih.toDate();
-        return veriTarihi >= ayBaslangic && veriTarihi <= ayBitis &&
-          (secilenSantral === 'tumu' || v.santralId === secilenSantral);
+      return Array.from({ length: gunSayisi }, (_, index) => {
+        const gun = index + 1;
+        const gunTarihi = new Date(secilenYil, secilenAy, gun);
+        
+        const gunVerileri = uretimVerileri.filter(v => {
+          const veriTarihi = v.tarih.toDate();
+          return veriTarihi.getDate() === gun &&
+            veriTarihi.getMonth() === secilenAy &&
+            veriTarihi.getFullYear() === secilenYil &&
+            (secilenSantral === 'tumu' || v.santralId === secilenSantral);
+        });
+
+        // Günlük hedef (aylık hedefin gün sayısına bölümü)
+        const gunlukHedef = ilgiliSantraller.reduce((total, santral) => {
+          const aylikHedef = getSantralHedef(santral, secilenAy);
+          return total + (aylikHedef / gunSayisi);
+        }, 0);
+
+        // Gerçekleşen hesaplama
+        const gerceklesen = gunVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
+
+        // Gelir hesaplama - santral elektrik fiyatlarından
+        let gelir = 0;
+        let ortalamaBirimFiyat = 0;
+
+        if (gunVerileri.length > 0) {
+          let toplamFiyat = 0;
+          gunVerileri.forEach(veri => {
+            const santral = santraller.find(s => s.id === veri.santralId);
+            if (santral) {
+              const birimFiyat = getElektrikFiyati(santral, secilenYil, secilenAy);
+              gelir += veri.gunlukUretim * birimFiyat;
+              toplamFiyat += birimFiyat;
+            }
+          });
+          ortalamaBirimFiyat = toplamFiyat / gunVerileri.length;
+        } else {
+          // Veri yoksa ortalama fiyat kullan
+          const santral = ilgiliSantraller[0];
+          if (santral) {
+            ortalamaBirimFiyat = getElektrikFiyati(santral, secilenYil, secilenAy);
+          }
+        }
+
+        // CO2 tasarrufu hesaplama
+        const co2Tasarrufu = gunVerileri.reduce((total, v) => 
+          total + (v.tasarrufEdilenCO2 || (v.gunlukUretim * 0.5)), 0);
+
+        return {
+          ay: `${gun}`,
+          ayIndex: gun - 1,
+          hedef: gunlukHedef,
+          gerceklesen,
+          basariOrani: gunlukHedef > 0 ? (gerceklesen / gunlukHedef) * 100 : 0,
+          gelir,
+          co2Tasarrufu,
+          birimFiyat: ortalamaBirimFiyat
+        };
       });
+    } else {
+      // Yıllık görünümde aylık veriler
+      return aylar.map(ay => {
+        const ayBaslangic = new Date(secilenYil, ay.index, 1);
+        const ayBitis = endOfMonth(ayBaslangic);
 
-      // Hedef hesaplama
-      const hedef = ilgiliSantraller.reduce((total, santral) => {
-        return total + getSantralHedef(santral, ay.index);
-      }, 0);
+        const ayVerileri = uretimVerileri.filter(v => {
+          const veriTarihi = v.tarih.toDate();
+          return veriTarihi >= ayBaslangic && veriTarihi <= ayBitis &&
+            (secilenSantral === 'tumu' || v.santralId === secilenSantral);
+        });
 
-      // Gerçekleşen hesaplama
-      const gerceklesen = ayVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
+        // Hedef hesaplama
+        const hedef = ilgiliSantraller.reduce((total, santral) => {
+          return total + getSantralHedef(santral, ay.index);
+        }, 0);
 
-      // Gelir hesaplama
-      const gelir = gerceklesen * birimEnerjiSatisFiyati;
+        // Gerçekleşen hesaplama
+        const gerceklesen = ayVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
 
-      // CO2 tasarrufu hesaplama
-      const co2Tasarrufu = ayVerileri.reduce((total, v) => 
-        total + (v.tasarrufEdilenCO2 || (v.gunlukUretim * 0.5)), 0);
+        // Gelir hesaplama - santral elektrik fiyatlarından
+        let gelir = 0;
+        let ortalamaBirimFiyat = 0;
 
-      return {
-        ay: ay.label,
-        ayIndex: ay.index,
-        hedef,
-        gerceklesen,
-        basariOrani: hedef > 0 ? (gerceklesen / hedef) * 100 : 0,
-        gelir,
-        co2Tasarrufu
-      };
-    });
-  }, [uretimVerileri, santraller, secilenSantral, secilenYil, birimEnerjiSatisFiyati]);
+        if (ayVerileri.length > 0) {
+          let toplamFiyat = 0;
+          ayVerileri.forEach(veri => {
+            const santral = santraller.find(s => s.id === veri.santralId);
+            if (santral) {
+              const birimFiyat = getElektrikFiyati(santral, secilenYil, ay.index);
+              gelir += veri.gunlukUretim * birimFiyat;
+              toplamFiyat += birimFiyat;
+            }
+          });
+          ortalamaBirimFiyat = toplamFiyat / ayVerileri.length;
+        } else {
+          // Veri yoksa ilk santralın fiyatını kullan
+          const santral = ilgiliSantraller[0];
+          if (santral) {
+            ortalamaBirimFiyat = getElektrikFiyati(santral, secilenYil, ay.index);
+          }
+        }
+
+        // CO2 tasarrufu hesaplama
+        const co2Tasarrufu = ayVerileri.reduce((total, v) => 
+          total + (v.tasarrufEdilenCO2 || (v.gunlukUretim * 0.5)), 0);
+
+        return {
+          ay: ay.label,
+          ayIndex: ay.index,
+          hedef,
+          gerceklesen,
+          basariOrani: hedef > 0 ? (gerceklesen / hedef) * 100 : 0,
+          gelir,
+          co2Tasarrufu,
+          birimFiyat: ortalamaBirimFiyat
+        };
+      });
+    }
+  }, [uretimVerileri, santraller, secilenSantral, secilenYil, secilenAy, gorunumTipi]);
 
   // Event handlers
   const handleYenile = async () => {
@@ -471,11 +629,12 @@ export const UretimVerileri: React.FC = () => {
       }
 
       const excelData = aylikVeriler.map(veri => ({
-        'Ay': veri.ay,
+        [gorunumTipi === 'aylik' ? 'Gün' : 'Ay']: veri.ay,
         'Hedef Üretim (kWh)': veri.hedef.toFixed(0),
         'Gerçekleşen Üretim (kWh)': veri.gerceklesen.toFixed(0),
         'Başarı Oranı (%)': veri.basariOrani.toFixed(1),
-        'Gelir (TL)': veri.gelir.toFixed(2),
+        'Gelir (₺)': veri.gelir.toFixed(2),
+        'Birim Fiyat (₺/kWh)': veri.birimFiyat.toFixed(2),
         'CO2 Tasarrufu (kg)': veri.co2Tasarrufu.toFixed(1)
       }));
 
@@ -483,7 +642,9 @@ export const UretimVerileri: React.FC = () => {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Üretim Analizi');
 
-      const dosyaAdi = `Uretim_Analizi_${secilenYil}.xlsx`;
+      const dosyaAdi = gorunumTipi === 'aylik' 
+        ? `Uretim_Analizi_${secilenYil}_${aySecenekleri[secilenAy].label}.xlsx`
+        : `Uretim_Analizi_${secilenYil}.xlsx`;
       XLSX.writeFile(workbook, dosyaAdi);
       toast.success('Excel dosyası başarıyla indirildi');
     } catch (error) {
@@ -552,6 +713,16 @@ export const UretimVerileri: React.FC = () => {
     }
   };
 
+  // Gelir hesaplama fonksiyonu (detay modal için)
+  const hesaplaVeriGeliri = (veri: UretimVerisi): number => {
+    const santral = santraller.find(s => s.id === veri.santralId);
+    if (!santral) return 0;
+    
+    const veriTarihi = veri.tarih.toDate();
+    const birimFiyat = getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth());
+    return veri.gunlukUretim * birimFiyat;
+  };
+
   if (yukleniyor) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -606,7 +777,7 @@ export const UretimVerileri: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">Üretim Verileri ve Gelir Analizi</h1>
               <p className="text-gray-600">
-                {performansOzeti.aktifSantralSayisi} santral • {performansOzeti.veriGunSayisi} gün veri
+                {performansOzeti.aktifSantralSayisi} santral • {performansOzeti.veriGunSayisi} {gorunumTipi === 'aylik' ? 'gün' : 'gün'} veri
               </p>
             </div>
           </div>
@@ -632,6 +803,19 @@ export const UretimVerileri: React.FC = () => {
 
         {/* Filtre Çubuğu */}
         <div className="mt-6 flex flex-wrap items-center gap-3">
+          {/* Görünüm Tipi */}
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
+            <select
+              value={gorunumTipi}
+              onChange={(e) => setGorunumTipi(e.target.value as GorunumTipi)}
+              className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm bg-white"
+            >
+              <option value="yillik">Yıllık Görünüm</option>
+              <option value="aylik">Aylık Görünüm</option>
+            </select>
+          </div>
+
           {/* Santral Seçimi */}
           <div className="flex items-center space-x-2">
             <Building className="h-4 w-4 text-gray-500" />
@@ -649,7 +833,6 @@ export const UretimVerileri: React.FC = () => {
 
           {/* Yıl Seçimi */}
           <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
             <select
               value={secilenYil}
               onChange={(e) => setSecilenYil(parseInt(e.target.value))}
@@ -661,19 +844,27 @@ export const UretimVerileri: React.FC = () => {
             </select>
           </div>
 
-          {/* Birim Fiyat Ayarı */}
-          <div className="flex items-center space-x-2">
-            <DollarSign className="h-4 w-4 text-gray-500" />
-            <input
-              type="number"
-              value={birimEnerjiSatisFiyati}
-              onChange={(e) => setBirimEnerjiSatisFiyati(parseFloat(e.target.value) || 0)}
-              step="0.01"
-              min="0"
-              className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm w-20"
-              placeholder="0.85"
-            />
-            <span className="text-sm text-gray-500">TL/kWh</span>
+          {/* Ay Seçimi (Aylık görünümde) */}
+          {gorunumTipi === 'aylik' && (
+            <div className="flex items-center space-x-2">
+              <select
+                value={secilenAy}
+                onChange={(e) => setSecilenAy(parseInt(e.target.value))}
+                className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+              >
+                {aySecenekleri.map(ay => (
+                  <option key={ay.value} value={ay.value}>{ay.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Ortalama Fiyat Gösterimi */}
+          <div className="flex items-center space-x-2 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+            <DollarSign className="h-4 w-4 text-amber-600" />
+            <span className="text-sm text-amber-700 font-medium">
+              Ort. ₺{performansOzeti.ortalamaBirimFiyat.toFixed(2)}/kWh
+            </span>
           </div>
 
           <div className="flex space-x-2 ml-auto">
@@ -708,11 +899,13 @@ export const UretimVerileri: React.FC = () => {
       </div>
 
       {/* Ana Metrik Kartları */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card decoration="top" decorationColor="emerald">
           <div className="flex items-center justify-between">
             <div>
-              <Text className="text-sm font-medium text-gray-600">Yıllık Hedef</Text>
+              <Text className="text-sm font-medium text-gray-600">
+                {gorunumTipi === 'aylik' ? 'Aylık' : 'Yıllık'} Hedef
+              </Text>
               <Metric className="text-xl font-bold text-gray-900">
                 {(performansOzeti.toplamHedef / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
               </Metric>
@@ -764,28 +957,18 @@ export const UretimVerileri: React.FC = () => {
             </div>
           </div>
         </Card>
-
-        <Card decoration="top" decorationColor="green">
-          <div className="flex items-center justify-between">
-            <div>
-              <Text className="text-sm font-medium text-gray-600">CO₂ Tasarrufu</Text>
-              <Metric className="text-xl font-bold text-gray-900">
-                {(performansOzeti.toplamCO2Tasarrufu / 1000).toFixed(1)}t
-              </Metric>
-            </div>
-            <div className="p-3 bg-green-100 rounded-xl">
-              <Leaf className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </Card>
       </div>
 
-      {/* Ana Grafik - Aylık Hedef vs Gerçekleşen */}
+      {/* Ana Grafik */}
       <Card>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Title>Aylık Hedef vs Gerçekleşen Üretim</Title>
-            <Text className="text-sm text-gray-500">Performans analizi ve gelir hesaplaması</Text>
+            <Title>
+              {gorunumTipi === 'aylik' ? 'Günlük' : 'Aylık'} Hedef vs Gerçekleşen Üretim
+            </Title>
+            <Text className="text-sm text-gray-500">
+              Performans analizi ve gelir hesaplaması - Santral elektrik fiyatları kullanılıyor
+            </Text>
           </div>
           <div className="flex items-center space-x-2">
             <Badge 
@@ -796,7 +979,7 @@ export const UretimVerileri: React.FC = () => {
               %{performansOzeti.basariOrani.toFixed(1)}
             </Badge>
             <Badge color="blue" className="text-xs">
-              {secilenYil}
+              {gorunumTipi === 'aylik' ? `${aySecenekleri[secilenAy].label} ${secilenYil}` : secilenYil}
             </Badge>
           </div>
         </div>
@@ -807,7 +990,7 @@ export const UretimVerileri: React.FC = () => {
           index="ay"
           categories={["hedef", "gerceklesen"]}
           colors={["blue", "emerald"]}
-          valueFormatter={(value) => `${(value / 1000).toFixed(1)} MWh`}
+          valueFormatter={(value) => `${(value / (gorunumTipi === 'aylik' ? 1 : 1000)).toFixed(1)} ${gorunumTipi === 'aylik' ? 'kWh' : 'MWh'}`}
           showAnimation={true}
           showGradient={true}
           showLegend={true}
@@ -828,21 +1011,32 @@ export const UretimVerileri: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-amber-900">
-                ₺{(performansOzeti.toplamGelir / 12).toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                ₺{gorunumTipi === 'aylik' 
+                  ? (performansOzeti.toplamGelir / aylikVeriler.filter(v => v.gerceklesen > 0).length || 0).toLocaleString('tr-TR', {maximumFractionDigits: 0})
+                  : (performansOzeti.toplamGelir / 12).toLocaleString('tr-TR', {maximumFractionDigits: 0})
+                }
               </div>
-              <div className="text-xs text-amber-600">Aylık Ortalama</div>
+              <div className="text-xs text-amber-600">
+                {gorunumTipi === 'aylik' ? 'Günlük Ortalama' : 'Aylık Ortalama'}
+              </div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-amber-900">
-                ₺{birimEnerjiSatisFiyati.toFixed(2)}
+                ₺{performansOzeti.ortalamaBirimFiyat.toFixed(2)}
               </div>
-              <div className="text-xs text-amber-600">Birim Fiyat (TL/kWh)</div>
+              <div className="text-xs text-amber-600">Ortalama Birim Fiyat (₺/kWh)</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-amber-900">
-                ₺{performansOzeti.veriGunSayisi > 0 ? (performansOzeti.toplamGelir / performansOzeti.veriGunSayisi).toFixed(0) : '0'}
+                {aylikVeriler.length > 0 && aylikVeriler.some(v => v.birimFiyat > 0) ? (
+                  `₺${(aylikVeriler.reduce((sum, v) => sum + v.birimFiyat, 0) / aylikVeriler.filter(v => v.birimFiyat > 0).length).toFixed(2)}`
+                ) : (
+                  '₺0.00'
+                )}
               </div>
-              <div className="text-xs text-amber-600">Günlük Ortalama</div>
+              <div className="text-xs text-amber-600">
+                {gorunumTipi === 'aylik' ? 'Günlük Ort. Fiyat' : 'Aylık Ort. Fiyat'}
+              </div>
             </div>
           </div>
         </div>
@@ -883,6 +1077,7 @@ export const UretimVerileri: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Santral</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Üretim</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Birim Fiyat</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gelir</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Performans</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
@@ -891,7 +1086,10 @@ export const UretimVerileri: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {uretimVerileri.slice(0, 50).map((veri) => {
                 const santral = santraller.find(s => s.id === veri.santralId);
-                const gelir = veri.gunlukUretim * birimEnerjiSatisFiyati;
+                const gelir = hesaplaVeriGeliri(veri);
+                const veriTarihi = veri.tarih.toDate();
+                const birimFiyat = santral ? getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth()) : 0;
+                
                 return (
                   <tr key={veri.id} className="hover:bg-gray-50">
                     {canDelete && (
@@ -905,13 +1103,16 @@ export const UretimVerileri: React.FC = () => {
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {format(veri.tarih.toDate(), 'dd MMM yyyy', { locale: tr })}
+                      {format(veriTarihi, 'dd MMM yyyy', { locale: tr })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {santral?.ad || 'Bilinmeyen Santral'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                       {veri.gunlukUretim.toLocaleString('tr-TR', {maximumFractionDigits: 1})} kWh
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
+                      ₺{birimFiyat.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-600">
                       ₺{gelir.toLocaleString('tr-TR', {maximumFractionDigits: 2})}
@@ -1029,9 +1230,19 @@ export const UretimVerileri: React.FC = () => {
                 </p>
               </div>
               <div>
+                <label className="text-sm font-medium text-gray-600">Birim Fiyat</label>
+                <p className="text-sm text-gray-600">
+                  ₺{(() => {
+                    const santral = santraller.find(s => s.id === secilenVeriDetay.santralId);
+                    const veriTarihi = secilenVeriDetay.tarih.toDate();
+                    return santral ? getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth()).toFixed(2) : '0.00';
+                  })()} / kWh
+                </p>
+              </div>
+              <div>
                 <label className="text-sm font-medium text-gray-600">Gelir</label>
                 <p className="text-sm font-bold text-emerald-600">
-                  ₺{(secilenVeriDetay.gunlukUretim * birimEnerjiSatisFiyati).toLocaleString('tr-TR', {maximumFractionDigits: 2})}
+                  ₺{hesaplaVeriGeliri(secilenVeriDetay).toLocaleString('tr-TR', {maximumFractionDigits: 2})}
                 </p>
               </div>
               <div>
