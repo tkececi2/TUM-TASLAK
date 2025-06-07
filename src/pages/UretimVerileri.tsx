@@ -140,7 +140,7 @@ export const UretimVerileri: React.FC = () => {
   // Modal states
   const [importModalAcik, setImportModalAcik] = useState(false);
   const [silmeOnayModalAcik, setSilmeOnayModalAcik] = useState(false);
-  const [silinecekVeriId, setSilinecekVeriId = useState<string | null>(null);
+  const [silinecekVeriId, setSilinecekVeriId] = useState<string | null>(null);
   const [detayModalAcik, setDetayModalAcik] = useState(false);
   const [secilenVeriDetay, setSecilenVeriDetay] = useState<UretimVerisi | null>(null);
 
