@@ -234,11 +234,14 @@ export const UretimVerileri: React.FC = () => {
   // Elektrik fiyatlarını hesapla
   const getElektrikFiyatlari = (santral: Santral, tarih: Date) => {
     const yil = tarih.getFullYear().toString();
-    const ay = (tarih.getMonth() + 1).toString().padStart(2, '0');
+    const ayIsim = [
+      'ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran',
+      'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'
+    ][tarih.getMonth()];
 
-    const fiyatlar = santral.elektrikFiyatlari?.[yil]?.[ay] || {
-      birimFiyat: 1.5, // Varsayılan fiyat
-      dagitimBedeli: 0.3 // Varsayılan dağıtım bedeli
+    const fiyatlar = santral.elektrikFiyatlari?.[yil]?.[ayIsim] || {
+      birimFiyat: 5.0, // Varsayılan fiyat
+      dagitimBedeli: 0.5 // Varsayılan dağıtım bedeli
     };
 
     return fiyatlar;
@@ -560,8 +563,20 @@ export const UretimVerileri: React.FC = () => {
     let aylikGerceklesen = 0;
 
     if (secilenTarihAraligi === 'aylik') {
-      const aylikHedefKey = `${secilenYil}-${(secilenAy + 1).toString().padStart(2, '0')}`;
-      aylikHedef = secilenSantralData?.aylikHedefler?.[aylikHedefKey] || (yillikHedef / 12);
+      const ayIsim = [
+        'ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran',
+        'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'
+      ][secilenAy];
+
+      if (secilenSantralData?.aylikHedefler?.[ayIsim]) {
+        aylikHedef = secilenSantralData.aylikHedefler[ayIsim];
+      } else if (secilenSantral === 'tumu') {
+        aylikHedef = santraller.reduce((total, santral) => {
+          return total + (santral.aylikHedefler?.[ayIsim] || (santral.yillikHedefUretim || 0) / 12);
+        }, 0);
+      } else {
+        aylikHedef = yillikHedef / 12;
+      }
 
       aylikGerceklesen = filtrelenmisVeriler
         .filter(v => {
@@ -571,9 +586,22 @@ export const UretimVerileri: React.FC = () => {
         .reduce((total, v) => total + v.gunlukUretim, 0);
     }
 
-    // Gelir analizi
-    const toplamGelir = filtrelenmisVeriler.reduce((total, v) => total + v.gelir, 0);
-    const toplamDagitimBedeli = filtrelenmisVeriler.reduce((total, v) => total + v.dagitimBedeli, 0);
+    // Gelir analizi - santral fiyatlarını kullanarak yeniden hesapla
+    let toplamGelir = 0;
+    let toplamDagitimBedeli = 0;
+
+    filtrelenmisVeriler.forEach(veri => {
+      const santral = santraller.find(s => s.id === veri.santralId);
+      if (santral) {
+        const fiyatlar = getElektrikFiyatlari(santral, veri.tarih.toDate());
+        toplamGelir += veri.gunlukUretim * fiyatlar.birimFiyat;
+        toplamDagitimBedeli += veri.gunlukUretim * fiyatlar.dagitimBedeli;
+      } else {
+        // Veri kaydında gelir varsa onu kullan
+        toplamGelir += veri.gelir || 0;
+        toplamDagitimBedeli += veri.dagitimBedeli || 0;
+      }
+    });
 
     // Performans trendi hesaplama
     const sonAyVerileri = filtrelenmisVeriler.slice(0, 30);
@@ -628,11 +656,45 @@ export const UretimVerileri: React.FC = () => {
       });
 
       const gerceklesenUretim = ayVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
-      const aylikHedefKey = `${secilenYil}-${(ay.value + 1).toString().padStart(2, '0')}`;
-      const hedefUretim = secilenSantralData?.aylikHedefler?.[aylikHedefKey] || (yillikHedef / 12);
+      
+      // Aylık hedefleri santral bilgilerinden al
+      const ayIsim = [
+        'ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran',
+        'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'
+      ][ay.value];
 
-      const gelir = ayVerileri.reduce((total, v) => total + v.gelir, 0);
-      const dagitimBedeli = ayVerileri.reduce((total, v) => total + v.dagitimBedeli, 0);
+      let hedefUretim = 0;
+      if (secilenSantralData?.aylikHedefler?.[ayIsim]) {
+        hedefUretim = secilenSantralData.aylikHedefler[ayIsim];
+      } else if (secilenSantral === 'tumu') {
+        // Tüm santraller seçiliyse, tüm santrallerin aylık hedeflerini topla
+        hedefUretim = santraller.reduce((total, santral) => {
+          return total + (santral.aylikHedefler?.[ayIsim] || (santral.yillikHedefUretim || 0) / 12);
+        }, 0);
+      } else {
+        // Eğer aylık hedef yoksa yıllık hedefin 1/12'si
+        hedefUretim = yillikHedef / 12;
+      }
+
+      // Gelir hesaplama - santral fiyatlarını kullan
+      let gelir = 0;
+      let dagitimBedeli = 0;
+
+      ayVerileri.forEach(veri => {
+        const santral = santraller.find(s => s.id === veri.santralId);
+        if (santral) {
+          const fiyatlar = getElektrikFiyatlari(santral, veri.tarih.toDate());
+          const gunlukGelir = veri.gunlukUretim * fiyatlar.birimFiyat;
+          const gunlukDagitim = veri.gunlukUretim * fiyatlar.dagitimBedeli;
+          
+          gelir += gunlukGelir;
+          dagitimBedeli += gunlukDagitim;
+        } else {
+          // Veri kaydında gelir varsa onu kullan
+          gelir += veri.gelir || 0;
+          dagitimBedeli += veri.dagitimBedeli || 0;
+        }
+      });
 
       return {
         ay: ay.label,
