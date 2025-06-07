@@ -881,7 +881,7 @@ export const UretimVerileri: React.FC = () => {
               }))}
               index="ay"
               categories={["gelir", "dagitimBedeli", "netGelir"]}
-              colors={["green", "red", "emerald"]}
+              colors={["lime", "rose", "teal"]}
               valueFormatter={(value) => `₺${value.toLocaleString('tr-TR', {maximumFractionDigits: 0})}`}
               showAnimation={true}
               showLegend={true}
@@ -1032,7 +1032,7 @@ export const UretimVerileri: React.FC = () => {
               }))}
               index="ay"
               categories={["basariOrani", "hareketliOrtalama", "hedefCizgi", "minimumEsik"]}
-              colors={["red", "orange", "green", "gray"]}
+              colors={["rose", "amber", "emerald", "slate"]}
               valueFormatter={(value) => `%${value.toFixed(1)}`}
               showAnimation={true}
               showLegend={true}
@@ -1380,7 +1380,7 @@ export const UretimVerileri: React.FC = () => {
               ]}
               index="mevsim"
               categories={["hedef", "gerceklesen"]}
-              colors={["sky", "emerald"]}
+              colors={["cyan", "teal"]}
               valueFormatter={(value) => `${(value / 1000).toFixed(1)} MWh`}
               showAnimation={true}
               showLegend={true}
@@ -1427,7 +1427,7 @@ export const UretimVerileri: React.FC = () => {
               ]}
               index="ceyrek"
               categories={["gelir", "netGelir"]}
-              colors={["orange", "green"]}
+              colors={["amber", "emerald"]}
               valueFormatter={(value) => `₺${value.toLocaleString('tr-TR', {maximumFractionDigits: 0})}`}
               showAnimation={true}
               showLegend={true}
