@@ -29,7 +29,8 @@ import {
   Zap,
   ArrowUp,
   ArrowDown,
-  Minus
+  Minus,
+  Leaf
 } from 'lucide-react';
 import { Card, Title, Text, AreaChart, BarChart, LineChart, Metric, Flex, ProgressBar, Grid, Col, Badge, BadgeDelta, DonutChart } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
