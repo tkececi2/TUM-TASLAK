@@ -6,38 +6,30 @@ import { useAuth } from '../contexts/AuthContext';
 import { format, startOfMonth, endOfMonth, subDays, addDays, isSameDay, startOfYear, endOfYear, getMonth } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
-  Sun, 
+  Target, 
   Calendar, 
   Download, 
   Trash2, 
   Plus, 
   RefreshCw,
-  Battery,
-  Leaf,
   TrendingUp,
-  ArrowRight,
+  TrendingDown,
   ChevronDown,
   ChevronUp,
   AlertTriangle,
   CheckCircle,
   BarChart2,
-  Zap,
-  Target,
   Building,
-  MapPin,
   Filter,
-  Search,
-  Edit,
   Eye,
-  FileText,
   Activity,
-  Thermometer,
-  Cloud,
-  Wind,
   DollarSign,
   X,
   PieChart,
-  TrendingDown
+  Zap,
+  ArrowUp,
+  ArrowDown,
+  Minus
 } from 'lucide-react';
 import { Card, Title, Text, AreaChart, BarChart, LineChart, Metric, Flex, ProgressBar, Grid, Col, Badge, BadgeDelta, DonutChart } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -74,9 +66,22 @@ interface Santral {
   ad: string;
   kapasite: number;
   yillikHedefUretim: number;
-  aylikHedefler?: Record<string, number>;
-  kurulumTarihi: Timestamp;
+  aylikHedefler?: {
+    ocak: number;
+    subat: number;
+    mart: number;
+    nisan: number;
+    mayis: number;
+    haziran: number;
+    temmuz: number;
+    agustos: number;
+    eylul: number;
+    ekim: number;
+    kasim: number;
+    aralik: number;
+  };
   elektrikFiyatlari?: Record<string, Record<string, { birimFiyat: number, dagitimBedeli: number }>>;
+  kurulumTarihi: Timestamp;
   companyId: string;
   konum: {
     adres: string;
@@ -94,50 +99,31 @@ interface Santral {
   musteriId?: string;
 }
 
-interface PerformansAnalizi {
-  yillikHedefGerceklesme: number;
-  aylikHedefGerceklesme: number;
-  toplamGerceklesenUretim: number;
-  toplamHedefUretim: number;
-  aylikGerceklesenUretim: number;
-  aylikHedefUretim: number;
-  performansTrendi: 'yukselen' | 'dusen' | 'sabit';
-  hedefeFark: number;
-  gelirAnalizi: {
-    toplamGelir: number;
-    toplamDagitimBedeli: number;
-    netGelir: number;
-    ortalamaBirimFiyat: number;
-  };
+interface HedefGerceklesmeAnalizi {
+  yillikHedef: number;
+  yillikGerceklesen: number;
+  yillikGerceklesmeOrani: number;
+  aylikHedef: number;
+  aylikGerceklesen: number;
+  aylikGerceklesmeOrani: number;
+  toplamGelir: number;
+  toplamDagitimBedeli: number;
+  netGelir: number;
+  ortalamaBirimFiyat: number;
+  performansTrendi: 'yukselis' | 'dusus' | 'sabit';
 }
 
-interface AylikVeri {
+interface AylikKarsilastirma {
   ay: string;
   ayIndex: number;
   hedefUretim: number;
   gerceklesenUretim: number;
   gerceklesmeOrani: number;
-  gelir: number;
+  hedefGelir: number;
+  gerceklesenGelir: number;
   dagitimBedeli: number;
   netGelir: number;
-}
-
-interface DashboardStats {
-    toplamUretim: number;
-    ortalamaPerformans: number;
-    toplamGelir: number;
-    toplamCO2: number;
-    hedefGerceklesme: number;
-    aktifSantralSayisi: number;
-    gunlukOrtalama: number;
-    enYuksekUretim: number;
-}
-
-interface WeatherData {
-    sicaklik: number;
-    nem: number;
-    radyasyon: number;
-    havaKodu: string;
+  birimFiyat: number;
 }
 
 export const UretimVerileri: React.FC = () => {
@@ -152,10 +138,7 @@ export const UretimVerileri: React.FC = () => {
   const [secilenSantral, setSecilenSantral] = useState<string>('tumu');
   const [secilenYil, setSecilenYil] = useState<number>(new Date().getFullYear());
   const [secilenAy, setSecilenAy] = useState<number>(new Date().getMonth());
-  const [secilenTarihAraligi, setSecilenTarihAraligi] = useState<'aylik' | 'yillik'>('yillik');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filtreAcik, setFiltreAcik] = useState(false);
-  const [performansFiltresi, setPerformansFiltresi] = useState<'tumu' | 'yuksek' | 'orta' | 'dusuk'>('tumu');
+  const [goruntulemeSecenegi, setGoruntulemeSecenegi] = useState<'yillik' | 'aylik'>('yillik');
 
   // Modal states
   const [importModalAcik, setImportModalAcik] = useState(false);
@@ -164,17 +147,21 @@ export const UretimVerileri: React.FC = () => {
   const [detayModalAcik, setDetayModalAcik] = useState(false);
   const [secilenVeriDetay, setSecilenVeriDetay] = useState<UretimVerisi | null>(null);
 
-  // Görünüm states
-  const [goruntulemeSecenegi, setGoruntulemeSecenegi] = useState<'kartlar' | 'tablo' | 'grafik'>('kartlar');
-  const [animasyonAktif, setAnimasyonAktif] = useState(true);
-
   // Yıl ve ay seçenekleri
-  const yilSecenekleri = Array.from({ length: 9 }, (_, i) => 2022 + i);
+  const yilSecenekleri = Array.from({ length: 10 }, (_, i) => 2022 + i);
   const aySecenekleri = [
-    { value: 0, label: 'Ocak' }, { value: 1, label: 'Şubat' }, { value: 2, label: 'Mart' },
-    { value: 3, label: 'Nisan' }, { value: 4, label: 'Mayıs' }, { value: 5, label: 'Haziran' },
-    { value: 6, label: 'Temmuz' }, { value: 7, label: 'Ağustos' }, { value: 8, label: 'Eylül' },
-    { value: 9, label: 'Ekim' }, { value: 10, label: 'Kasım' }, { value: 11, label: 'Aralık' }
+    { value: 0, label: 'Ocak', key: 'ocak' }, 
+    { value: 1, label: 'Şubat', key: 'subat' }, 
+    { value: 2, label: 'Mart', key: 'mart' },
+    { value: 3, label: 'Nisan', key: 'nisan' }, 
+    { value: 4, label: 'Mayıs', key: 'mayis' }, 
+    { value: 5, label: 'Haziran', key: 'haziran' },
+    { value: 6, label: 'Temmuz', key: 'temmuz' }, 
+    { value: 7, label: 'Ağustos', key: 'agustos' }, 
+    { value: 8, label: 'Eylül', key: 'eylul' },
+    { value: 9, label: 'Ekim', key: 'ekim' }, 
+    { value: 10, label: 'Kasım', key: 'kasim' }, 
+    { value: 11, label: 'Aralık', key: 'aralik' }
   ];
 
   // İzinler
@@ -186,17 +173,7 @@ export const UretimVerileri: React.FC = () => {
   const getMusteriSahaIds = (): string[] => {
     if (!kullanici || kullanici.rol !== 'musteri') return [];
 
-    console.log('UretimVerileri - Müşteri saha verisi kontrolü:', {
-      userId: kullanici.id,
-      sahalar: kullanici.sahalar,
-      santraller: kullanici.santraller,
-      atananSahalar: kullanici.atananSahalar,
-      atananSantraller: kullanici.atananSantraller
-    });
-
     let sahaIds: string[] = [];
-
-    // Tüm olası alanları kontrol et ve birleştir
     const possibleFields = [
       kullanici.sahalar,
       kullanici.santraller,
@@ -218,33 +195,32 @@ export const UretimVerileri: React.FC = () => {
       }
     }
 
-    // Tekrarları kaldır
-    sahaIds = [...new Set(sahaIds)];
-
-    console.log('UretimVerileri - Müşteri erişebilir saha/santral IDs:', sahaIds);
-
-    if (sahaIds.length === 0) {
-      console.warn('UretimVerileri - Müşteriye atanmış santral bulunamadı!');
-      console.warn('Müşteri yönetimi sayfasından bu müşteriye santral ataması yapın.');
-    }
-
-    return sahaIds;
+    return [...new Set(sahaIds)];
   };
 
-  // Elektrik fiyatlarını hesapla
+  // Elektrik fiyatlarını al (santral yönetimi sayfasından)
   const getElektrikFiyatlari = (santral: Santral, tarih: Date) => {
     const yil = tarih.getFullYear().toString();
-    const ayIsim = [
-      'ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran',
-      'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'
-    ][tarih.getMonth()];
+    const ayKey = aySecenekleri[tarih.getMonth()]?.key;
 
-    const fiyatlar = santral.elektrikFiyatlari?.[yil]?.[ayIsim] || {
-      birimFiyat: 5.0, // Varsayılan fiyat
-      dagitimBedeli: 0.5 // Varsayılan dağıtım bedeli
+    if (santral.elektrikFiyatlari?.[yil]?.[ayKey]) {
+      return santral.elektrikFiyatlari[yil][ayKey];
+    }
+
+    // Varsayılan fiyatlar
+    return {
+      birimFiyat: 5.0,
+      dagitimBedeli: 0.5
     };
+  };
 
-    return fiyatlar;
+  // Santral hedef üretimini al (santral yönetimi sayfasından)
+  const getSantralHedefUretim = (santral: Santral, ayIndex?: number) => {
+    if (ayIndex !== undefined && santral.aylikHedefler) {
+      const ayKey = aySecenekleri[ayIndex]?.key;
+      return santral.aylikHedefler[ayKey] || (santral.yillikHedefUretim / 12);
+    }
+    return santral.yillikHedefUretim;
   };
 
   // Santralleri getir
@@ -259,94 +235,44 @@ export const UretimVerileri: React.FC = () => {
 
       if (kullanici.rol === 'musteri') {
         const sahaIds = getMusteriSahaIds();
-        console.log('Müşteri için santral sorgusu - Saha IDs:', sahaIds);
 
         if (sahaIds.length === 0) {
-          console.warn('Müşteriye atanmış saha bulunamadı');
           setSantraller([]);
           setYukleniyor(false);
           return;
         }
 
-        // Birden fazla santral ID'si varsa sırayla sorgula
         const allSantraller: Santral[] = [];
-        
-        // 10'ar 10'ar grupla (Firestore 'in' operatörü limiti)
+
         for (let i = 0; i < sahaIds.length; i += 10) {
           const batch = sahaIds.slice(i, i + 10);
-          console.log(`Santral batch ${i/10 + 1} sorgulanıyor:`, batch);
-          
+
           try {
             const batchQuery = query(
               collection(db, 'santraller'),
               where('__name__', 'in', batch)
             );
-            
+
             const batchSnapshot = await getDocs(batchQuery);
             const batchSantraller = batchSnapshot.docs.map(doc => ({
               id: doc.id,
               ...doc.data()
             })) as Santral[];
-            
-            allSantraller.push(...batchSantraller);
-            console.log(`Batch ${i/10 + 1} sonucu:`, batchSantraller.length, 'santral');
-          } catch (batchError) {
-            console.error(`Batch ${i/10 + 1} sorgu hatası:`, batchError);
-          }
-        }
 
-        // Eğer hiç santral bulunamadıysa, companyId ve musteriId ile dene
-        if (allSantraller.length === 0) {
-          console.log('ID ile santral bulunamadı, müşteri ID ile deneniyor...');
-          try {
-            const musteriQuery = query(
-              collection(db, 'santraller'),
-              where('companyId', '==', kullanici.companyId),
-              where('musteriId', '==', kullanici.id)
-            );
-            
-            const musteriSnapshot = await getDocs(musteriQuery);
-            const musteriSantraller = musteriSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            })) as Santral[];
-            
-            allSantraller.push(...musteriSantraller);
-            console.log('Müşteri ID ile bulunan santraller:', musteriSantraller.length);
-          } catch (musteriError) {
-            console.error('Müşteri ID ile santral sorgu hatası:', musteriError);
+            allSantraller.push(...batchSantraller);
+          } catch (batchError) {
+            console.error(`Batch sorgu hatası:`, batchError);
           }
         }
 
         setSantraller(allSantraller);
-        console.log('Toplam yüklenen santral sayısı:', allSantraller.length);
-        
-        // Santral detaylarını logla
-        allSantraller.forEach((santral, index) => {
-          console.log(`Santral ${index + 1}:`, {
-            id: santral.id,
-            ad: santral.ad,
-            kapasite: santral.kapasite,
-            yillikHedefUretim: santral.yillikHedefUretim,
-            aylikHedefler: santral.aylikHedefler,
-            hasTargets: !!(santral.yillikHedefUretim || santral.aylikHedefler)
-          });
-        });
-        
-        if (allSantraller.length === 0) {
-          console.warn('Müşteri için hiç santral bulunamadı!');
-          console.warn('Kontrol edilecek noktalar:');
-          console.warn('1. Müşteri sahalar/santraller doğru atanmış mı?');
-          console.warn('2. Santral ID\'leri doğru mu?');
-          console.warn('3. Firestore rules müşteri erişimine izin veriyor mu?');
-        }
       } else {
         santralQuery = query(
           collection(db, 'santraller'),
           where('companyId', '==', kullanici.companyId),
           orderBy('ad')
         );
-        
+
         const snapshot = await getDocs(santralQuery);
         const santralListesi = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -354,7 +280,6 @@ export const UretimVerileri: React.FC = () => {
         })) as Santral[];
 
         setSantraller(santralListesi);
-        console.log('Santraller güncellendi:', santralListesi.length);
       }
     } catch (error) {
       console.error('Santral getirme hatası:', error);
@@ -368,23 +293,10 @@ export const UretimVerileri: React.FC = () => {
     santralleriGetir();
   }, [kullanici]);
 
-  // Sayfa odaklandığında verileri yenile (başka sekmeden dönüldüğünde)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (!yukleniyor && !yenileniyor && santraller.length > 0) {
-        console.log('Sayfa odaklandı, santral verilerini yenileniyor...');
-        santralleriGetir();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [yukleniyor, yenileniyor, santraller.length]);
-
   // Üretim verilerini getir
   useEffect(() => {
     const verileriGetir = async () => {
-      if (!kullanici?.companyId) {
+      if (!kullanici?.companyId || santraller.length === 0) {
         setUretimVerileri([]);
         return;
       }
@@ -393,7 +305,7 @@ export const UretimVerileri: React.FC = () => {
         let tarihBaslangic: Date;
         let tarihBitis: Date;
 
-        if (secilenTarihAraligi === 'yillik') {
+        if (goruntulemeSecenegi === 'yillik') {
           tarihBaslangic = startOfYear(new Date(secilenYil, 0, 1));
           tarihBitis = endOfYear(new Date(secilenYil, 0, 1));
         } else {
@@ -405,56 +317,37 @@ export const UretimVerileri: React.FC = () => {
 
         if (kullanici.rol === 'musteri') {
           const sahaIds = getMusteriSahaIds();
-          console.log('Müşteri için üretim verileri sorgusu - Saha IDs:', sahaIds);
-          console.log('Seçilen santral:', secilenSantral);
-          console.log('Tarih aralığı:', tarihBaslangic, 'ile', tarihBitis);
-          console.log('Müşteri companyId:', kullanici.companyId);
-          
+
           if (sahaIds.length === 0) {
-            console.warn('Müşteriye atanmış saha bulunamadı - üretim verileri boş');
             setUretimVerileri([]);
             return;
           }
 
           if (secilenSantral !== 'tumu') {
             if (!sahaIds.includes(secilenSantral)) {
-              console.warn('Seçilen santral müşteriye ait değil:', secilenSantral);
               setUretimVerileri([]);
               return;
             }
 
-            try {
-              uretimQuery = query(
-                collection(db, 'uretimVerileri'),
-                where('companyId', '==', kullanici.companyId),
-                where('santralId', '==', secilenSantral),
-                where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-                where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-                orderBy('tarih', 'desc')
-              );
-            } catch (error) {
-              console.error('Tek santral sorgusu oluşturma hatası:', error);
-              setUretimVerileri([]);
-              return;
-            }
+            uretimQuery = query(
+              collection(db, 'uretimVerileri'),
+              where('companyId', '==', kullanici.companyId),
+              where('santralId', '==', secilenSantral),
+              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
+              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
+              orderBy('tarih', 'desc')
+            );
           } else {
             const limitedSahaIds = sahaIds.slice(0, 10);
-            console.log('Tüm sahalar için sorgu oluşturuluyor:', limitedSahaIds);
-            
-            try {
-              uretimQuery = query(
-                collection(db, 'uretimVerileri'),
-                where('companyId', '==', kullanici.companyId),
-                where('santralId', 'in', limitedSahaIds),
-                where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-                where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-                orderBy('tarih', 'desc')
-              );
-            } catch (error) {
-              console.error('Çoklu santral sorgusu oluşturma hatası:', error);
-              setUretimVerileri([]);
-              return;
-            }
+
+            uretimQuery = query(
+              collection(db, 'uretimVerileri'),
+              where('companyId', '==', kullanici.companyId),
+              where('santralId', 'in', limitedSahaIds),
+              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
+              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
+              orderBy('tarih', 'desc')
+            );
           }
         } else {
           if (secilenSantral !== 'tumu') {
@@ -477,116 +370,69 @@ export const UretimVerileri: React.FC = () => {
           }
         }
 
-        console.log('Sorgu çalıştırılıyor...');
         const snapshot = await getDocs(uretimQuery);
-        console.log('Sorgu tamamlandı, döküman sayısı:', snapshot.docs.length);
-        
         const veriler = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as UretimVerisi[];
 
-        console.log('Getirilen üretim verileri sayısı:', veriler.length);
-        console.log('İlk 3 veri:', veriler.slice(0, 3));
-        
-        if (kullanici.rol === 'musteri') {
-          console.log('Müşteri üretim verileri detayı:');
-          console.log('- Sorgu döküman sayısı:', snapshot.docs.length);
-          console.log('- İşlenen veri sayısı:', veriler.length);
-          console.log('- Kullanıcı sahalar:', kullanici.sahalar);
-          console.log('- Kullanıcı santraller:', kullanici.santraller);
-          
-          if (veriler.length === 0) {
-            console.warn('Müşteri için üretim verisi bulunamadı!');
-            console.warn('Kontrol edilecek durumlar:');
-            console.warn('1. Firestore rules müşteri erişimine izin veriyor mu?');
-            console.warn('2. Üretim verilerinde santralId doğru mu?');
-            console.warn('3. Müşteri sahalar/santraller doğru atanmış mı?');
-          }
-        }
-        
         setUretimVerileri(veriler);
       } catch (error) {
         console.error('Üretim verileri getirme hatası:', error);
-        console.error('Hata detayı:', {
-          code: error.code,
-          message: error.message,
-          stack: error.stack
-        });
         toast.error('Üretim verileri yüklenirken bir hata oluştu');
         setUretimVerileri([]);
       }
     };
 
-    if (santraller.length > 0 || kullanici?.rol === 'musteri') {
+    if (santraller.length > 0) {
       verileriGetir();
     }
-  }, [secilenSantral, secilenYil, secilenAy, secilenTarihAraligi, santraller, kullanici]);
+  }, [secilenSantral, secilenYil, secilenAy, goruntulemeSecenegi, santraller, kullanici]);
 
-  // Performans analizi hesaplama
-  const performansAnalizi = useMemo((): PerformansAnalizi => {
-    console.log('Performans analizi hesaplanıyor...');
-    console.log('Seçilen santral:', secilenSantral);
-    console.log('Mevcut santraller:', santraller.length);
-    console.log('Üretim verileri:', uretimVerileri.length);
+  // Hedef vs Gerçekleşen analizi
+  const hedefGerceklesmeAnalizi = useMemo((): HedefGerceklesmeAnalizi => {
+    const filtrelenmisVeriler = secilenSantral !== 'tumu'
+      ? uretimVerileri.filter(v => v.santralId === secilenSantral)
+      : uretimVerileri;
 
     const secilenSantralData = secilenSantral !== 'tumu' 
       ? santraller.find(s => s.id === secilenSantral)
       : null;
 
-    console.log('Seçilen santral data:', secilenSantralData);
-
-    const filtrelenmisVeriler = secilenSantral !== 'tumu'
-      ? uretimVerileri.filter(v => v.santralId === secilenSantral)
-      : uretimVerileri;
-
-    console.log('Filtrelenmiş veriler:', filtrelenmisVeriler.length);
-
     // Yıllık hedef ve gerçekleşme
-    const yillikHedef = secilenSantralData?.yillikHedefUretim || 
-      santraller.reduce((total, s) => total + (s.yillikHedefUretim || 0), 0);
-
-    console.log('Hesaplanan yıllık hedef:', yillikHedef);
-    
-    // Her santralın hedefini kontrol et
-    if (secilenSantral === 'tumu') {
-      console.log('Tüm santrallerin hedefleri:');
-      santraller.forEach(s => {
-        console.log(`- ${s.ad}: ${s.yillikHedefUretim || 0} kWh`);
-      });
+    let yillikHedef = 0;
+    if (secilenSantralData) {
+      yillikHedef = secilenSantralData.yillikHedefUretim || 0;
+    } else if (secilenSantral === 'tumu') {
+      yillikHedef = santraller.reduce((total, s) => total + (s.yillikHedefUretim || 0), 0);
     }
 
-    const toplamGerceklesen = filtrelenmisVeriler.reduce((total, v) => total + v.gunlukUretim, 0);
+    const yillikGerceklesen = filtrelenmisVeriler.reduce((total, v) => total + v.gunlukUretim, 0);
 
-    // Aylık hedef ve gerçekleşme (sadece aylık görünümde)
+    // Aylık hedef ve gerçekleşme
     let aylikHedef = 0;
-    let aylikGerceklesen = 0;
-
-    if (secilenTarihAraligi === 'aylik') {
-      const ayIsim = [
-        'ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran',
-        'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'
-      ][secilenAy];
-
-      if (secilenSantralData?.aylikHedefler?.[ayIsim]) {
-        aylikHedef = secilenSantralData.aylikHedefler[ayIsim];
-      } else if (secilenSantral === 'tumu') {
-        aylikHedef = santraller.reduce((total, santral) => {
-          return total + (santral.aylikHedefler?.[ayIsim] || (santral.yillikHedefUretim || 0) / 12);
-        }, 0);
-      } else {
-        aylikHedef = yillikHedef / 12;
-      }
-
-      aylikGerceklesen = filtrelenmisVeriler
-        .filter(v => {
-          const veriTarihi = v.tarih.toDate();
-          return veriTarihi.getFullYear() === secilenYil && veriTarihi.getMonth() === secilenAy;
-        })
-        .reduce((total, v) => total + v.gunlukUretim, 0);
+    if (secilenSantralData?.aylikHedefler) {
+      const ayKey = aySecenekleri[secilenAy]?.key;
+      aylikHedef = secilenSantralData.aylikHedefler[ayKey] || (yillikHedef / 12);
+    } else if (secilenSantral === 'tumu') {
+      const ayKey = aySecenekleri[secilenAy]?.key;
+      aylikHedef = santraller.reduce((total, santral) => {
+        const santralAylikHedef = santral.aylikHedefler?.[ayKey] || (santral.yillikHedefUretim || 0) / 12;
+        return total + santralAylikHedef;
+      }, 0);
+    } else {
+      aylikHedef = yillikHedef / 12;
     }
 
-    // Gelir analizi - santral fiyatlarını kullanarak yeniden hesapla
+    const aylikGerceklesen = filtrelenmisVeriler
+      .filter(v => {
+        if (goruntulemeSecenegi !== 'aylik') return true;
+        const veriTarihi = v.tarih.toDate();
+        return veriTarihi.getFullYear() === secilenYil && veriTarihi.getMonth() === secilenAy;
+      })
+      .reduce((total, v) => total + v.gunlukUretim, 0);
+
+    // Gelir analizi (santral fiyatlarını kullan)
     let toplamGelir = 0;
     let toplamDagitimBedeli = 0;
 
@@ -597,53 +443,46 @@ export const UretimVerileri: React.FC = () => {
         toplamGelir += veri.gunlukUretim * fiyatlar.birimFiyat;
         toplamDagitimBedeli += veri.gunlukUretim * fiyatlar.dagitimBedeli;
       } else {
-        // Veri kaydında gelir varsa onu kullan
         toplamGelir += veri.gelir || 0;
         toplamDagitimBedeli += veri.dagitimBedeli || 0;
       }
     });
 
     // Performans trendi hesaplama
-    const sonAyVerileri = filtrelenmisVeriler.slice(0, 30);
-    const oncekiAyVerileri = filtrelenmisVeriler.slice(30, 60);
-    const sonAyOrtalama = sonAyVerileri.length > 0 ? 
-      sonAyVerileri.reduce((total, v) => total + v.gunlukUretim, 0) / sonAyVerileri.length : 0;
-    const oncekiAyOrtalama = oncekiAyVerileri.length > 0 ? 
-      oncekiAyVerileri.reduce((total, v) => total + v.gunlukUretim, 0) / oncekiAyVerileri.length : 0;
+    const sonVeriler = filtrelenmisVeriler.slice(0, 15);
+    const oncekiVeriler = filtrelenmisVeriler.slice(15, 30);
+    const sonOrtalama = sonVeriler.length > 0 ? 
+      sonVeriler.reduce((total, v) => total + v.gunlukUretim, 0) / sonVeriler.length : 0;
+    const oncekiOrtalama = oncekiVeriler.length > 0 ? 
+      oncekiVeriler.reduce((total, v) => total + v.gunlukUretim, 0) / oncekiVeriler.length : 0;
 
-    let performansTrendi: 'yukselen' | 'dusen' | 'sabit' = 'sabit';
-    if (sonAyOrtalama > oncekiAyOrtalama * 1.05) {
-      performansTrendi = 'yukselen';
-    } else if (sonAyOrtalama < oncekiAyOrtalama * 0.95) {
-      performansTrendi = 'dusen';
+    let performansTrendi: 'yukselis' | 'dusus' | 'sabit' = 'sabit';
+    if (sonOrtalama > oncekiOrtalama * 1.05) {
+      performansTrendi = 'yukselis';
+    } else if (sonOrtalama < oncekiOrtalama * 0.95) {
+      performansTrendi = 'dusus';
     }
 
     return {
-      yillikHedefGerceklesme: yillikHedef > 0 ? (toplamGerceklesen / yillikHedef) * 100 : 0,
-      aylikHedefGerceklesme: aylikHedef > 0 ? (aylikGerceklesen / aylikHedef) * 100 : 0,
-      toplamGerceklesenUretim: toplamGerceklesen,
-      toplamHedefUretim: yillikHedef,
-      aylikGerceklesenUretim: aylikGerceklesen,
-      aylikHedefUretim: aylikHedef,
-      performansTrendi,
-      hedefeFark: toplamGerceklesen - yillikHedef,
-      gelirAnalizi: {
-        toplamGelir,
-        toplamDagitimBedeli,
-        netGelir: toplamGelir - toplamDagitimBedeli,
-        ortalamaBirimFiyat: toplamGerceklesen > 0 ? toplamGelir / toplamGerceklesen : 0
-      }
+      yillikHedef,
+      yillikGerceklesen,
+      yillikGerceklesmeOrani: yillikHedef > 0 ? (yillikGerceklesen / yillikHedef) * 100 : 0,
+      aylikHedef,
+      aylikGerceklesen,
+      aylikGerceklesmeOrani: aylikHedef > 0 ? (aylikGerceklesen / aylikHedef) * 100 : 0,
+      toplamGelir,
+      toplamDagitimBedeli,
+      netGelir: toplamGelir - toplamDagitimBedeli,
+      ortalamaBirimFiyat: yillikGerceklesen > 0 ? toplamGelir / yillikGerceklesen : 0,
+      performansTrendi
     };
-  }, [uretimVerileri, santraller, secilenSantral, secilenYil, secilenAy, secilenTarihAraligi]);
+  }, [uretimVerileri, santraller, secilenSantral, secilenYil, secilenAy, goruntulemeSecenegi]);
 
   // Aylık karşılaştırma verileri
-  const aylikKarsilastirmaVerileri = useMemo((): AylikVeri[] => {
+  const aylikKarsilastirmaVerileri = useMemo((): AylikKarsilastirma[] => {
     const secilenSantralData = secilenSantral !== 'tumu' 
       ? santraller.find(s => s.id === secilenSantral)
       : null;
-
-    const yillikHedef = secilenSantralData?.yillikHedefUretim || 
-      santraller.reduce((total, s) => total + (s.yillikHedefUretim || 0), 0);
 
     return aySecenekleri.map(ay => {
       const ayBaslangic = new Date(secilenYil, ay.value, 1);
@@ -656,45 +495,40 @@ export const UretimVerileri: React.FC = () => {
       });
 
       const gerceklesenUretim = ayVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
-      
-      // Aylık hedefleri santral bilgilerinden al
-      const ayIsim = [
-        'ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran',
-        'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'
-      ][ay.value];
 
+      // Hedef üretim (santral yönetimi sayfasından)
       let hedefUretim = 0;
-      if (secilenSantralData?.aylikHedefler?.[ayIsim]) {
-        hedefUretim = secilenSantralData.aylikHedefler[ayIsim];
+      if (secilenSantralData?.aylikHedefler) {
+        hedefUretim = secilenSantralData.aylikHedefler[ay.key] || (secilenSantralData.yillikHedefUretim || 0) / 12;
       } else if (secilenSantral === 'tumu') {
-        // Tüm santraller seçiliyse, tüm santrallerin aylık hedeflerini topla
         hedefUretim = santraller.reduce((total, santral) => {
-          return total + (santral.aylikHedefler?.[ayIsim] || (santral.yillikHedefUretim || 0) / 12);
+          const santralAylikHedef = santral.aylikHedefler?.[ay.key] || (santral.yillikHedefUretim || 0) / 12;
+          return total + santralAylikHedef;
         }, 0);
-      } else {
-        // Eğer aylık hedef yoksa yıllık hedefin 1/12'si
-        hedefUretim = yillikHedef / 12;
       }
 
-      // Gelir hesaplama - santral fiyatlarını kullan
-      let gelir = 0;
+      // Gelir hesaplama (santral fiyatlarını kullan)
+      let gerceklesenGelir = 0;
       let dagitimBedeli = 0;
+      let toplamBirimFiyat = 0;
+      let fiyatSayaci = 0;
 
       ayVerileri.forEach(veri => {
         const santral = santraller.find(s => s.id === veri.santralId);
         if (santral) {
           const fiyatlar = getElektrikFiyatlari(santral, veri.tarih.toDate());
-          const gunlukGelir = veri.gunlukUretim * fiyatlar.birimFiyat;
-          const gunlukDagitim = veri.gunlukUretim * fiyatlar.dagitimBedeli;
-          
-          gelir += gunlukGelir;
-          dagitimBedeli += gunlukDagitim;
+          gerceklesenGelir += veri.gunlukUretim * fiyatlar.birimFiyat;
+          dagitimBedeli += veri.gunlukUretim * fiyatlar.dagitimBedeli;
+          toplamBirimFiyat += fiyatlar.birimFiyat;
+          fiyatSayaci++;
         } else {
-          // Veri kaydında gelir varsa onu kullan
-          gelir += veri.gelir || 0;
+          gerceklesenGelir += veri.gelir || 0;
           dagitimBedeli += veri.dagitimBedeli || 0;
         }
       });
+
+      const ortalamaBirimFiyat = fiyatSayaci > 0 ? toplamBirimFiyat / fiyatSayaci : 0;
+      const hedefGelir = hedefUretim * ortalamaBirimFiyat;
 
       return {
         ay: ay.label,
@@ -702,26 +536,60 @@ export const UretimVerileri: React.FC = () => {
         hedefUretim,
         gerceklesenUretim,
         gerceklesmeOrani: hedefUretim > 0 ? (gerceklesenUretim / hedefUretim) * 100 : 0,
-        gelir,
+        hedefGelir,
+        gerceklesenGelir,
         dagitimBedeli,
-        netGelir: gelir - dagitimBedeli
+        netGelir: gerceklesenGelir - dagitimBedeli,
+        birimFiyat: ortalamaBirimFiyat
       };
     });
-  }, [uretimVerileri, santraller, secilenSantral, secilenYil]);
-
-  // Grafik verileri
-  const yillikGrafikVerileri = useMemo(() => {
-    return aylikKarsilastirmaVerileri.map(veri => ({
-      ay: veri.ay,
-      hedefUretim: veri.hedefUretim,
-      gerceklesenUretim: veri.gerceklesenUretim,
-      gerceklesmeOrani: veri.gerceklesmeOrani,
-      gelir: veri.gelir,
-      netGelir: veri.netGelir
-    }));
-  }, [aylikKarsilastirmaVerileri]);
+  }, [uretimVerileri, santraller, secilenSantral, secilenYil, secilenAy]);
 
   // Event handlers
+  const handleYenile = async () => {
+    setYenileniyor(true);
+    try {
+      await santralleriGetir();
+      toast.success('Veriler başarıyla yenilendi');
+    } catch (error) {
+      console.error('Yenileme hatası:', error);
+      toast.error('Veriler yenilenirken bir hata oluştu');
+    }
+    setYenileniyor(false);
+  };
+
+  const handleExcelExport = () => {
+    try {
+      if (aylikKarsilastirmaVerileri.length === 0) {
+        toast.error('Dışa aktarılacak veri bulunamadı');
+        return;
+      }
+
+      const excelData = aylikKarsilastirmaVerileri.map(veri => ({
+        'Ay': veri.ay,
+        'Hedef Üretim (kWh)': veri.hedefUretim.toFixed(0),
+        'Gerçekleşen Üretim (kWh)': veri.gerceklesenUretim.toFixed(0),
+        'Gerçekleşme Oranı (%)': veri.gerceklesmeOrani.toFixed(1),
+        'Hedef Gelir (₺)': veri.hedefGelir.toFixed(2),
+        'Gerçekleşen Gelir (₺)': veri.gerceklesenGelir.toFixed(2),
+        'Dağıtım Bedeli (₺)': veri.dagitimBedeli.toFixed(2),
+        'Net Gelir (₺)': veri.netGelir.toFixed(2),
+        'Ortalama Birim Fiyat (₺/kWh)': veri.birimFiyat.toFixed(3)
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Hedef vs Gerçekleşen');
+
+      const dosyaAdi = `Hedef_Gerceklesen_${secilenYil}.xlsx`;
+      XLSX.writeFile(workbook, dosyaAdi);
+      toast.success('Excel dosyası başarıyla indirildi');
+    } catch (error) {
+      console.error('Excel dışa aktarma hatası:', error);
+      toast.error('Excel dosyası oluşturulurken bir hata oluştu');
+    }
+  };
+
   const handleVeriSil = async (id: string) => {
     if (!canDelete) {
       toast.error('Bu işlem için yetkiniz yok');
@@ -740,59 +608,6 @@ export const UretimVerileri: React.FC = () => {
     }
   };
 
-  const handleYenile = async () => {
-    setYenileniyor(true);
-
-    try {
-      // Santral verilerini yenile
-      await santralleriGetir();
-      
-      // Üretim verilerini de tetikle (useEffect dependency'leri sayesinde otomatik çalışacak)
-      // Bu sayede hem santral bilgileri hem de hesaplamalar güncellenecek
-      
-      toast.success('Veriler başarıyla yenilendi');
-    } catch (error) {
-      console.error('Yenileme hatası:', error);
-      toast.error('Veriler yenilenirken bir hata oluştu');
-    }
-
-    setYenileniyor(false);
-  };
-
-  const handleExcelExport = () => {
-    try {
-      if (yillikGrafikVerileri.length === 0) {
-        toast.error('Dışa aktarılacak veri bulunamadı');
-        return;
-      }
-
-      const excelData = yillikGrafikVerileri.map(veri => ({
-        'Ay': veri.ay,
-        'Hedef Üretim (kWh)': veri.hedefUretim.toFixed(0),
-        'Gerçekleşen Üretim (kWh)': veri.gerceklesenUretim.toFixed(0),
-        'Gerçekleşme Oranı (%)': veri.gerceklesmeOrani.toFixed(1),
-        'Toplam Gelir (₺)': veri.gelir.toFixed(2),
-        'Net Gelir (₺)': veri.netGelir.toFixed(2)
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Hedef vs Gerçekleşen');
-
-      const dosyaAdi = `Hedef_Gerceklesen_Analizi_${secilenYil}.xlsx`;
-      XLSX.writeFile(workbook, dosyaAdi);
-      toast.success('Excel dosyası başarıyla indirildi');
-    } catch (error) {
-      console.error('Excel dışa aktarma hatası:', error);
-      toast.error('Excel dosyası oluşturulurken bir hata oluştu');
-    }
-  };
-
-  const handleVeriDetayGoster = (veri: UretimVerisi) => {
-    setSecilenVeriDetay(veri);
-    setDetayModalAcik(true);
-  };
-
   if (yukleniyor) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -801,32 +616,27 @@ export const UretimVerileri: React.FC = () => {
     );
   }
 
-  if (santraller.length === 0 && kullanici?.rol !== 'musteri') {
+  if (santraller.length === 0) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Hedef vs Gerçekleşen Üretim</h1>
-            <p className="mt-1 text-sm text-gray-500">Santral performans analizi</p>
+            <p className="mt-1 text-sm text-gray-500">Santral performans karşılaştırması</p>
           </div>
         </div>
 
-        <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="relative">
-              <Target className="h-20 w-20 text-yellow-400 mb-6" />
-              <div className="absolute -top-2 -right-2 h-6 w-6 bg-orange-500 rounded-full flex items-center justify-center">
-                <AlertTriangle className="h-4 w-4 text-white" />
-              </div>
-            </div>
+            <Target className="h-20 w-20 text-blue-400 mb-6" />
             <h3 className="text-2xl font-bold text-gray-900 mb-3">Santral Bulunamadı</h3>
             <p className="text-gray-600 text-center max-w-md mb-6">
-              Henüz hiç santral kaydı bulunmuyor. Hedef karşılaştırma analizi yapmak için önce santrallerinizi sisteme eklemelisiniz.
+              Hedef karşılaştırma analizi yapmak için önce santrallerinizi sisteme eklemelisiniz.
             </p>
             {canAdd && (
               <button
                 onClick={() => navigate('/ges-yonetimi')}
-                className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 transition-all duration-200"
+                className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 transition-all duration-200"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 İlk Santralı Ekle
@@ -848,31 +658,31 @@ export const UretimVerileri: React.FC = () => {
               <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mr-6 shadow-lg">
                 <Target className="h-10 w-10 text-white" />
               </div>
-              <div className="absolute -top-1 -right-1 h-5 w-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                <TrendingUp className="h-3 w-3 text-white" />
-              </div>
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-1">Hedef vs Gerçekleşen Üretim</h1>
               <p className="text-gray-600">
-                {santraller.length} santral • Performans analizi ve maliyet hesaplaması
+                {santraller.length} santral • Performans karşılaştırması ve finansal analiz
               </p>
             </div>
           </div>
 
-          {/* Hızlı İstatistikler */}
+          {/* Ana İstatistikler */}
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center space-x-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className="text-lg font-bold text-gray-900">
-                  %{performansAnalizi.yillikHedefGerceklesme.toFixed(1)}
+                <div className="text-xl font-bold text-gray-900">
+                  %{goruntulemeSecenegi === 'yillik' ? 
+                    hedefGerceklesmeAnalizi.yillikGerceklesmeOrani.toFixed(1) : 
+                    hedefGerceklesmeAnalizi.aylikGerceklesmeOrani.toFixed(1)}
                 </div>
-                <div className="text-xs text-gray-500">Yıllık</div>
+                <div className="text-xs text-gray-500">
+                  {goruntulemeSecenegi === 'yillik' ? 'Yıllık' : 'Aylık'} Gerçekleşme
+                </div>
               </div>
-              <div className="w-px h-8 bg-gray-200"></div>
               <div className="text-center">
-                <div className="text-lg font-bold text-gray-900">
-                  ₺{performansAnalizi.gelirAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                <div className="text-xl font-bold text-green-600">
+                  ₺{hedefGerceklesmeAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
                 </div>
                 <div className="text-xs text-gray-500">Net Gelir</div>
               </div>
@@ -897,12 +707,12 @@ export const UretimVerileri: React.FC = () => {
             </select>
           </div>
 
-          {/* Tarih Aralığı */}
+          {/* Görüntüleme Seçeneği */}
           <div className="flex items-center space-x-2">
             <Calendar className="h-4 w-4 text-gray-500" />
             <select
-              value={secilenTarihAraligi}
-              onChange={(e) => setSecilenTarihAraligi(e.target.value as any)}
+              value={goruntulemeSecenegi}
+              onChange={(e) => setGoruntulemeSecenegi(e.target.value as any)}
               className="rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
             >
               <option value="yillik">Yıllık Analiz</option>
@@ -922,7 +732,7 @@ export const UretimVerileri: React.FC = () => {
           </select>
 
           {/* Ay Seçimi - Sadece aylık görünümde */}
-          {secilenTarihAraligi === 'aylik' && (
+          {goruntulemeSecenegi === 'aylik' && (
             <select
               value={secilenAy}
               onChange={(e) => setSecilenAy(parseInt(e.target.value))}
@@ -965,22 +775,21 @@ export const UretimVerileri: React.FC = () => {
         </div>
       </div>
 
-      {/* Ana Performans Kartları */}
+      {/* Ana Metrik Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card decoration="top" decorationColor="blue" className="bg-gradient-to-br from-blue-50 to-indigo-50">
           <div className="flex items-center justify-between">
             <div>
-              <Text className="text-sm font-medium text-gray-600">Yıllık Hedef Gerçekleşme</Text>
+              <Text className="text-sm font-medium text-gray-600">
+                {goruntulemeSecenegi === 'yillik' ? 'Yıllık' : 'Aylık'} Hedef
+              </Text>
               <Metric className="text-2xl font-bold text-gray-900">
-                %{performansAnalizi.yillikHedefGerceklesme.toFixed(1)}
+                {((goruntulemeSecenegi === 'yillik' ? hedefGerceklesmeAnalizi.yillikHedef : hedefGerceklesmeAnalizi.aylikHedef) / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
               </Metric>
               <div className="mt-2">
-                <ProgressBar 
-                  value={performansAnalizi.yillikHedefGerceklesme} 
-                  color={performansAnalizi.yillikHedefGerceklesme >= 90 ? "green" : 
-                         performansAnalizi.yillikHedefGerceklesme >= 70 ? "yellow" : "red"}
-                  className="mt-1"
-                />
+                <Text className="text-xs text-gray-500">
+                  Santral yönetiminden alındı
+                </Text>
               </div>
             </div>
             <div className="p-3 bg-blue-100 rounded-xl">
@@ -992,23 +801,24 @@ export const UretimVerileri: React.FC = () => {
         <Card decoration="top" decorationColor="green" className="bg-gradient-to-br from-green-50 to-emerald-50">
           <div className="flex items-center justify-between">
             <div>
-              <Text className="text-sm font-medium text-gray-600">Toplam Üretim</Text>
+              <Text className="text-sm font-medium text-gray-600">Gerçekleşen Üretim</Text>
               <Metric className="text-2xl font-bold text-gray-900">
-                {(performansAnalizi.toplamGerceklesenUretim / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
+                {((goruntulemeSecenegi === 'yillik' ? hedefGerceklesmeAnalizi.yillikGerceklesen : hedefGerceklesmeAnalizi.aylikGerceklesen) / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
               </Metric>
               <div className="flex items-center mt-1">
                 <Badge 
-                  color={performansAnalizi.performansTrendi === 'yukselen' ? "green" : 
-                         performansAnalizi.performansTrendi === 'dusen' ? "red" : "yellow"}
+                  color={
+                    (goruntulemeSecenegi === 'yillik' ? hedefGerceklesmeAnalizi.yillikGerceklesmeOrani : hedefGerceklesmeAnalizi.aylikGerceklesmeOrani) >= 90 ? "green" : 
+                    (goruntulemeSecenegi === 'yillik' ? hedefGerceklesmeAnalizi.yillikGerceklesmeOrani : hedefGerceklesmeAnalizi.aylikGerceklesmeOrani) >= 70 ? "yellow" : "red"
+                  }
                   className="text-xs"
                 >
-                  {performansAnalizi.performansTrendi === 'yukselen' ? 'Yükseliş' : 
-                   performansAnalizi.performansTrendi === 'dusen' ? 'Düşüş' : 'Sabit'}
+                  %{(goruntulemeSecenegi === 'yillik' ? hedefGerceklesmeAnalizi.yillikGerceklesmeOrani : hedefGerceklesmeAnalizi.aylikGerceklesmeOrani).toFixed(1)}
                 </Badge>
               </div>
             </div>
             <div className="p-3 bg-green-100 rounded-xl">
-              <Battery className="h-8 w-8 text-green-600" />
+              <Activity className="h-8 w-8 text-green-600" />
             </div>
           </div>
         </Card>
@@ -1016,12 +826,12 @@ export const UretimVerileri: React.FC = () => {
         <Card decoration="top" decorationColor="amber" className="bg-gradient-to-br from-amber-50 to-yellow-50">
           <div className="flex items-center justify-between">
             <div>
-              <Text className="text-sm font-medium text-gray-600">Net Gelir</Text>
+              <Text className="text-sm font-medium text-gray-600">Toplam Gelir</Text>
               <Metric className="text-2xl font-bold text-gray-900">
-                ₺{performansAnalizi.gelirAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                ₺{hedefGerceklesmeAnalizi.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
               </Metric>
               <Text className="text-xs text-gray-500 mt-1">
-                Ort. fiyat: ₺{performansAnalizi.gelirAnalizi.ortalamaBirimFiyat.toFixed(3)}/kWh
+                Ort. fiyat: ₺{hedefGerceklesmeAnalizi.ortalamaBirimFiyat.toFixed(3)}/kWh
               </Text>
             </div>
             <div className="p-3 bg-amber-100 rounded-xl">
@@ -1033,16 +843,22 @@ export const UretimVerileri: React.FC = () => {
         <Card decoration="top" decorationColor="emerald" className="bg-gradient-to-br from-emerald-50 to-teal-50">
           <div className="flex items-center justify-between">
             <div>
-              <Text className="text-sm font-medium text-gray-600">Dağıtım Bedeli</Text>
+              <Text className="text-sm font-medium text-gray-600">Net Gelir</Text>
               <Metric className="text-2xl font-bold text-gray-900">
-                ₺{performansAnalizi.gelirAnalizi.toplamDagitimBedeli.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                ₺{hedefGerceklesmeAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
               </Metric>
-              <Text className="text-xs text-gray-500 mt-1">
-                Toplam gelirin %{((performansAnalizi.gelirAnalizi.toplamDagitimBedeli / performansAnalizi.gelirAnalizi.toplamGelir) * 100).toFixed(1)}'i
-              </Text>
+              <div className="flex items-center mt-1">
+                {hedefGerceklesmeAnalizi.performansTrendi === 'yukselis' && <ArrowUp className="h-4 w-4 text-green-500 mr-1" />}
+                {hedefGerceklesmeAnalizi.performansTrendi === 'dusus' && <ArrowDown className="h-4 w-4 text-red-500 mr-1" />}
+                {hedefGerceklesmeAnalizi.performansTrendi === 'sabit' && <Minus className="h-4 w-4 text-gray-500 mr-1" />}
+                <Text className="text-xs text-gray-500">
+                  {hedefGerceklesmeAnalizi.performansTrendi === 'yukselis' ? 'Yükselişte' : 
+                   hedefGerceklesmeAnalizi.performansTrendi === 'dusus' ? 'Düşüşte' : 'Sabit'}
+                </Text>
+              </div>
             </div>
             <div className="p-3 bg-emerald-100 rounded-xl">
-              <TrendingDown className="h-8 w-8 text-emerald-600" />
+              <TrendingUp className="h-8 w-8 text-emerald-600" />
             </div>
           </div>
         </Card>
@@ -1050,7 +866,7 @@ export const UretimVerileri: React.FC = () => {
 
       {/* Ana Grafik Alanı */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Yıllık Hedef vs Gerçekleşen Grafiği */}
+        {/* Hedef vs Gerçekleşen Grafiği */}
         <Card>
           <div className="flex items-center justify-between mb-4">
             <Title>Aylık Hedef vs Gerçekleşen Üretim</Title>
@@ -1060,7 +876,7 @@ export const UretimVerileri: React.FC = () => {
           </div>
           <AreaChart
             className="mt-4 h-80"
-            data={yillikGrafikVerileri}
+            data={aylikKarsilastirmaVerileri}
             index="ay"
             categories={["hedefUretim", "gerceklesenUretim"]}
             colors={["blue", "green"]}
@@ -1068,60 +884,22 @@ export const UretimVerileri: React.FC = () => {
             showAnimation={true}
             showGradient={true}
             showLegend={true}
-            customTooltip={(props) => {
-              const { payload, active } = props;
-              if (!active || !payload) return null;
-
-              const data = payload[0]?.payload;
-              if (!data) return null;
-
-              return (
-                <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
-                  <div className="text-sm font-medium text-gray-900 mb-2">{data.ay} {secilenYil}</div>
-                  <div className="space-y-1">
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
-                      <span className="text-xs text-gray-600">Hedef:</span>
-                      <span className="ml-1 text-xs font-medium">
-                        {(data.hedefUretim / 1000).toFixed(1)} MWh
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                      <span className="text-xs text-gray-600">Gerçekleşen:</span>
-                      <span className="ml-1 text-xs font-medium">
-                        {(data.gerceklesenUretim / 1000).toFixed(1)} MWh
-                      </span>
-                    </div>
-                    <div className="border-t pt-1 mt-2">
-                      <span className="text-xs text-gray-600">Gerçekleşme: </span> 
-                      <span className={`text-xs font-medium ${
-                        data.gerceklesmeOrani >= 90 ? 'text-green-600' : 
-                        data.gerceklesmeOrani >= 70 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        %{data.gerceklesmeOrani.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            }}
           />
         </Card>
 
-        {/* Gelir Analizi Grafiği */}
+        {/* Gelir Karşılaştırması Grafiği */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <Title>Aylık Gelir ve Maliyet Analizi</Title>
+            <Title>Aylık Gelir Karşılaştırması</Title>
             <Badge color="green" className="text-xs">
-              Net: ₺{performansAnalizi.gelirAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+              Net: ₺{hedefGerceklesmeAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
             </Badge>
           </div>
           <BarChart
             className="mt-4 h-80"
-            data={yillikGrafikVerileri}
+            data={aylikKarsilastirmaVerileri}
             index="ay"
-            categories={["gelir", "netGelir"]}
+            categories={["hedefGelir", "gerceklesenGelir"]}
             colors={["amber", "green"]}
             valueFormatter={(value) => `₺${value.toLocaleString('tr-TR', {maximumFractionDigits: 0})}`}
             showAnimation={true}
@@ -1130,102 +908,77 @@ export const UretimVerileri: React.FC = () => {
         </Card>
       </div>
 
-      {/* Detay Tablolar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Aylık Performans Tablosu */}
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <Title>Aylık Performans Detayı</Title>
-            <Text>{aylikKarsilastirmaVerileri.filter(v => v.gerceklesenUretim > 0).length} aktif ay</Text>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ay</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Hedef</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gerçekleşen</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Oran</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {aylikKarsilastirmaVerileri.map((veri) => (
-                  <tr key={veri.ay} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{veri.ay}</td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-900">
-                      {(veri.hedefUretim / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-900">
-                      {(veri.gerceklesenUretim / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Badge
-                        color={veri.gerceklesmeOrani >= 90 ? "green" : 
-                               veri.gerceklesmeOrani >= 70 ? "yellow" : "red"}
-                        className="text-xs"
-                      >
-                        %{veri.gerceklesmeOrani.toFixed(1)}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* Finansal Detay */}
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <Title>Aylık Finansal Detay</Title>
-            <Text>₺{performansAnalizi.gelirAnalizi.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})} toplam</Text>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ay</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gelir</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dağıtım</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {aylikKarsilastirmaVerileri.map((veri) => (
-                  <tr key={veri.ay} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{veri.ay}</td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-900">
-                      ₺{veri.gelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right text-red-600">
-                      ₺{veri.dagitimBedeli.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-right font-medium text-green-600">
-                      ₺{veri.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-
-      {/* Performans Özeti */}
+      {/* Aylık Detay Tablo */}
       <Card>
         <div className="flex items-center justify-between mb-6">
-          <Title>Yıllık Performans Özeti</Title>
+          <Title>Aylık Performans Detayı</Title>
+          <Text>{aylikKarsilastirmaVerileri.filter(v => v.gerceklesenUretim > 0).length} ay aktif</Text>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ay</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hedef Üretim</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gerçekleşen</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gerçekleşme %</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hedef Gelir</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gerçekleşen Gelir</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Net Gelir</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Birim Fiyat</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {aylikKarsilastirmaVerileri.map((veri) => (
+                <tr key={veri.ay} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{veri.ay}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    {(veri.hedefUretim / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    {(veri.gerceklesenUretim / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <Badge
+                      color={veri.gerceklesmeOrani >= 90 ? "green" : 
+                             veri.gerceklesmeOrani >= 70 ? "yellow" : "red"}
+                      className="text-xs"
+                    >
+                      %{veri.gerceklesmeOrani.toFixed(1)}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    ₺{veri.hedefGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    ₺{veri.gerceklesenGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-green-600">
+                    ₺{veri.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    ₺{veri.birimFiyat.toFixed(3)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Özet Kart */}
+      <Card>
+        <div className="flex items-center justify-between mb-6">
+          <Title>Performans Özeti - {secilenYil}</Title>
           <div className="flex items-center space-x-2">
             <Badge 
-              color={performansAnalizi.hedefeFark >= 0 ? "green" : "red"}
+              color={hedefGerceklesmeAnalizi.yillikGerceklesmeOrani >= 90 ? "green" : 
+                     hedefGerceklesmeAnalizi.yillikGerceklesmeOrani >= 70 ? "yellow" : "red"}
               className="text-sm"
             >
-              {performansAnalizi.hedefeFark >= 0 ? '+' : ''}
-              {(performansAnalizi.hedefeFark / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
+              %{hedefGerceklesmeAnalizi.yillikGerceklesmeOrani.toFixed(1)} Başarı
             </Badge>
-            <Text className="text-sm text-gray-500">hedefe göre</Text>
           </div>
         </div>
 
@@ -1237,24 +990,24 @@ export const UretimVerileri: React.FC = () => {
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Hedef</span>
+                <span className="text-sm text-gray-600">Yıllık Hedef</span>
                 <span className="font-medium">
-                  {(performansAnalizi.toplamHedefUretim / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
+                  {(hedefGerceklesmeAnalizi.yillikHedef / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Gerçekleşen</span>
                 <span className="font-medium">
-                  {(performansAnalizi.toplamGerceklesenUretim / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
+                  {(hedefGerceklesmeAnalizi.yillikGerceklesen / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Başarı Oranı</span>
                 <Badge 
-                  color={performansAnalizi.yillikHedefGerceklesme >= 90 ? "green" : 
-                         performansAnalizi.yillikHedefGerceklesme >= 70 ? "yellow" : "red"}
+                  color={hedefGerceklesmeAnalizi.yillikGerceklesmeOrani >= 90 ? "green" : 
+                         hedefGerceklesmeAnalizi.yillikGerceklesmeOrani >= 70 ? "yellow" : "red"}
                 >
-                  %{performansAnalizi.yillikHedefGerceklesme.toFixed(1)}
+                  %{hedefGerceklesmeAnalizi.yillikGerceklesmeOrani.toFixed(1)}
                 </Badge>
               </div>
             </div>
@@ -1269,19 +1022,19 @@ export const UretimVerileri: React.FC = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Toplam Gelir</span>
                 <span className="font-medium">
-                  ₺{performansAnalizi.gelirAnalizi.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                  ₺{hedefGerceklesmeAnalizi.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Dağıtım Bedeli</span>
                 <span className="font-medium text-red-600">
-                  ₺{performansAnalizi.gelirAnalizi.toplamDagitimBedeli.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                  ₺{hedefGerceklesmeAnalizi.toplamDagitimBedeli.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Net Gelir</span>
                 <span className="font-medium text-green-600">
-                  ₺{performansAnalizi.gelirAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                  ₺{hedefGerceklesmeAnalizi.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
                 </span>
               </div>
             </div>
@@ -1289,196 +1042,32 @@ export const UretimVerileri: React.FC = () => {
 
           <div className="bg-amber-50 rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-gray-900">Maliyet Analizi</h4>
+              <h4 className="font-semibold text-gray-900">Fiyat Analizi</h4>
               <BarChart2 className="h-6 w-6 text-amber-600" />
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Birim Fiyat</span>
+                <span className="text-sm text-gray-600">Ortalama Birim Fiyat</span>
                 <span className="font-medium">
-                  ₺{performansAnalizi.gelirAnalizi.ortalamaBirimFiyat.toFixed(3)}/kWh
+                  ₺{hedefGerceklesmeAnalizi.ortalamaBirimFiyat.toFixed(3)}/kWh
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Dağıtım Oranı</span>
                 <span className="font-medium">
-                  %{((performansAnalizi.gelirAnalizi.toplamDagitimBedeli / performansAnalizi.gelirAnalizi.toplamGelir) * 100).toFixed(1)}
+                  %{((hedefGerceklesmeAnalizi.toplamDagitimBedeli / hedefGerceklesmeAnalizi.toplamGelir) * 100).toFixed(1)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Net Marj</span>
-                <span className="font-medium text-green-600">
-                  %{((performansAnalizi.gelirAnalizi.netGelir / performansAnalizi.gelirAnalizi.toplamGelir) * 100).toFixed(1)}
+                <span className="text-sm text-gray-600">Veri Kaynağı</span>
+                <span className="text-xs text-green-600 font-medium">
+                  Santral Yönetimi
                 </span>
               </div>
             </div>
           </div>
         </div>
       </Card>
-
-      {/* Detay Modal */}
-      {detayModalAcik && secilenVeriDetay && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Üretim Verisi Detayı</h3>
-                <button
-                  onClick={() => setDetayModalAcik(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Temel Bilgiler */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Text className="text-sm font-medium text-gray-600">Santral</Text>
-                    <Text className="text-lg font-semibold text-gray-900">
-                      {santraller.find(s => s.id === secilenVeriDetay.santralId)?.ad || 'Bilinmiyor'}
-                    </Text>
-                  </div>
-                  <div>
-                    <Text className="text-sm font-medium text-gray-600">Tarih</Text>
-                    <Text className="text-lg font-semibold text-gray-900">
-                      {format(secilenVeriDetay.tarih.toDate(), 'dd MMMM yyyy', { locale: tr })}
-                    </Text>
-                  </div>
-                </div>
-
-                {/* Üretim Bilgileri */}
-                <div className="bg-yellow-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Üretim Bilgileri</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Text className="text-sm text-gray-600">Günlük Üretim</Text>
-                      <Text className="text-xl font-bold text-yellow-600">
-                        {secilenVeriDetay.gunlukUretim.toLocaleString('tr-TR')} kWh
-                      </Text>
-                    </div>
-                    <div>
-                      <Text className="text-sm text-gray-600">Anlık Güç</Text>
-                      <Text className="text-xl font-bold text-yellow-600">
-                        {secilenVeriDetay.anlikGuc.toLocaleString('tr-TR')} kW
-                      </Text>
-                    </div>
-                    <div>
-                      <Text className="text-sm text-gray-600">Performans Oranı</Text>
-                      <Text className="text-xl font-bold text-yellow-600">
-                        %{secilenVeriDetay.performansOrani.toFixed(2)}
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Finansal Bilgiler */}
-                <div className="bg-green-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Finansal Bilgiler</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Text className="text-sm text-gray-600">Günlük Gelir</Text>
-                      <Text className="text-xl font-bold text-green-600">
-                        ₺{secilenVeriDetay.gelir.toLocaleString('tr-TR')}
-                      </Text>
-                    </div>
-                    <div>
-                      <Text className="text-sm text-gray-600">Dağıtım Bedeli</Text>
-                      <Text className="text-xl font-bold text-green-600">
-                        ₺{secilenVeriDetay.dagitimBedeli.toLocaleString('tr-TR')}
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Çevresel Etki */}
-                <div className="bg-emerald-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Çevresel Etki</h4>
-                  <div>
-                    <Text className="text-sm text-gray-600">CO₂ Tasarrufu</Text>
-                    <Text className="text-xl font-bold text-emerald-600">
-                      {secilenVeriDetay.tasarrufEdilenCO2.toFixed(2)} kg
-                    </Text>
-                    <Text className="text-sm text-gray-500">
-                      ({(secilenVeriDetay.tasarrufEdilenCO2 / 1000).toFixed(3)} ton CO₂)
-                    </Text>
-                  </div>
-                </div>
-
-                {/* Hava Koşulları */}
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Hava Koşulları</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <Thermometer className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                      <Text className="text-lg font-bold text-blue-600">
-                        {secilenVeriDetay.hava.sicaklik}°C
-                      </Text>
-                      <Text className="text-sm text-gray-600">Sıcaklık</Text>
-                    </div>
-                    <div className="text-center">
-                      <Cloud className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                      <Text className="text-lg font-bold text-blue-600">
-                        %{secilenVeriDetay.hava.nem}
-                      </Text>
-                      <Text className="text-sm text-gray-600">Nem</Text>
-                    </div>
-                    <div className="text-center">
-                      <Sun className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                      <Text className="text-lg font-bold text-yellow-600">
-                        {secilenVeriDetay.hava.radyasyon} W/m²
-                      </Text>
-                      <Text className="text-sm text-gray-600">Radyasyon</Text>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Meta Bilgiler */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Kayıt Bilgileri</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Text className="text-sm text-gray-600">Oluşturan</Text>
-                      <Text className="font-semibold text-gray-900">
-                        {secilenVeriDetay.olusturanKisi.ad}
-                      </Text>
-                    </div>
-                    <div>
-                      <Text className="text-sm text-gray-600">Oluşturulma Tarihi</Text>
-                      <Text className="font-semibold text-gray-900">
-                        {format(secilenVeriDetay.olusturmaTarihi.toDate(), 'dd.MM.yyyy HH:mm', { locale: tr })}
-                      </Text>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                {canDelete && (
-                  <button
-                    onClick={() => {
-                      setSilinecekVeriId(secilenVeriDetay.id);
-                      setSilmeOnayModalAcik(true);
-                      setDetayModalAcik(false);
-                    }}
-                    className="px-4 py-2 border border-red-300 rounded-lg text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 classNameName="h-4 w-4 mr-2 inline" />
-                    Sil
-                  </button>
-                )}
-                <button
-                  onClick={() => setDetayModalAcik(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-                >
-                  Kapat
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modaller */}
       {importModalAcik && santraller.length > 0 && (
