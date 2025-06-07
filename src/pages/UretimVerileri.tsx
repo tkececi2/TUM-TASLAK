@@ -140,7 +140,7 @@ export const UretimVerileri: React.FC = () => {
   // Modal states
   const [importModalAcik, setImportModalAcik] = useState(false);
   const [silmeOnayModalAcik, setSilmeOnayModalAcik] = useState(false);
-  const [silinecekVeriId, setSilinecekVeriId] = useState<string | null>(null);
+  const [silinecekVeriId, setSilinecekVeriId = useState<string | null>(null);
   const [detayModalAcik, setDetayModalAcik] = useState(false);
   const [secilenVeriDetay, setSecilenVeriDetay] = useState<UretimVerisi | null>(null);
 
@@ -1349,14 +1349,14 @@ export const UretimVerileri: React.FC = () => {
             </div>
           </div>
 
-          
+
 <BarChart
               className="mt-4 h-64"
               data={[
                 {
                   mevsim: "Kış (Ara-Şub)",
                   hedef: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.hedef, 0),
-                  gerceklesen: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.gerceklesen, 0),
+                  gerceklesen: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.gerceklesen, 0),
                   gelir: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.netGelir, 0)
                 },
                 {
@@ -1396,7 +1396,7 @@ export const UretimVerileri: React.FC = () => {
             </div>
           </div>
 
-          
+
 <AreaChart
               className="mt-4 h-64"
               data={[
