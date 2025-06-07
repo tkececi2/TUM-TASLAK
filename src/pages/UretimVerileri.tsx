@@ -1356,7 +1356,7 @@ export const UretimVerileri: React.FC = () => {
                 {
                   mevsim: "Kış (Ara-Şub)",
                   hedef: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.hedef, 0),
-                  gerceklesen: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.gerceklesen, 0),
+                  gerceklesen: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.gerceklesen, 0),
                   gelir: aylikVeriler.slice(11, 12).concat(aylikVeriler.slice(0, 2)).reduce((sum, v) => sum + v.netGelir, 0)
                 },
                 {
