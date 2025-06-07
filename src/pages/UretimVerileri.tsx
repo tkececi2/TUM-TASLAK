@@ -860,59 +860,55 @@ export const UretimVerileri: React.FC = () => {
             />
           </Card>
 
-          {/* Gelişmiş Gelir Analizi Grafiği */}
+          
           <Card>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <Title>Aylık Gelir & Karlılık Analizi</Title>
-                <Text className="text-sm text-gray-500">Net gelir trendi</Text>
+                <Title>Aylık Çevre Katkısı Analizi</Title>
+                <Text className="text-sm text-gray-500">CO₂ tasarrufu trendi</Text>
               </div>
               <div className="flex items-center space-x-2">
                 <Badge color="emerald" className="text-xs">
-                  Net: ₺{performansOzeti.netGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+                  Toplam: {(performansOzeti.toplamGerceklesen * 0.5 / 1000).toFixed(1)} ton CO₂
                 </Badge>
               </div>
             </div>
-            <BarChart
+            <AreaChart
               className="mt-4 h-80"
               data={aylikVeriler.map(veri => ({
                 ...veri,
-                karMarji: veri.gelir > 0 ? ((veri.netGelir / veri.gelir) * 100) : 0
+                co2Tasarrufu: (veri.gerceklesen * 0.5) / 1000,
+                agacEsdegeri: Math.round((veri.gerceklesen * 0.5) / 21)
               }))}
               index="ay"
-              categories={["gelir", "dagitimBedeli", "netGelir"]}
-              colors={["green", "red", "emerald"]}
-              valueFormatter={(value) => `₺${value.toLocaleString('tr-TR', {maximumFractionDigits: 0})}`}
+              categories={["co2Tasarrufu"]}
+              colors={["emerald"]}
+              valueFormatter={(value) => `${value.toFixed(1)} ton CO₂`}
               showAnimation={true}
               showLegend={true}
               showGridLines={true}
-              enableLegendSlider={true}
+              showGradient={true}
               customTooltip={(props) => {
                 const { payload, active } = props;
                 if (!active || !payload || !payload[0]) return null;
 
                 const data = payload[0].payload;
-                const karMarji = data.gelir > 0 ? ((data.netGelir / data.gelir) * 100) : 0;
 
                 return (
                   <div className="bg-white p-4 border border-gray-200 rounded-xl shadow-lg">
                     <div className="font-semibold text-gray-900 mb-2">{data.ay} {secilenYil}</div>
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-green-600 text-sm">Toplam Gelir:</span>
-                        <span className="font-medium">₺{data.gelir.toLocaleString('tr-TR')}</span>
+                        <span className="text-emerald-600 text-sm">CO₂ Tasarrufu:</span>
+                        <span className="font-medium">{data.co2Tasarrufu.toFixed(1)} ton</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-red-600 text-sm">Dağıtım Bedeli:</span>
-                        <span className="font-medium">₺{data.dagitimBedeli.toLocaleString('tr-TR')}</span>
+                        <span className="text-green-600 text-sm">Ağaç Eşdeğeri:</span>
+                        <span className="font-medium">{data.agacEsdegeri} ağaç</span>
                       </div>
                       <div className="flex items-center justify-between border-t pt-1 mt-2">
-                        <span className="text-emerald-600 text-sm">Net Gelir:</span>
-                        <span className="font-medium">₺{data.netGelir.toLocaleString('tr-TR')}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 text-sm">Kar Marjı:</span>
-                        <span className="font-medium">%{karMarji.toFixed(1)}</span>
+                        <span className="text-blue-600 text-sm">Üretim:</span>
+                        <span className="font-medium">{(data.gerceklesen / 1000).toFixed(1)} MWh</span>
                       </div>
                     </div>
                   </div>
@@ -943,8 +939,8 @@ export const UretimVerileri: React.FC = () => {
               hareketliOrtalama: index >= 2 ? 
                 aylikVeriler.slice(Math.max(0, index - 2), index + 1)
                   .reduce((sum, v) => sum + v.basariOrani, 0) / 3 : veri.basariOrani,
-              birimFiyat: veri.birimFiyat,
-              verimlilik: veri.gerceklesen > 0 ? (veri.netGelir / veri.gerceklesen) * 1000 : 0
+              co2Katkisi: (veri.gerceklesen * 0.5) / 1000,
+              verimlilik: veri.gerceklesen / 1000
             }))}
             index="ay"
             categories={["basariOrani", "hareketliOrtalama"]}
@@ -973,12 +969,12 @@ export const UretimVerileri: React.FC = () => {
                       <span className="font-medium">%{data.hareketliOrtalama.toFixed(1)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600 text-sm">Birim Fiyat:</span>
-                      <span className="font-medium">₺{data.birimFiyat.toFixed(3)}</span>
+                      <span className="text-green-600 text-sm">CO2 Katkısı:</span>
+                      <span className="font-medium">{(data.co2Katkisi).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-green-600 text-sm">Verimlilik:</span>
-                      <span className="font-medium">₺{data.verimlilik.toFixed(2)}/MWh</span>
+                      <span className="text-gray-600 text-sm">Verimlilik:</span>
+                      <span className="font-medium">{(data.verimlilik).toFixed(2)} MWh</span>
                     </div>
                   </div>
                 </div>
