@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, orderBy, getDocs, where, doc, deleteDoc, Timestamp, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, where, doc, deleteDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { format, startOfMonth, endOfMonth, subDays, addDays, isSameDay, startOfYear, endOfYear, getMonth } from 'date-fns';
@@ -30,7 +31,10 @@ import {
   ArrowDown,
   Minus,
   Leaf,
-  Edit2
+  Edit2,
+  DollarSign,
+  FileText,
+  Check
 } from 'lucide-react';
 import { Card, Title, Text, AreaChart, BarChart, LineChart, Metric, Flex, ProgressBar, Grid, Col, Badge, BadgeDelta, DonutChart } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -101,6 +105,7 @@ interface PerformansOzeti {
   toplamHedef: number;
   toplamGerceklesen: number;
   basariOrani: number;
+  toplamGelir: number;
   ortalamaBirimFiyat: number;
   aktifSantralSayisi: number;
   veriGunSayisi: number;
@@ -113,6 +118,7 @@ interface AylikVeri {
   hedef: number;
   gerceklesen: number;
   basariOrani: number;
+  gelir: number;
   co2Tasarrufu: number;
 }
 
@@ -127,12 +133,14 @@ export const UretimVerileri: React.FC = () => {
   const [yenileniyor, setYenileniyor] = useState(false);
   const [secilenSantral, setSecilenSantral] = useState<string>('tumu');
   const [secilenYil, setSecilenYil] = useState<number>(new Date().getFullYear());
-  const [goruntulemeSecenegi, setGoruntulemeSecenegi] = useState<'yillik' | 'aylik'>('yillik');
+  const [birimEnerjiSatisFiyati, setBirimEnerjiSatisFiyati] = useState<number>(0.85); // TL/kWh
 
   // Modal states
   const [importModalAcik, setImportModalAcik] = useState(false);
   const [silmeOnayModalAcik, setSilmeOnayModalAcik] = useState(false);
   const [silinecekVeriId, setSilinecekVeriId] = useState<string | null>(null);
+  const [topluSilmeModalAcik, setTopluSilmeModalAcik] = useState(false);
+  const [secilenVeriler, setSecilenVeriler] = useState<string[]>([]);
   const [detayModalAcik, setDetayModalAcik] = useState(false);
   const [secilenVeriDetay, setSecilenVeriDetay] = useState<UretimVerisi | null>(null);
 
@@ -374,6 +382,9 @@ export const UretimVerileri: React.FC = () => {
       return total + veri.gunlukUretim;
     }, 0);
 
+    // Gelir hesaplama
+    const toplamGelir = toplamGerceklesen * birimEnerjiSatisFiyati;
+
     // CO2 tasarrufu hesaplama
     const toplamCO2Tasarrufu = filtrelenmisVeriler.reduce((total, veri) => {
       return total + (veri.tasarrufEdilenCO2 || (veri.gunlukUretim * 0.5));
@@ -388,12 +399,13 @@ export const UretimVerileri: React.FC = () => {
       toplamHedef,
       toplamGerceklesen,
       basariOrani: toplamHedef > 0 ? (toplamGerceklesen / toplamHedef) * 100 : 0,
-      ortalamaBirimFiyat: 5.2,
+      toplamGelir,
+      ortalamaBirimFiyat: birimEnerjiSatisFiyati,
       aktifSantralSayisi: ilgiliSantraller.length,
       veriGunSayisi: uniqueTarihler.size,
       toplamCO2Tasarrufu
     };
-  }, [uretimVerileri, santraller, secilenSantral]);
+  }, [uretimVerileri, santraller, secilenSantral, birimEnerjiSatisFiyati]);
 
   // Aylık veri hesaplama
   const aylikVeriler = useMemo((): AylikVeri[] => {
@@ -419,6 +431,9 @@ export const UretimVerileri: React.FC = () => {
       // Gerçekleşen hesaplama
       const gerceklesen = ayVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
 
+      // Gelir hesaplama
+      const gelir = gerceklesen * birimEnerjiSatisFiyati;
+
       // CO2 tasarrufu hesaplama
       const co2Tasarrufu = ayVerileri.reduce((total, v) => 
         total + (v.tasarrufEdilenCO2 || (v.gunlukUretim * 0.5)), 0);
@@ -429,10 +444,11 @@ export const UretimVerileri: React.FC = () => {
         hedef,
         gerceklesen,
         basariOrani: hedef > 0 ? (gerceklesen / hedef) * 100 : 0,
+        gelir,
         co2Tasarrufu
       };
     });
-  }, [uretimVerileri, santraller, secilenSantral, secilenYil]);
+  }, [uretimVerileri, santraller, secilenSantral, secilenYil, birimEnerjiSatisFiyati]);
 
   // Event handlers
   const handleYenile = async () => {
@@ -459,6 +475,7 @@ export const UretimVerileri: React.FC = () => {
         'Hedef Üretim (kWh)': veri.hedef.toFixed(0),
         'Gerçekleşen Üretim (kWh)': veri.gerceklesen.toFixed(0),
         'Başarı Oranı (%)': veri.basariOrani.toFixed(1),
+        'Gelir (TL)': veri.gelir.toFixed(2),
         'CO2 Tasarrufu (kg)': veri.co2Tasarrufu.toFixed(1)
       }));
 
@@ -493,6 +510,48 @@ export const UretimVerileri: React.FC = () => {
     }
   };
 
+  const handleTopluSil = async () => {
+    if (!canDelete || secilenVeriler.length === 0) {
+      toast.error('Silmek için veri seçiniz');
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      
+      secilenVeriler.forEach(veriId => {
+        const veriRef = doc(db, 'uretimVerileri', veriId);
+        batch.delete(veriRef);
+      });
+
+      await batch.commit();
+      
+      toast.success(`${secilenVeriler.length} adet veri başarıyla silindi`);
+      setUretimVerileri(prev => prev.filter(veri => !secilenVeriler.includes(veri.id)));
+      setSecilenVeriler([]);
+      setTopluSilmeModalAcik(false);
+    } catch (error) {
+      console.error('Toplu silme hatası:', error);
+      toast.error('Veriler silinirken bir hata oluştu');
+    }
+  };
+
+  const handleVeriSecimDegistir = (veriId: string, secili: boolean) => {
+    if (secili) {
+      setSecilenVeriler(prev => [...prev, veriId]);
+    } else {
+      setSecilenVeriler(prev => prev.filter(id => id !== veriId));
+    }
+  };
+
+  const handleTumunuSec = () => {
+    if (secilenVeriler.length === uretimVerileri.length) {
+      setSecilenVeriler([]);
+    } else {
+      setSecilenVeriler(uretimVerileri.map(v => v.id));
+    }
+  };
+
   if (yukleniyor) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -506,8 +565,8 @@ export const UretimVerileri: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Üretim Performans Analizi</h1>
-            <p className="mt-1 text-sm text-gray-500">Santral üretim verilerini analiz edin</p>
+            <h1 className="text-2xl font-bold text-gray-900">Üretim Verileri ve Gelir Analizi</h1>
+            <p className="mt-1 text-sm text-gray-500">Santral üretim verilerini ve gelir hesaplarını analiz edin</p>
           </div>
         </div>
 
@@ -545,7 +604,7 @@ export const UretimVerileri: React.FC = () => {
               </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">Üretim Performans Analizi</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">Üretim Verileri ve Gelir Analizi</h1>
               <p className="text-gray-600">
                 {performansOzeti.aktifSantralSayisi} santral • {performansOzeti.veriGunSayisi} gün veri
               </p>
@@ -563,9 +622,9 @@ export const UretimVerileri: React.FC = () => {
               </div>
               <div className="text-center">
                 <div className="text-xl font-bold text-emerald-600">
-                  {(performansOzeti.toplamCO2Tasarrufu / 1000).toFixed(1)}t
+                  ₺{(performansOzeti.toplamGelir / 1000).toFixed(1)}K
                 </div>
-                <div className="text-xs text-gray-500">CO₂ Tasarrufu</div>
+                <div className="text-xs text-gray-500">Toplam Gelir</div>
               </div>
             </div>
           </div>
@@ -602,6 +661,21 @@ export const UretimVerileri: React.FC = () => {
             </select>
           </div>
 
+          {/* Birim Fiyat Ayarı */}
+          <div className="flex items-center space-x-2">
+            <DollarSign className="h-4 w-4 text-gray-500" />
+            <input
+              type="number"
+              value={birimEnerjiSatisFiyati}
+              onChange={(e) => setBirimEnerjiSatisFiyati(parseFloat(e.target.value) || 0)}
+              step="0.01"
+              min="0"
+              className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm w-20"
+              placeholder="0.85"
+            />
+            <span className="text-sm text-gray-500">TL/kWh</span>
+          </div>
+
           <div className="flex space-x-2 ml-auto">
             <button
               onClick={handleYenile}
@@ -634,20 +708,17 @@ export const UretimVerileri: React.FC = () => {
       </div>
 
       {/* Ana Metrik Kartları */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card decoration="top" decorationColor="emerald">
           <div className="flex items-center justify-between">
             <div>
               <Text className="text-sm font-medium text-gray-600">Yıllık Hedef</Text>
-              <Metric className="text-2xl font-bold text-gray-900">
+              <Metric className="text-xl font-bold text-gray-900">
                 {(performansOzeti.toplamHedef / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
               </Metric>
-              <Text className="text-xs text-gray-500 mt-1">
-                Santral yönetiminden
-              </Text>
             </div>
             <div className="p-3 bg-emerald-100 rounded-xl">
-              <Target className="h-8 w-8 text-emerald-600" />
+              <Target className="h-6 w-6 text-emerald-600" />
             </div>
           </div>
         </Card>
@@ -655,24 +726,27 @@ export const UretimVerileri: React.FC = () => {
         <Card decoration="top" decorationColor="teal">
           <div className="flex items-center justify-between">
             <div>
-              <Text className="text-sm font-medium text-gray-600">Gerçekleşen Üretim</Text>
-              <Metric className="text-2xl font-bold text-gray-900">
+              <Text className="text-sm font-medium text-gray-600">Gerçekleşen</Text>
+              <Metric className="text-xl font-bold text-gray-900">
                 {(performansOzeti.toplamGerceklesen / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
               </Metric>
-              <div className="flex items-center mt-1">
-                <Badge 
-                  color={
-                    performansOzeti.basariOrani >= 90 ? "emerald" : 
-                    performansOzeti.basariOrani >= 70 ? "amber" : "rose"
-                  }
-                  className="text-xs"
-                >
-                  %{performansOzeti.basariOrani.toFixed(1)}
-                </Badge>
-              </div>
             </div>
             <div className="p-3 bg-teal-100 rounded-xl">
-              <Activity className="h-8 w-8 text-teal-600" />
+              <Activity className="h-6 w-6 text-teal-600" />
+            </div>
+          </div>
+        </Card>
+
+        <Card decoration="top" decorationColor="amber">
+          <div className="flex items-center justify-between">
+            <div>
+              <Text className="text-sm font-medium text-gray-600">Toplam Gelir</Text>
+              <Metric className="text-xl font-bold text-gray-900">
+                ₺{performansOzeti.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+              </Metric>
+            </div>
+            <div className="p-3 bg-amber-100 rounded-xl">
+              <DollarSign className="h-6 w-6 text-amber-600" />
             </div>
           </div>
         </Card>
@@ -680,16 +754,13 @@ export const UretimVerileri: React.FC = () => {
         <Card decoration="top" decorationColor="blue">
           <div className="flex items-center justify-between">
             <div>
-              <Text className="text-sm font-medium text-gray-600">Toplam Kapasite</Text>
-              <Metric className="text-2xl font-bold text-gray-900">
-                {santraller.reduce((sum, s) => sum + (s.kapasite || 0), 0).toLocaleString('tr-TR')} kW
+              <Text className="text-sm font-medium text-gray-600">Başarı Oranı</Text>
+              <Metric className="text-xl font-bold text-gray-900">
+                %{performansOzeti.basariOrani.toFixed(1)}
               </Metric>
-              <Text className="text-xs text-gray-500 mt-1">
-                Kurulu güç
-              </Text>
             </div>
             <div className="p-3 bg-blue-100 rounded-xl">
-              <Zap className="h-8 w-8 text-blue-600" />
+              <TrendingUp className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </Card>
@@ -698,93 +769,23 @@ export const UretimVerileri: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <Text className="text-sm font-medium text-gray-600">CO₂ Tasarrufu</Text>
-              <Metric className="text-2xl font-bold text-gray-900">
-                {(performansOzeti.toplamCO2Tasarrufu / 1000).toFixed(1)} ton
+              <Metric className="text-xl font-bold text-gray-900">
+                {(performansOzeti.toplamCO2Tasarrufu / 1000).toFixed(1)}t
               </Metric>
-              <Text className="text-xs text-gray-500 mt-1">
-                Çevre katkısı
-              </Text>
             </div>
             <div className="p-3 bg-green-100 rounded-xl">
-              <Leaf className="h-8 w-8 text-green-600" />
+              <Leaf className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Ana Grafik Alanı */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Hedef vs Gerçekleşen Grafiği */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <Title>Aylık Hedef vs Gerçekleşen Üretim</Title>
-              <Text className="text-sm text-gray-500">Performans trend analizi</Text>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Badge 
-                color={performansOzeti.basariOrani >= 90 ? "emerald" : 
-                       performansOzeti.basariOrani >= 70 ? "amber" : "rose"}
-                className="text-xs"
-              >
-                %{performansOzeti.basariOrani.toFixed(1)}
-              </Badge>
-              <Badge color="blue" className="text-xs">
-                {secilenYil}
-              </Badge>
-            </div>
-          </div>
-          <AreaChart
-            className="mt-4 h-80"
-            data={aylikVeriler}
-            index="ay"
-            categories={["hedef", "gerceklesen"]}
-            colors={["cyan", "emerald"]}
-            valueFormatter={(value) => `${(value / 1000).toFixed(1)} MWh`}
-            showAnimation={true}
-            showGradient={true}
-            showLegend={true}
-            showGridLines={true}
-            showXAxis={true}
-            showYAxis={true}
-            enableLegendSlider={true}
-          />
-        </Card>
-
-        {/* CO2 Tasarrufu Grafiği */}
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <Title>Aylık CO₂ Tasarrufu</Title>
-              <Text className="text-sm text-gray-500">Çevresel etki analizi</Text>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Badge color="emerald" className="text-xs">
-                {(performansOzeti.toplamCO2Tasarrufu / 1000).toFixed(1)} ton
-              </Badge>
-            </div>
-          </div>
-          <BarChart
-            className="mt-4 h-80"
-            data={aylikVeriler}
-            index="ay"
-            categories={["co2Tasarrufu"]}
-            colors={["emerald"]}
-            valueFormatter={(value) => `${(value / 1000).toFixed(2)} ton`}
-            showAnimation={true}
-            showLegend={false}
-            showGridLines={true}
-            enableLegendSlider={false}
-          />
-        </Card>
-      </div>
-
-      {/* Performans Trend Analizi */}
+      {/* Ana Grafik - Aylık Hedef vs Gerçekleşen */}
       <Card>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <Title>Performans Trend Analizi</Title>
-            <Text className="text-sm text-gray-500">Aylık başarı oranları ve trendler</Text>
+            <Title>Aylık Hedef vs Gerçekleşen Üretim</Title>
+            <Text className="text-sm text-gray-500">Performans analizi ve gelir hesaplaması</Text>
           </div>
           <div className="flex items-center space-x-2">
             <Badge 
@@ -792,7 +793,7 @@ export const UretimVerileri: React.FC = () => {
                      performansOzeti.basariOrani >= 70 ? "amber" : "rose"}
               className="text-xs"
             >
-              Ortalama: %{performansOzeti.basariOrani.toFixed(1)}
+              %{performansOzeti.basariOrani.toFixed(1)}
             </Badge>
             <Badge color="blue" className="text-xs">
               {secilenYil}
@@ -800,130 +801,109 @@ export const UretimVerileri: React.FC = () => {
           </div>
         </div>
 
-        {/* Trend İstatistikleri */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-emerald-600 uppercase tracking-wide font-medium">En Yüksek</div>
-                <div className="text-lg font-bold text-emerald-900">
-                  %{Math.max(...aylikVeriler.map(v => v.basariOrani)).toFixed(1)}
-                </div>
-                <div className="text-xs text-emerald-600">
-                  {aylikVeriler.find(v => v.basariOrani === Math.max(...aylikVeriler.map(v => v.basariOrani)))?.ay}
-                </div>
+        <AreaChart
+          className="mt-4 h-96"
+          data={aylikVeriler}
+          index="ay"
+          categories={["hedef", "gerceklesen"]}
+          colors={["blue", "emerald"]}
+          valueFormatter={(value) => `${(value / 1000).toFixed(1)} MWh`}
+          showAnimation={true}
+          showGradient={true}
+          showLegend={true}
+          showGridLines={true}
+          showXAxis={true}
+          showYAxis={true}
+          enableLegendSlider={true}
+        />
+
+        {/* Gelir Özeti */}
+        <div className="mt-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-lg font-bold text-amber-900">
+                ₺{performansOzeti.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
               </div>
-              <TrendingUp className="h-6 w-6 text-emerald-600" />
+              <div className="text-xs text-amber-600">Toplam Gelir</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-amber-900">
+                ₺{(performansOzeti.toplamGelir / 12).toLocaleString('tr-TR', {maximumFractionDigits: 0})}
+              </div>
+              <div className="text-xs text-amber-600">Aylık Ortalama</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-amber-900">
+                ₺{birimEnerjiSatisFiyati.toFixed(2)}
+              </div>
+              <div className="text-xs text-amber-600">Birim Fiyat (TL/kWh)</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-amber-900">
+                ₺{performansOzeti.veriGunSayisi > 0 ? (performansOzeti.toplamGelir / performansOzeti.veriGunSayisi).toFixed(0) : '0'}
+              </div>
+              <div className="text-xs text-amber-600">Günlük Ortalama</div>
             </div>
           </div>
-
-          <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg p-4 border border-rose-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-rose-600 uppercase tracking-wide font-medium">En Düşük</div>
-                <div className="text-lg font-bold text-rose-900">
-                  %{Math.min(...aylikVeriler.map(v => v.basariOrani)).toFixed(1)}
-                </div>
-                <div className="text-xs text-rose-600">
-                  {aylikVeriler.find(v => v.basariOrani === Math.min(...aylikVeriler.map(v => v.basariOrani)))?.ay}
-                </div>
-              </div>
-              <TrendingDown className="h-6 w-6 text-rose-600" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-teal-600 uppercase tracking-wide font-medium">Standart Sapma</div>
-                <div className="text-lg font-bold text-teal-900">
-                  ±{(() => {
-                    const ortalama = aylikVeriler.reduce((sum, v) => sum + v.basariOrani, 0) / aylikVeriler.length;
-                    const varyans = aylikVeriler.reduce((sum, v) => sum + Math.pow(v.basariOrani - ortalama, 2), 0) / aylikVeriler.length;
-                    return Math.sqrt(varyans).toFixed(1);
-                  })()}%
-                </div>
-                <div className="text-xs text-teal-600">Tutarlılık</div>
-              </div>
-              <Activity className="h-6 w-6 text-teal-600" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs text-blue-600 uppercase tracking-wide font-medium">Trend Eğilimi</div>
-                <div className="text-lg font-bold text-blue-900">
-                  {(() => {
-                    const sonUcAy = aylikVeriler.slice(-3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
-                    const ilkUcAy = aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
-                    const trend = sonUcAy - ilkUcAy;
-                    return trend > 0 ? `+${trend.toFixed(1)}%` : `${trend.toFixed(1)}%`;
-                  })()}
-                </div>
-                <div className="text-xs text-blue-600">
-                  {(() => {
-                    const sonUcAy = aylikVeriler.slice(-3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
-                    const ilkUcAy = aylikVeriler.slice(0, 3).reduce((sum, v) => sum + v.basariOrani, 0) / 3;
-                    return sonUcAy > ilkUcAy ? 'Yükseliş' : 'Düşüş';
-                  })()}
-                </div>
-              </div>
-              <BarChart2 className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Trend Grafiği */}
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-200">
-          <LineChart
-            className="h-80"
-            data={aylikVeriler.map((veri, index) => ({
-              ay: veri.ay,
-              basariOrani: veri.basariOrani,
-              hareketliOrtalama: index >= 2 ? 
-                aylikVeriler.slice(Math.max(0, index - 2), index + 1)
-                  .reduce((sum, v) => sum + v.basariOrani, 0) / 3 : veri.basariOrani,
-              hedefCizgi: 90,
-              minimumEsik: 70
-            }))}
-            index="ay"
-            categories={["basariOrani", "hareketliOrtalama", "hedefCizgi", "minimumEsik"]}
-            colors={["rose", "amber", "emerald", "slate"]}
-            valueFormatter={(value) => `%${value.toFixed(1)}`}
-            showAnimation={true}
-            showLegend={true}
-            showGridLines={true}
-            connectNulls={false}
-            strokeWidth={3}
-          />
         </div>
       </Card>
 
       {/* Üretim Verilerini Listele */}
       <Card>
         <div className="flex items-center justify-between mb-6">
-          <Title>Son Üretim Verileri</Title>
-          <Text>{uretimVerileri.length} kayıt</Text>
+          <Title>Üretim Verileri Listesi</Title>
+          <div className="flex items-center space-x-3">
+            <Text>{uretimVerileri.length} kayıt</Text>
+            {canDelete && secilenVeriler.length > 0 && (
+              <button
+                onClick={() => setTopluSilmeModalAcik(true)}
+                className="inline-flex items-center px-3 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Seçilenleri Sil ({secilenVeriler.length})
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                {canDelete && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={secilenVeriler.length === uretimVerileri.length && uretimVerileri.length > 0}
+                      onChange={handleTumunuSec}
+                      className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Santral</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Üretim</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gelir</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Performans</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">CO₂ Tasarrufu</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {uretimVerileri.slice(0, 20).map((veri) => {
+              {uretimVerileri.slice(0, 50).map((veri) => {
                 const santral = santraller.find(s => s.id === veri.santralId);
+                const gelir = veri.gunlukUretim * birimEnerjiSatisFiyati;
                 return (
                   <tr key={veri.id} className="hover:bg-gray-50">
+                    {canDelete && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={secilenVeriler.includes(veri.id)}
+                          onChange={(e) => handleVeriSecimDegistir(veri.id, e.target.checked)}
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {format(veri.tarih.toDate(), 'dd MMM yyyy', { locale: tr })}
                     </td>
@@ -933,6 +913,9 @@ export const UretimVerileri: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                       {veri.gunlukUretim.toLocaleString('tr-TR', {maximumFractionDigits: 1})} kWh
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-600">
+                      ₺{gelir.toLocaleString('tr-TR', {maximumFractionDigits: 2})}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <Badge
                         color={veri.performansOrani >= 90 ? "emerald" : 
@@ -941,9 +924,6 @@ export const UretimVerileri: React.FC = () => {
                       >
                         %{veri.performansOrani.toFixed(1)}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                      {(veri.tasarrufEdilenCO2 || (veri.gunlukUretim * 0.5)).toFixed(1)} kg
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <div className="flex items-center justify-center space-x-2">
@@ -1007,6 +987,14 @@ export const UretimVerileri: React.FC = () => {
         />
       )}
 
+      {topluSilmeModalAcik && (
+        <SilmeOnayModal
+          onConfirm={handleTopluSil}
+          onCancel={() => setTopluSilmeModalAcik(false)}
+          mesaj={`${secilenVeriler.length} adet üretim verisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+        />
+      )}
+
       {/* Detay Modal */}
       {detayModalAcik && secilenVeriDetay && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1038,6 +1026,12 @@ export const UretimVerileri: React.FC = () => {
                 <label className="text-sm font-medium text-gray-600">Günlük Üretim</label>
                 <p className="text-sm text-gray-900">
                   {secilenVeriDetay.gunlukUretim.toLocaleString('tr-TR')} kWh
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600">Gelir</label>
+                <p className="text-sm font-bold text-emerald-600">
+                  ₺{(secilenVeriDetay.gunlukUretim * birimEnerjiSatisFiyati).toLocaleString('tr-TR', {maximumFractionDigits: 2})}
                 </p>
               </div>
               <div>
