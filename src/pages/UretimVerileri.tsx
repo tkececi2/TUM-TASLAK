@@ -265,19 +265,77 @@ export const UretimVerileri: React.FC = () => {
           return;
         }
 
-        const limitedSahaIds = sahaIds.slice(0, 10);
-        console.log('Sorgulanacak sahalar:', limitedSahaIds);
+        // Birden fazla santral ID'si varsa sırayla sorgula
+        const allSantraller: Santral[] = [];
+        
+        // 10'ar 10'ar grupla (Firestore 'in' operatörü limiti)
+        for (let i = 0; i < sahaIds.length; i += 10) {
+          const batch = sahaIds.slice(i, i + 10);
+          console.log(`Santral batch ${i/10 + 1} sorgulanıyor:`, batch);
+          
+          try {
+            const batchQuery = query(
+              collection(db, 'santraller'),
+              where('__name__', 'in', batch)
+            );
+            
+            const batchSnapshot = await getDocs(batchQuery);
+            const batchSantraller = batchSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as Santral[];
+            
+            allSantraller.push(...batchSantraller);
+            console.log(`Batch ${i/10 + 1} sonucu:`, batchSantraller.length, 'santral');
+          } catch (batchError) {
+            console.error(`Batch ${i/10 + 1} sorgu hatası:`, batchError);
+          }
+        }
 
-        try {
-          santralQuery = query(
-            collection(db, 'santraller'),
-            where('__name__', 'in', limitedSahaIds)
-          );
-        } catch (error) {
-          console.error('Müşteri santral sorgusu oluşturma hatası:', error);
-          setSantraller([]);
-          setYukleniyor(false);
-          return;
+        // Eğer hiç santral bulunamadıysa, companyId ve musteriId ile dene
+        if (allSantraller.length === 0) {
+          console.log('ID ile santral bulunamadı, müşteri ID ile deneniyor...');
+          try {
+            const musteriQuery = query(
+              collection(db, 'santraller'),
+              where('companyId', '==', kullanici.companyId),
+              where('musteriId', '==', kullanici.id)
+            );
+            
+            const musteriSnapshot = await getDocs(musteriQuery);
+            const musteriSantraller = musteriSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            })) as Santral[];
+            
+            allSantraller.push(...musteriSantraller);
+            console.log('Müşteri ID ile bulunan santraller:', musteriSantraller.length);
+          } catch (musteriError) {
+            console.error('Müşteri ID ile santral sorgu hatası:', musteriError);
+          }
+        }
+
+        setSantraller(allSantraller);
+        console.log('Toplam yüklenen santral sayısı:', allSantraller.length);
+        
+        // Santral detaylarını logla
+        allSantraller.forEach((santral, index) => {
+          console.log(`Santral ${index + 1}:`, {
+            id: santral.id,
+            ad: santral.ad,
+            kapasite: santral.kapasite,
+            yillikHedefUretim: santral.yillikHedefUretim,
+            aylikHedefler: santral.aylikHedefler,
+            hasTargets: !!(santral.yillikHedefUretim || santral.aylikHedefler)
+          });
+        });
+        
+        if (allSantraller.length === 0) {
+          console.warn('Müşteri için hiç santral bulunamadı!');
+          console.warn('Kontrol edilecek noktalar:');
+          console.warn('1. Müşteri sahalar/santraller doğru atanmış mı?');
+          console.warn('2. Santral ID\'leri doğru mu?');
+          console.warn('3. Firestore rules müşteri erişimine izin veriyor mu?');
         }
       } else {
         santralQuery = query(
@@ -285,16 +343,16 @@ export const UretimVerileri: React.FC = () => {
           where('companyId', '==', kullanici.companyId),
           orderBy('ad')
         );
+        
+        const snapshot = await getDocs(santralQuery);
+        const santralListesi = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Santral[];
+
+        setSantraller(santralListesi);
+        console.log('Santraller güncellendi:', santralListesi.length);
       }
-
-      const snapshot = await getDocs(santralQuery);
-      const santralListesi = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Santral[];
-
-      setSantraller(santralListesi);
-      console.log('Santraller güncellendi:', santralListesi.length);
     } catch (error) {
       console.error('Santral getirme hatası:', error);
       toast.error('Santraller yüklenirken bir hata oluştu');
@@ -464,17 +522,36 @@ export const UretimVerileri: React.FC = () => {
 
   // Performans analizi hesaplama
   const performansAnalizi = useMemo((): PerformansAnalizi => {
+    console.log('Performans analizi hesaplanıyor...');
+    console.log('Seçilen santral:', secilenSantral);
+    console.log('Mevcut santraller:', santraller.length);
+    console.log('Üretim verileri:', uretimVerileri.length);
+
     const secilenSantralData = secilenSantral !== 'tumu' 
       ? santraller.find(s => s.id === secilenSantral)
       : null;
+
+    console.log('Seçilen santral data:', secilenSantralData);
 
     const filtrelenmisVeriler = secilenSantral !== 'tumu'
       ? uretimVerileri.filter(v => v.santralId === secilenSantral)
       : uretimVerileri;
 
+    console.log('Filtrelenmiş veriler:', filtrelenmisVeriler.length);
+
     // Yıllık hedef ve gerçekleşme
     const yillikHedef = secilenSantralData?.yillikHedefUretim || 
       santraller.reduce((total, s) => total + (s.yillikHedefUretim || 0), 0);
+
+    console.log('Hesaplanan yıllık hedef:', yillikHedef);
+    
+    // Her santralın hedefini kontrol et
+    if (secilenSantral === 'tumu') {
+      console.log('Tüm santrallerin hedefleri:');
+      santraller.forEach(s => {
+        console.log(`- ${s.ad}: ${s.yillikHedefUretim || 0} kWh`);
+      });
+    }
 
     const toplamGerceklesen = filtrelenmisVeriler.reduce((total, v) => total + v.gunlukUretim, 0);
 
