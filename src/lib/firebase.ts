@@ -1,5 +1,5 @@
 import { initializeApp, getApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator, AuthError } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator, AuthError, sendEmailVerification } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED, query, collection, limit, getDocs } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
@@ -214,25 +214,30 @@ const checkConnection = async () => {
 
 export const createUserWithProfile = async (email: string, password: string, userData: any) => {
   try {
-    // Burada bağlantı kontrolü yapmanıza gerek yok, Firebase ağ hatalarını kendisi yönetecek
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
+    // E-posta doğrulama gönder
+    await sendEmailVerification(user);
+    
     const userProfile = {
       ...userData,
       id: user.uid,
       email: user.email,
+      emailVerified: false, // Başlangıçta doğrulanmamış
       olusturmaTarihi: new Date(),
       guncellenmeTarihi: new Date()
     };
 
     await setDoc(doc(db, 'kullanicilar', user.uid), userProfile);
-    authService.setCurrentUser(userProfile);
-
-    // Özel iddiaları almak için tokeni yenileyin
-    await user.getIdToken(true);
-
-    toast.success('Kullanıcı başarıyla oluşturuldu');
+    
+    // Kullanıcıyı hemen login etme - doğrulama bekle
+    toast.success('Hesap oluşturuldu! E-postanızı kontrol ederek hesabınızı doğrulayın.');
+    toast('E-posta doğrulama linkine tıkladıktan sonra tekrar giriş yapın.', { icon: 'ℹ️' });
+    
+    // Kullanıcıyı logout et
+    await auth.signOut();
+    
     return user;
   } catch (error: any) {
     if (error.code === 'auth/email-already-in-use') {
@@ -240,19 +245,26 @@ export const createUserWithProfile = async (email: string, password: string, use
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // E-posta doğrulanmış mı kontrol et
+        if (!user.emailVerified) {
+          await sendEmailVerification(user);
+          await auth.signOut();
+          toast.error('E-posta adresiniz doğrulanmamış. Yeni doğrulama e-postası gönderildi.');
+          throw new Error('Email not verified');
+        }
+
         const userProfile = {
           ...userData,
           id: user.uid,
           email: user.email,
+          emailVerified: true,
           guncellenmeTarihi: new Date()
         };
 
         await setDoc(doc(db, 'kullanicilar', user.uid), userProfile, { merge: true });
         authService.setCurrentUser(userProfile);
 
-        // Özel iddiaları almak için tokeni yenileyin
         await user.getIdToken(true);
-
         toast.success('Kullanıcı profili güncellendi');
         return user;
       } catch (signInError) {
@@ -267,15 +279,10 @@ export const createUserWithProfile = async (email: string, password: string, use
 
 export const signInUser = async (email: string, password: string) => {
   try {
-    // WebContainer ortamlarında bağlantı kontrolünü atlayın
-    // Firebase ağ hatalarını uygun şekilde yönetecektir
-
     let userCredential;
     try {
-      // İlk deneme - normal giriş
       userCredential = await signInWithEmailAndPassword(auth, email, password);
     } catch (initialError: any) {
-      // Firebase hata mesajlarını detaylı olarak günlüğe kaydet (toast mesajı göstermiyoruz)
       console.error('Firebase giriş hatası:', {
         code: initialError.code,
         message: initialError.message,
@@ -283,28 +290,44 @@ export const signInUser = async (email: string, password: string) => {
         stack: initialError.stack
       });
       
-      // Ağ hatası durumunda tekrar dene
       if (initialError.code === 'auth/network-request-failed') {
-        // Kısa bir bekleme sonrası tekrar dene
         await new Promise(resolve => setTimeout(resolve, 1000));
         userCredential = await signInWithEmailAndPassword(auth, email, password);
         console.log('Giriş yeniden deneme başarılı');
       } else {
-        // Diğer hataları yukarı ilet (toast göstermeden)
         throw initialError;
       }
     }
 
-    // En son özel iddiaları almak için token yenileme
-    await userCredential.user.getIdToken(true);
+    const user = userCredential.user;
+    
+    // E-posta doğrulama kontrolü
+    if (!user.emailVerified) {
+      await sendEmailVerification(user);
+      await auth.signOut();
+      toast.error('E-posta adresiniz doğrulanmamış! Yeni doğrulama e-postası gönderildi.');
+      toast('E-postanızdaki doğrulama linkine tıklayın ve tekrar giriş yapın.', { icon: 'ℹ️' });
+      throw new Error('Email not verified');
+    }
 
-    // Hata ayıklama için token ayrıntılarını günlüğe kaydedin
-    const idTokenResult = await userCredential.user.getIdTokenResult();
+    // E-posta doğrulandıysa, kullanıcı verisini güncelle
+    const userDocRef = doc(db, 'kullanicilar', user.uid);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      // E-posta doğrulama durumunu güncelle
+      if (!userData.emailVerified) {
+        await setDoc(userDocRef, { emailVerified: true }, { merge: true });
+      }
+    }
+
+    await user.getIdToken(true);
+    const idTokenResult = await user.getIdTokenResult();
     console.log('Giriş sonrası token iddiaları:', idTokenResult.claims);
 
-    return userCredential.user;
+    return user;
   } catch (error) {
-    // Sadece loglama yap, toast mesajı gösterme (AuthContext'te halledilecek)
     console.error('signInUser hatası:', error);
     throw error;
   }

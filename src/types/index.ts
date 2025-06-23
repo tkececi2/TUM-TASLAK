@@ -229,6 +229,7 @@ export interface Kullanici {
   id: string;
   ad: string;
   email: string;
+  emailVerified?: boolean; // E-posta doğrulama durumu
   telefon?: string;
   rol: KullaniciRolu;
   fotoURL?: string;
