@@ -10,16 +10,16 @@ import { ArizaDetay } from './pages/ArizaDetay';
 import { Ekip } from './pages/Ekip';
 import { Sahalar } from './pages/Sahalar';
 import { StokKontrol } from './pages/StokKontrol';
-import { Istatistikler } from './pages/Istatistikler';
-import { Performans } from './pages/Performans';
+
+
 import { Ayarlar } from './pages/Ayarlar';
 import { Musteriler } from './pages/Musteriler';
 import { NobetKontrol } from './pages/NobetKontrol';
 import { YapilanIsler } from './pages/YapilanIsler';
 import { ElektrikKesintileri } from './pages/ElektrikKesintileri';
 import { InvertorKontrol } from './pages/InvertorKontrol';
-import { MekanikBakim } from './pages/MekanikBakim';
-import { ElektrikBakim } from './pages/ElektrikBakim';
+import { MekanikBakimPage } from './pages/MekanikBakim';
+import { ElektrikBakimPage } from './pages/ElektrikBakimPage';
 import { GesYonetimi } from './pages/GesYonetimi';
 import { GesSahalari } from './pages/GesSahalari';
 import { UretimVerileri } from './pages/UretimVerileri';
@@ -29,7 +29,7 @@ import { CompanySettings } from './pages/CompanySettings';
 import { SuperAdminDashboard } from './pages/SuperAdminDashboard';
 import { InviteUser } from './pages/InviteUser';
 import HomePage from './pages/HomePage';
-import { RaporYonetimi } from './pages/RaporYonetimi';
+import { VardiyaBildirimler } from './pages/VardiyaBildirimler';
 import { RaporTemplate } from './pages/RaporTemplate';
 
 function App() {
@@ -57,9 +57,9 @@ function App() {
         <Route path="/sahalar" element={<Sahalar />} />
         <Route path="/stok-kontrol" element={<StokKontrol />} />
         <Route path="/ekip" element={<Ekip />} />
-        <Route path="/istatistikler" element={<Istatistikler />} />
-        <Route path="/performans" element={<Performans />} />
-        <Route path="/rapor-yonetimi" element={<RaporYonetimi />} />
+
+
+
         <Route path="/rapor/:raporTuru" element={<RaporTemplate />} />
         <Route path="/ayarlar" element={<Ayarlar />} />
         <Route path="/musteriler" element={<Musteriler />} />
@@ -67,11 +67,12 @@ function App() {
         <Route path="/yapilan-isler" element={<YapilanIsler />} />
         <Route path="/elektrik-kesintileri" element={<ElektrikKesintileri />} />
         <Route path="/invertor-kontrol" element={<InvertorKontrol />} />
-        <Route path="/mekanik-bakim" element={<MekanikBakim />} />
-        <Route path="/elektrik-bakim" element={<ElektrikBakim />} />
+        <Route path="/mekanik-bakim" element={<MekanikBakimPage />} />
+        <Route path="/elektrik-bakim" element={<ElektrikBakimPage />} />
         <Route path="/ges-yonetimi" element={<GesYonetimi />} />
         <Route path="/ges-sahalari" element={<GesSahalari />} />
         <Route path="/uretim-verileri" element={<UretimVerileri />} />
+        <Route path="/vardiya-bildirimleri" element={<VardiyaBildirimler />} />
         <Route path="/company-settings" element={<CompanySettings />} />
         <Route path="/admin" element={<SuperAdminDashboard />} />
       </Route>

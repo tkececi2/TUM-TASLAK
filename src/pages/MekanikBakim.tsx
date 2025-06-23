@@ -1,8 +1,8 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useMenuNotifications } from '../contexts/MenuNotificationContext';
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
@@ -10,13 +10,16 @@ import {
   LayoutGrid, 
   List,
   Building,
-  Calendar,
+  Calendar as CalendarIcon,
   CheckCircle,
   AlertTriangle,
   Search,
   Wrench,
   Settings,
-  TrendingUp
+  TrendingUp,
+  Filter,
+  Edit2,
+  Eye
 } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { MekanikBakimForm } from '../components/MekanikBakimForm';
@@ -26,20 +29,27 @@ import { MekanikBakimDetay } from '../components/MekanikBakimDetay';
 import { StatsCard } from '../components/StatsCard';
 import { SearchInput } from '../components/SearchInput';
 import { SilmeOnayModal } from '../components/SilmeOnayModal';
-import type { MekanikBakim } from '../types';
+import type { MekanikBakim, Saha } from '../types';
 import toast from 'react-hot-toast';
 
-export const MekanikBakim: React.FC = () => {
+export const MekanikBakimPage: React.FC = () => {
   const { kullanici } = useAuth();
+  const { markPageAsSeen } = useMenuNotifications();
   const [bakimlar, setBakimlar] = useState<MekanikBakim[]>([]);
+  const [originalBakimlar, setOriginalBakimlar] = useState<MekanikBakim[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
-  const [formAcik, setFormAcik] = useState(false);
+  
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [bakimToEdit, setBakimToEdit] = useState<MekanikBakim | null>(null);
+  
   const [secilenSaha, setSecilenSaha] = useState<string>('');
   const [secilenAy, setSecilenAy] = useState<string>(format(new Date(), 'yyyy-MM'));
   const [gorunumTipi, setGorunumTipi] = useState<'kart' | 'liste'>('kart');
-  const [seciliBakim, setSeciliBakim] = useState<MekanikBakim | null>(null);
-  const [silinecekBakim, setSilinecekBakim] = useState<string | null>(null);
-  const [sahalar, setSahalar] = useState<Array<{id: string, ad: string}>>([]);
+  
+  const [detayModalBakim, setDetayModalBakim] = useState<MekanikBakim | null>(null);
+  const [silinecekBakimId, setSilinecekBakimId] = useState<string | null>(null);
+  
+  const [sahalar, setSahalar] = useState<Pick<Saha, 'id' | 'ad'>[]>([]);
   const [aramaMetni, setAramaMetni] = useState('');
 
   const [istatistikler, setIstatistikler] = useState({
@@ -49,424 +59,406 @@ export const MekanikBakim: React.FC = () => {
     kontrolOrani: 0
   });
 
-  // Yetki kontrolleri
-  const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
-  const canDelete = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
+  const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
+  const canDelete = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
+  const canEdit = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
 
-  useEffect(() => {
-    const sahalariGetir = async () => {
-      if (!kullanici) return;
-
-      try {
-        let sahaQuery;
-        if (kullanici.rol === 'musteri' && kullanici.sahalar) {
-          sahaQuery = query(
-            collection(db, 'sahalar'),
-            where('__name__', 'in', kullanici.sahalar)
-          );
-        } else {
-          sahaQuery = query(
-            collection(db, 'sahalar'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('ad')
-          );
-        }
-        
-        const sahaSnapshot = await getDocs(sahaQuery);
-        const sahaListesi = sahaSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ad: doc.data().ad
-        }));
-        setSahalar(sahaListesi);
-      } catch (error) {
-        console.error('Sahalar getirilemedi:', error);
-        toast.error('Sahalar yüklenirken bir hata oluştu');
+  const getSahalar = useCallback(async () => {
+    if (!kullanici || !kullanici.companyId) return;
+    try {
+      let sahaQuery;
+      if (kullanici.rol === 'musteri' && kullanici.sahalar && Array.isArray(kullanici.sahalar) && kullanici.sahalar.length > 0) {
+        sahaQuery = query(
+          collection(db, 'sahalar'),
+          where('__name__', 'in', kullanici.sahalar)
+        );
+      } else {
+        sahaQuery = query(
+          collection(db, 'sahalar'),
+          where('companyId', '==', kullanici.companyId),
+          orderBy('ad')
+        );
       }
-    };
+      const sahaSnapshot = await getDocs(sahaQuery);
+      const sahaListesi = sahaSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ad: doc.data().ad as string
+      }));
+      setSahalar(sahaListesi);
+    } catch (error) {
+      console.error('Sahalar getirilemedi:', error);
+      toast.error('Sahalar yüklenirken bir hata oluştu.');
+    }
+  }, [kullanici]);
 
-    sahalariGetir();
+  const getBakimlar = useCallback(async () => {
+    if (!kullanici?.companyId) return;
+    setYukleniyor(true);
+    try {
+      let q = query(collection(db, 'mekanikBakimlar'), where('companyId', '==', kullanici.companyId));
+
+      if (kullanici.rol === 'musteri' && kullanici.sahalar && Array.isArray(kullanici.sahalar)) {
+        if (kullanici.sahalar.length === 0) {
+          setOriginalBakimlar([]);
+          setBakimlar([]);
+          setYukleniyor(false);
+          return;
+        }
+        q = query(q, where('sahaId', 'in', kullanici.sahalar));
+      }
+      
+      const snapshot = await getDocs(q);
+      let veriler = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as MekanikBakim[];
+      
+      setOriginalBakimlar(veriler); // Filtreleme için orijinal veriyi sakla
+      // İstatistikleri ve filtrelemeyi burada uygula (aşağıdaki useEffect'ten taşınacak)
+
+    } catch (error) {
+      console.error('Bakımlar getirilemedi:', error);
+      toast.error('Bakımlar yüklenirken bir hata oluştu.');
+      setOriginalBakimlar([]);
+      setBakimlar([]);
+    } finally {
+      setYukleniyor(false);
+    }
   }, [kullanici]);
 
   useEffect(() => {
-    const bakimlariGetir = async () => {
-      if (!kullanici?.companyId) return;
+    // Sayfa görüldü olarak işaretle
+    markPageAsSeen('mekanikBakim');
+    
+    getSahalar();
+    getBakimlar();
+  }, [getSahalar, getBakimlar]);
+  
+  useEffect(() => {
+    // Bu useEffect orijinalBakimlar, secilenSaha, secilenAy, aramaMetni değiştiğinde çalışacak
+    // ve bakimlar state'ini güncelleyecek.
+    setYukleniyor(true);
+    let filtrelenmis = [...originalBakimlar];
 
-      try {
-        setYukleniyor(true);
+    // 1. Saha filtresi
+    if (secilenSaha) {
+      filtrelenmis = filtrelenmis.filter(bakim => bakim.sahaId === secilenSaha);
+    }
 
-        let bakimQuery;
-        if (kullanici.rol === 'musteri' && kullanici.sahalar) {
-          if (secilenSaha) {
-            if (!kullanici.sahalar.includes(secilenSaha)) {
-              setBakimlar([]);
-              setYukleniyor(false);
-              return;
-            }
-            bakimQuery = query(
-              collection(db, 'mekanikBakimlar'),
-              where('sahaId', '==', secilenSaha),
-              where('companyId', '==', kullanici.companyId)
-            );
-          } else {
-            bakimQuery = query(
-              collection(db, 'mekanikBakimlar'),
-              where('sahaId', 'in', kullanici.sahalar),
-              where('companyId', '==', kullanici.companyId)
-            );
-          }
-        } else if (secilenSaha) {
-          bakimQuery = query(
-            collection(db, 'mekanikBakimlar'),
-            where('sahaId', '==', secilenSaha),
-            where('companyId', '==', kullanici.companyId)
-          );
-        } else {
-          bakimQuery = query(
-            collection(db, 'mekanikBakimlar'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('tarih', 'desc')
-          );
-        }
-
-        const snapshot = await getDocs(bakimQuery);
-        let bakimVerileri = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as MekanikBakim[];
-
-        const ayBaslangic = startOfMonth(parseISO(secilenAy + '-01'));
-        const ayBitis = endOfMonth(parseISO(secilenAy + '-01'));
-
-        // Tarih filtresi uygula
-        bakimVerileri = bakimVerileri.filter(bakim => {
+    // 2. Ay/Yıl filtresi
+    if (secilenAy) {
+      const ayBaslangic = startOfMonth(parseISO(secilenAy + '-01'));
+      const ayBitis = endOfMonth(parseISO(secilenAy + '-01'));
+      filtrelenmis = filtrelenmis.filter(bakim => {
+        if (bakim.tarih && bakim.tarih.toDate) { // Timestamp kontrolü
           const bakimTarihi = bakim.tarih.toDate();
           return bakimTarihi >= ayBaslangic && bakimTarihi <= ayBitis;
-        });
-        
-        setBakimlar(bakimVerileri);
+        }
+        return false;
+      });
+    }
+    
+    // 3. Arama metni filtresi
+    if (aramaMetni) {
+      const aramaKucuk = aramaMetni.toLowerCase();
+      filtrelenmis = filtrelenmis.filter(bakim => {
+        const saha = sahalar.find(s => s.id === bakim.sahaId);
+        return (
+          (saha?.ad.toLowerCase().includes(aramaKucuk)) ||
+          (bakim.kontrolEden.ad.toLowerCase().includes(aramaKucuk)) ||
+          (bakim.genelNotlar && bakim.genelNotlar.toLowerCase().includes(aramaKucuk))
+        );
+      });
+    }
+    
+    // Tarihe göre sırala (en yeni en üstte)
+    filtrelenmis.sort((a, b) => {
+        const dateA = a.tarih?.toDate ? a.tarih.toDate().getTime() : 0;
+        const dateB = b.tarih?.toDate ? b.tarih.toDate().getTime() : 0;
+        return dateB - dateA;
+    });
 
-        // İstatistikleri hesapla
-        const sorunluBakimSayisi = bakimVerileri.filter(bakim => 
-          Object.values(bakim.durumlar).some(kategori => 
-            Object.values(kategori).some(durum => durum === false)
-          )
-        ).length;
+    setBakimlar(filtrelenmis);
 
-        setIstatistikler({
-          toplamBakim: bakimVerileri.length,
-          sorunluBakim: sorunluBakimSayisi,
-          sorunsuzBakim: bakimVerileri.length - sorunluBakimSayisi,
-          kontrolOrani: bakimVerileri.length > 0 
-            ? ((bakimVerileri.length - sorunluBakimSayisi) / bakimVerileri.length) * 100 
-            : 0
-        });
+    // İstatistikleri hesapla
+    const sorunluBakimSayisi = filtrelenmis.filter(bakim => 
+      bakim.durumlar && typeof bakim.durumlar === 'object' &&
+      Object.keys(bakim.durumlar)
+        .filter(key => !key.endsWith('Aciklamalar')) // Sadece durumları içeren anahtarları al
+        .some(kategoriKey => {
+            const kategori = bakim.durumlar[kategoriKey as keyof MekanikBakim['durumlar']];
+            return typeof kategori === 'object' && kategori !== null && Object.values(kategori).some(durum => durum === false);
+        })
+    ).length;
+    
+    const toplamFiltreli = filtrelenmis.length;
+    const sorunsuzSayisi = toplamFiltreli - sorunluBakimSayisi;
 
-      } catch (error) {
-        console.error('Bakımlar getirilemedi:', error);
-        toast.error('Bakımlar yüklenirken bir hata oluştu');
-      } finally {
-        setYukleniyor(false);
-      }
-    };
+    setIstatistikler({
+      toplamBakim: toplamFiltreli,
+      sorunluBakim: sorunluBakimSayisi,
+      sorunsuzBakim: sorunsuzSayisi,
+      kontrolOrani: toplamFiltreli > 0 ? (sorunsuzSayisi / toplamFiltreli) * 100 : 0
+    });
+    setYukleniyor(false);
 
-    bakimlariGetir();
-  }, [kullanici, secilenSaha, secilenAy]);
+  }, [originalBakimlar, secilenSaha, secilenAy, aramaMetni, sahalar]);
+
+
+  const handleOpenAddForm = () => {
+    setBakimToEdit(null);
+    setIsFormOpen(true);
+  };
+
+  const handleOpenEditForm = (bakim: MekanikBakim) => {
+    setBakimToEdit(bakim);
+    setIsFormOpen(true);
+  };
+
+  const handleFormSuccess = () => {
+    getBakimlar(); // Veriyi yeniden çek
+    // Form zaten kendi içinde onClose ile kapanacak, burada ek bir şeye gerek yok.
+    // Ancak, onSuccess'ten sonra modalın kapandığından emin olmak için
+    setIsFormOpen(false);
+    setBakimToEdit(null);
+  };
+  
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setBakimToEdit(null);
+  }
 
   const handleBakimSil = async (id: string) => {
-    if (!kullanici) {
-      toast.error('Oturum açmanız gerekiyor');
+    if (!kullanici || !canDelete) {
+      toast.error('Bu işlem için yetkiniz yok.');
       return;
     }
-
-    if (!canDelete) {
-      toast.error('Bu işlem için yetkiniz yok');
-      return;
-    }
-
+    setYukleniyor(true);
     try {
-      setYukleniyor(true);
       const bakimRef = doc(db, 'mekanikBakimlar', id);
-      
-      // Önce bakım kaydının var olduğunu kontrol et
       const bakimDoc = await getDoc(bakimRef);
-      if (!bakimDoc.exists()) {
-        toast.error('Bakım kaydı bulunamadı');
-        return;
-      }
 
-      // Şirket kontrolü
-      const bakimData = bakimDoc.data();
-      if (bakimData.companyId !== kullanici.companyId) {
-        toast.error('Bu bakım kaydını silmek için yetkiniz yok');
+      if (!bakimDoc.exists() || bakimDoc.data()?.companyId !== kullanici.companyId) {
+        toast.error('Bakım kaydı bulunamadı veya silme yetkiniz yok.');
+        setSilinecekBakimId(null);
+        setYukleniyor(false);
         return;
       }
       
-      // Bakım kaydını sil
       await deleteDoc(bakimRef);
-      
-      toast.success('Bakım kaydı başarıyla silindi');
-      setSilinecekBakim(null);
-      setBakimlar(prev => prev.filter(bakim => bakim.id !== id));
+      toast.success('Bakım kaydı başarıyla silindi.');
+      setSilinecekBakimId(null);
+      getBakimlar(); // Veriyi yeniden yükle
     } catch (error) {
       console.error('Bakım silme hatası:', error);
-      toast.error('Bakım silinirken bir hata oluştu');
+      toast.error('Bakım silinirken bir hata oluştu.');
     } finally {
       setYukleniyor(false);
     }
   };
 
-  const filtrelenmisVeriler = bakimlar.filter(bakim => {
-    if (!aramaMetni) return true;
-    
-    const aramaMetniKucuk = aramaMetni.toLowerCase();
-    const sahaAdi = sahalar.find(s => s.id === bakim.sahaId)?.ad.toLowerCase() || '';
-    const kontrolEdenAdi = bakim.kontrolEden.ad.toLowerCase();
-    
+  if (!kullanici) {
     return (
-      sahaAdi.includes(aramaMetniKucuk) ||
-      kontrolEdenAdi.includes(aramaMetniKucuk) ||
-      (bakim.genelNotlar && bakim.genelNotlar.toLowerCase().includes(aramaMetniKucuk))
-    );
-  });
-
-  if (yukleniyor) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="flex justify-center items-center min-h-[calc(100vh-200px)]">
         <LoadingSpinner size="lg" />
+        <p className="ml-4 text-slate-600">Kullanıcı bilgileri yükleniyor...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
-      {/* Header Section */}
-      <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-slate-100 p-4 md:p-6">
+      <div className="w-full space-y-6">
+        {/* Header */}
+        <header className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
-                <Wrench className="h-10 w-10 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">Mekanik Bakım Kontrolleri</h1>
-                <p className="text-yellow-100 mt-2">
-                  {kullanici?.rol === 'musteri' 
-                    ? 'Size ait sahaların bakım kayıtları'
-                    : `Toplam ${filtrelenmisVeriler.length} bakım kaydı`}
-                </p>
-              </div>
+            <div className="mb-4 md:mb-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+                Mekanik Bakım Kayıtları
+              </h1>
+              <p className="text-sm text-slate-600 mt-1">
+                {secilenSaha ? sahalar.find(s => s.id === secilenSaha)?.ad || 'Seçili Saha' : 'Tüm Sahalar'} ({format(parseISO(secilenAy + '-01'), 'MMMM yyyy', { locale: tr })})
+              </p>
             </div>
-            {canAdd && (
-              <div className="mt-6 md:mt-0">
+            <div className="flex items-center space-x-2">
+              {canAdd && (
                 <button
-                  onClick={() => setFormAcik(true)}
-                  className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-lg text-sm font-medium text-yellow-700 bg-white hover:bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-200 hover:scale-105"
+                  onClick={handleOpenAddForm}
+                  className="flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Yeni Bakım Kaydı
+                  <Plus size={18} className="mr-2" />
+                  Yeni Bakım Ekle
                 </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Toplam Bakım</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{istatistikler.toplamBakim}</p>
-                <p className="text-xs text-gray-500 mt-1">Kayıtlı bakım sayısı</p>
-              </div>
-              <div className="bg-yellow-100 rounded-xl p-3">
-                <Wrench className="h-6 w-6 text-yellow-600" />
-              </div>
+              )}
             </div>
           </div>
+        </header>
 
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Sorunlu Bakım</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{istatistikler.sorunluBakim}</p>
-                <p className="text-xs text-gray-500 mt-1">Müdahale gereken</p>
-              </div>
-              <div className="bg-red-100 rounded-xl p-3">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Sorunsuz Bakım</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{istatistikler.sorunsuzBakim}</p>
-                <p className="text-xs text-gray-500 mt-1">Başarılı kontrollar</p>
-              </div>
-              <div className="bg-green-100 rounded-xl p-3">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Başarı Oranı</p>
-                <p className="text-3xl font-bold text-blue-600 mt-2">%{istatistikler.kontrolOrani.toFixed(1)}</p>
-                <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${Math.min(istatistikler.kontrolOrani, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-              <div className="bg-blue-100 rounded-xl p-3">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {/* Controls */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8">
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1">
-              <SearchInput
-                value={aramaMetni}
-                onChange={setAramaMetni}
-                placeholder="Bakım kaydı ara..."
-              />
-            </div>
-            <div className="flex flex-wrap gap-4">
+        {/* Filters */}
+        <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div>
+              <label htmlFor="sahaFiltre" className="block text-xs font-medium text-gray-700 mb-1">Saha</label>
               <select
+                id="sahaFiltre"
                 value={secilenSaha}
                 onChange={(e) => setSecilenSaha(e.target.value)}
-                className="rounded-xl border-gray-200 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 transition-all duration-200"
+                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               >
                 <option value="">Tüm Sahalar</option>
                 {sahalar.map(saha => (
                   <option key={saha.id} value={saha.id}>{saha.ad}</option>
                 ))}
               </select>
+            </div>
 
+            <div>
+              <label htmlFor="ayFiltre" className="block text-xs font-medium text-gray-700 mb-1">Ay/Yıl</label>
               <input
                 type="month"
+                id="ayFiltre"
                 value={secilenAy}
                 onChange={(e) => setSecilenAy(e.target.value)}
-                className="rounded-xl border-gray-200 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 transition-all duration-200"
+                className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
+            </div>
 
-              <div className="flex rounded-xl shadow-sm overflow-hidden">
+            <div>
+              <label htmlFor="arama" className="block text-xs font-medium text-gray-700 mb-1">Ara (Saha, Kontrol Eden, Not...)</label>
+              <SearchInput
+                value={aramaMetni}
+                onChange={(value: string) => setAramaMetni(value)}
+                placeholder="Bakımlarda ara..."
+              />
+            </div>
+            
+            <div className="flex items-center justify-end space-x-1 bg-gray-100 p-0.5 rounded-lg">
+              {[
+                { view: 'liste', icon: List, label: 'Liste' },
+                { view: 'kart', icon: LayoutGrid, label: 'Kart' },
+              ].map((item) => (
                 <button
-                  onClick={() => setGorunumTipi('kart')}
-                  className={`px-4 py-2 text-sm font-medium border transition-all duration-200 ${
-                    gorunumTipi === 'kart'
-                      ? 'bg-yellow-50 text-yellow-700 border-yellow-500'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  key={item.view}
+                  onClick={() => setGorunumTipi(item.view as 'kart' | 'liste')}
+                  title={item.label}
+                  className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    gorunumTipi === item.view 
+                      ? 'bg-white text-blue-600 shadow-sm' 
+                      : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
                   }`}
                 >
-                  <LayoutGrid className="h-5 w-5" />
+                  <item.icon size={16} className="mx-auto"/>
+                  <span className="sr-only">{item.label}</span>
                 </button>
-                <button
-                  onClick={() => setGorunumTipi('liste')}
-                  className={`px-4 py-2 text-sm font-medium border-t border-b border-r transition-all duration-200 ${
-                    gorunumTipi === 'liste'
-                      ? 'bg-yellow-50 text-yellow-700 border-yellow-500'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <List className="h-5 w-5" />
-                </button>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatsCard 
+            title="Toplam Bakım" 
+            value={istatistikler.toplamBakim.toString()} 
+            icon={Wrench}
+            color="blue"
+          />
+          <StatsCard 
+            title="Sorunlu Bakım" 
+            value={istatistikler.sorunluBakim.toString()} 
+            icon={AlertTriangle}
+            color="red"
+          />
+          <StatsCard 
+            title="Sorunsuz Bakım" 
+            value={istatistikler.sorunsuzBakim.toString()} 
+            icon={CheckCircle}
+            color="green"
+          />
+          <StatsCard 
+            title="Genel Kontrol Oranı" 
+            value={`${istatistikler.kontrolOrani.toFixed(1)}%`}
+            icon={TrendingUp}
+            color="blue"
+          />
+        </div>
+        
         {/* Content Area */}
-        {gorunumTipi === 'liste' ? (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-            <MekanikBakimListesi
-              bakimlar={filtrelenmisVeriler}
-              sahalar={sahalar}
-              onBakimTikla={(bakim) => setSeciliBakim(bakim)}
-              onBakimSil={canDelete ? (id) => setSilinecekBakim(id) : undefined}
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtrelenmisVeriler.map((bakim) => (
-              <div key={bakim.id} className="relative">
-                <MekanikBakimKart
-                  bakim={bakim}
-                  sahaAdi={sahalar.find(s => s.id === bakim.sahaId)?.ad || 'Bilinmeyen Saha'}
-                  onClick={() => setSeciliBakim(bakim)}
-                />
-                {canDelete && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSilinecekBakim(bakim.id);
-                    }}
-                    className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors duration-200 z-10"
-                  >
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {filtrelenmisVeriler.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-12 text-center">
-            <Wrench className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Bakım kaydı bulunamadı</h3>
-            <p className="text-gray-500 mb-6">Seçilen kriterlere uygun bakım kaydı bulunmuyor.</p>
+        {yukleniyor && bakimlar.length === 0 ? (
+           <div className="flex justify-center items-center min-h-[300px]">
+             <LoadingSpinner size="lg" />
+             <p className="ml-3 text-slate-500">Bakım kayıtları yükleniyor...</p>
+           </div>
+        ) : !yukleniyor && bakimlar.length === 0 ? (
+          <div className="text-center py-10 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <Filter size={48} className="mx-auto text-gray-300 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">Kayıt Bulunamadı</h3>
+            <p className="text-sm text-gray-500">Seçili filtrelere uygun mekanik bakım kaydı bulunamadı.</p>
             {canAdd && (
-              <button
-                onClick={() => setFormAcik(true)}
-                className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 transition-all duration-200"
+               <button
+                  onClick={handleOpenAddForm}
+                  className="mt-6 flex items-center mx-auto px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
               >
-                <Plus className="h-5 w-5 mr-2" />
-                İlk Bakım Kaydını Oluştur
+                  <Plus size={18} className="mr-2" />
+                  İlk Bakım Kaydını Ekle
               </button>
             )}
           </div>
+        ) : gorunumTipi === 'kart' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {bakimlar.map(bakim => (
+              <MekanikBakimKart 
+                key={bakim.id} 
+                bakim={bakim} 
+                sahaAdi={sahalar.find(s => s.id === bakim.sahaId)?.ad || 'Bilinmeyen Saha'}
+                onDeleteClick={() => setSilinecekBakimId(bakim.id)}
+                onEditClick={() => handleOpenEditForm(bakim)}
+                onViewDetailsClick={() => setDetayModalBakim(bakim)}
+                canEdit={canEdit}
+                canDelete={canDelete}
+              />
+            ))}
+          </div>
+        ) : (
+          <MekanikBakimListesi 
+            bakimlar={bakimlar} 
+            sahalar={sahalar}
+            onDeleteClick={(id: string) => setSilinecekBakimId(id)}
+            onEditClick={handleOpenEditForm}
+            onViewDetailsClick={setDetayModalBakim}
+            canEdit={canEdit}
+            canDelete={canDelete}
+          />
+        )}
+
+        {/* Modals */}
+        {isFormOpen && (
+          <MekanikBakimForm
+            onClose={handleCloseForm}
+            sahalar={sahalar}
+            bakimToEdit={bakimToEdit}
+            mode={bakimToEdit ? 'edit' : 'add'}
+            onSuccess={handleFormSuccess}
+          />
+        )}
+
+        {silinecekBakimId && (
+          <SilmeOnayModal
+            baslik="Bakım Kaydını Sil"
+            mesaj="Bu mekanik bakım kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+            onConfirm={() => handleBakimSil(silinecekBakimId)}
+            onCancel={() => setSilinecekBakimId(null)}
+          />
+        )}
+
+        {detayModalBakim && (
+          <MekanikBakimDetay
+            bakim={detayModalBakim}
+            sahaAdi={sahalar.find(s => s.id === detayModalBakim.sahaId)?.ad || 'Bilinmeyen Saha'}
+            onClose={() => setDetayModalBakim(null)}
+          />
         )}
       </div>
-
-      {/* Modals */}
-      {formAcik && (
-        <MekanikBakimForm
-          onClose={() => setFormAcik(false)}
-          sahalar={sahalar}
-        />
-      )}
-
-      {seciliBakim && (
-        <MekanikBakimDetay
-          bakim={seciliBakim}
-          sahaAdi={sahalar.find(s => s.id === seciliBakim.sahaId)?.ad || 'Bilinmeyen Saha'}
-          onClose={() => setSeciliBakim(null)}
-        />
-      )}
-
-      {silinecekBakim && (
-        <SilmeOnayModal
-          onConfirm={() => handleBakimSil(silinecekBakim)}
-          onCancel={() => setSilinecekBakim(null)}
-          mesaj="Bu bakım kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
-        />
-      )}
     </div>
   );
 };

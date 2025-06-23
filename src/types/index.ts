@@ -30,6 +30,7 @@ export interface ElektrikBakim {
   };
   genelNotlar?: string;
   olusturmaTarihi: any; // Timestamp
+  guncellenmeTarihi?: any; // Timestamp - Eklendi
   companyId: string; // Şirket ID'si
 }
 
@@ -158,6 +159,7 @@ export interface InvertorKontrol {
     rol: string;
   };
   olusturmaTarihi: any; // Timestamp
+  guncellenmeTarihi?: any; // Timestamp - Eklendi
   companyId: string; // Şirket ID'si
 }
 
@@ -265,6 +267,10 @@ export interface Company {
   website?: string;
   createdAt: any; // Timestamp
   createdBy: string; // User ID
+  isActive?: boolean; // Şirket aktif mi? (Abonelik durumu)
+  subscriptionStatus?: 'active' | 'expired' | 'cancelled'; // Abonelik durumu
+  lastPaymentDate?: any; // Timestamp - Son ödeme tarihi
+  subscriptionExpiryDate?: any; // Timestamp - Abonelik bitiş tarihi
   settings?: {
     theme?: string;
     language?: string;
@@ -273,4 +279,21 @@ export interface Company {
       push: boolean;
     }
   };
+}
+
+export type VardiyaTipi = 'sabah' | 'aksam';
+
+export interface VardiyaBildirimi {
+  id: string;
+  sahaId: string;
+  sahaAdi: string;
+  tarih: any; // Timestamp
+  vardiyaTipi: VardiyaTipi;
+  vardiyaSaati: string; // HH:mm formatında
+  fotograflar: string[]; // Maksimum 4 adet
+  yorum: string;
+  bekciId: string;
+  bekciAdi: string;
+  olusturmaTarihi: any; // Timestamp
+  companyId: string;
 }

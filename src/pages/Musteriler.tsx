@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where, getDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { UserPlus, Pencil, Trash2, X, Building, Users, Mail, Phone, MapPin, Search, Filter } from 'lucide-react';
@@ -93,8 +93,112 @@ export const Musteriler: React.FC = () => {
 
     setYukleniyor(true);
     try {
+      // Müşteri bilgilerini al
+      const userDoc = await getDoc(doc(db, 'kullanicilar', id));
+      if (!userDoc.exists()) {
+        toast.error('Müşteri bulunamadı');
+        setYukleniyor(false);
+        return;
+      }
+
+      const userData = userDoc.data();
+      const customerName = userData.ad || 'Bilinmeyen Müşteri';
+
+      // Ek onay al
+      const confirmDelete = window.confirm(
+        `${customerName} adlı müşteriyi ve ona ait tüm verileri (sahalar, raporlar, bildirimler) silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`
+      );
+
+      if (!confirmDelete) {
+        setYukleniyor(false);
+        return;
+      }
+
+      console.log(`Müşteri silme işlemi başlatılıyor: ${id} (${customerName})`);
+
+      // Müşteriye atanmış sahalar varsa, musteriId'sini temizle
+      if (userData.sahalar && Array.isArray(userData.sahalar) && userData.sahalar.length > 0) {
+        try {
+          const sahaQuery = query(
+            collection(db, 'sahalar'),
+            where('__name__', 'in', userData.sahalar),
+            where('companyId', '==', kullanici?.companyId)
+          );
+          const sahaSnapshot = await getDocs(sahaQuery);
+
+          if (sahaSnapshot.size > 0) {
+            const batch = writeBatch(db);
+            sahaSnapshot.docs.forEach((sahaDoc) => {
+              batch.update(sahaDoc.ref, {
+                musteriId: null,
+                guncellemeTarihi: new Date()
+              });
+            });
+            await batch.commit();
+            console.log(`${sahaSnapshot.size} sahadan müşteri ataması kaldırıldı`);
+          }
+        } catch (error) {
+          console.error('Saha atamalarını kaldırırken hata:', error);
+        }
+      }
+
+      // Müşteriye atanmış santraller varsa, musteriId'sini temizle
+      try {
+        const santralQuery = query(
+          collection(db, 'santraller'),
+          where('musteriId', '==', id),
+          where('companyId', '==', kullanici?.companyId)
+        );
+        const santralSnapshot = await getDocs(santralQuery);
+
+        if (santralSnapshot.size > 0) {
+          const batch = writeBatch(db);
+          santralSnapshot.docs.forEach((santralDoc) => {
+            batch.update(santralDoc.ref, {
+              musteriId: null,
+              guncellemeTarihi: new Date()
+            });
+          });
+          await batch.commit();
+          console.log(`${santralSnapshot.size} santraldan müşteri ataması kaldırıldı`);
+        }
+      } catch (error) {
+        console.error('Santral atamalarını kaldırırken hata:', error);
+      }
+
+      // Müşteriye ait verileri sil
+      const collectionsToClean = [
+        { collection: 'arizalar', field: 'raporlayanId' },
+        { collection: 'bildirimler', field: 'kullaniciId' }
+      ];
+
+      for (const { collection: collectionName, field } of collectionsToClean) {
+        try {
+          const collectionQuery = query(
+            collection(db, collectionName),
+            where(field, '==', id),
+            where('companyId', '==', kullanici?.companyId)
+          );
+          const collectionSnapshot = await getDocs(collectionQuery);
+
+          if (collectionSnapshot.size > 0) {
+            const batch = writeBatch(db);
+            collectionSnapshot.docs.forEach((doc) => {
+              batch.delete(doc.ref);
+            });
+            await batch.commit();
+            console.log(`${collectionName}: ${collectionSnapshot.size} döküman silindi`);
+          }
+        } catch (error) {
+          console.error(`${collectionName} temizlenirken hata:`, error);
+        }
+      }
+
+      // Son olarak müşteri dokümanını sil
       await deleteDoc(doc(db, 'kullanicilar', id));
-      toast.success('Müşteri başarıyla silindi');
+      console.log('Müşteri dokümanı silindi');
+
+      toast.success(`${customerName} ve ilgili tüm verileri başarıyla silindi`);
       setSilinecekMusteri(null);
       setMusteriler(prev => prev.filter(m => m.id !== id));
     } catch (error) {

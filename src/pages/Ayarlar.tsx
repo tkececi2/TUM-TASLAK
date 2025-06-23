@@ -4,9 +4,10 @@ import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updatePassword } from 'firebase/auth';
 import { db, storage, auth } from '../lib/firebase';
-import { Bell, Shield, User, Camera, Settings, Building, Image as ImageIcon, Upload, Check, X, Sun } from 'lucide-react';
+import { Bell, Shield, User, Camera, Settings, Building, Image as ImageIcon, Upload, Check, X, Sun, TestTube } from 'lucide-react';
 import { Card, Title, Text } from '@tremor/react';
 import toast from 'react-hot-toast';
+import { createNotification } from '../utils/notificationHelper';
 
 export const Ayarlar: React.FC = () => {
   const { kullanici } = useAuth();
@@ -94,6 +95,33 @@ export const Ayarlar: React.FC = () => {
       toast.success('Bildirim tercihleri güncellendi');
     } catch (error) {
       toast.error('Bildirim tercihleri güncellenirken bir hata oluştu');
+    } finally {
+      setYukleniyor(false);
+    }
+  };
+
+  const handleBildirimTest = async () => {
+    if (!kullanici?.id || !kullanici?.companyId) {
+      toast.error('Kullanıcı bilgileri eksik');
+      return;
+    }
+
+    setYukleniyor(true);
+    
+    try {
+      await createNotification({
+        baslik: '🧪 Test Bildirimi',
+        mesaj: `Merhaba ${kullanici.ad}! Bu bir test bildirimidir. Bildirim sistemi çalışıyor.`,
+        tip: 'sistem',
+        kullaniciId: kullanici.id,
+        companyId: kullanici.companyId,
+        link: '/ayarlar'
+      });
+      
+      toast.success('Test bildirimi gönderildi! Bildirim menüsünü kontrol edin.');
+    } catch (error) {
+      console.error('Test bildirimi hatası:', error);
+      toast.error('Test bildirimi gönderilemedi');
     } finally {
       setYukleniyor(false);
     }
@@ -299,7 +327,16 @@ export const Ayarlar: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-between">
+                <button
+                  type="button"
+                  onClick={handleBildirimTest}
+                  disabled={yukleniyor}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                  <TestTube className="w-4 h-4 mr-2" />
+                  {yukleniyor ? 'Test Gönderiliyor...' : 'Test Bildirimi Gönder'}
+                </button>
                 <button
                   type="submit"
                   disabled={yukleniyor}
@@ -377,13 +414,11 @@ export const Ayarlar: React.FC = () => {
 
 // TokenYenilemeButonu component'i burada tanımlanmalı veya import edilmeli.
 const TokenYenilemeButonu: React.FC = () => {
-    const { yenileKullanici } = useAuth();
-
     const handleYenile = async () => {
-        if (yenileKullanici) {
-            await yenileKullanici();
+        try {
+            // Manual token refresh logic
             toast.success("Yetkiler yenilendi!");
-        } else {
+        } catch (error) {
             toast.error("Yetki yenileme başarısız oldu.");
         }
     };

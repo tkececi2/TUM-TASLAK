@@ -1,4 +1,4 @@
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage, auth } from '../lib/firebase'; // Firebase config dosyanızın yolu
 import { userService } from '../services/userService';
 import toast from 'react-hot-toast';
@@ -215,7 +215,7 @@ export const uploadMultipleFiles = async (
           console.log('StorageUser role:', storageUser.rol);
           
           // Rol bilgisi varsa ve izinli rollerdense yetki ver
-          if (storageUser.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(storageUser.rol)) {
+          if (storageUser.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin', 'bekci'].includes(storageUser.rol)) {
             userHasPermission = true;
             console.log('User has upload permission based on localStorage role');
           }
@@ -226,7 +226,7 @@ export const uploadMultipleFiles = async (
       
       // Token claim'de rol varsa kontrol et
       if (idTokenResult.claims && idTokenResult.claims.rol) {
-        if (['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(idTokenResult.claims.rol as string)) {
+        if (['yonetici', 'tekniker', 'muhendis', 'superadmin', 'bekci'].includes(idTokenResult.claims.rol as string)) {
           userHasPermission = true;
           console.log('User has upload permission based on token claims');
         }
@@ -239,7 +239,7 @@ export const uploadMultipleFiles = async (
         
         if (userDoc && userDoc.rol) {
           console.log('Using role from Firestore document:', userDoc.rol);
-          if (['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(userDoc.rol)) {
+          if (['yonetici', 'tekniker', 'muhendis', 'superadmin', 'bekci'].includes(userDoc.rol)) {
             userHasPermission = true;
             console.log('User has upload permission based on Firestore role');
           }
@@ -316,3 +316,28 @@ export const uploadMultipleFiles = async (
 
   return urls;
 }
+
+export const deleteFileByUrl = async (url: string): Promise<void> => {
+  if (!url.startsWith('https://firebasestorage.googleapis.com')) {
+    console.warn('Invalid Firebase Storage URL for deletion:', url);
+    // Optionally throw an error or return a specific status if the URL is not a Firebase URL
+    // For now, we'll just log a warning and attempt to proceed if it might be a relative path by mistake.
+    // However, robust error handling would check the URL format more strictly.
+  }
+  try {
+    const storageRef = ref(storage, url); // ref() can take a full URL
+    await deleteObject(storageRef);
+    console.log('File deleted successfully:', url);
+  } catch (error: any) {
+    // Handle specific errors, e.g., object-not-found, unauthenticated, etc.
+    if (error.code === 'storage/object-not-found') {
+      console.warn('File not found for deletion, it might have been already deleted:', url, error.code);
+      // Depending on requirements, this might not be an error to throw to the user
+    } else {
+      console.error('Error deleting file from Firebase Storage:', url, error);
+      toast.error(`Dosya silinirken bir hata oluştu: ${url.substring(url.lastIndexOf('/') + 1)}`);
+      // Re-throw the error if you want the caller to handle it further
+      // throw error;
+    }
+  }
+};

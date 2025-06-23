@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, deleteDoc, where, getDocs, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { UserPlus, Mail, Phone, Trash2, X } from 'lucide-react';
+import { UserPlus, Mail, Phone, Trash2, X, Edit, MapPin } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { EkipForm } from '../components/EkipForm';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ export const Ekip: React.FC = () => {
   const [ekipUyeleri, setEkipUyeleri] = useState<Kullanici[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [formAcik, setFormAcik] = useState(false);
+  const [duzenlenecekUye, setDuzenlenecekUye] = useState<Kullanici | null>(null);
   const [silmeOnayModal, setSilmeOnayModal] = useState<string | null>(null);
 
   // Ekip üyesi ekleme/silme yetkisi kontrolü
@@ -25,7 +26,7 @@ export const Ekip: React.FC = () => {
     const ekipQuery = query(
       collection(db, 'kullanicilar'),
       where('companyId', '==', kullanici.companyId),
-      where('rol', 'in', ['tekniker', 'muhendis', 'yonetici']),
+      where('rol', 'in', ['tekniker', 'muhendis', 'yonetici', 'bekci']),
       orderBy('ad')
     );
 
@@ -60,8 +61,71 @@ export const Ekip: React.FC = () => {
 
     setYukleniyor(true);
     try {
+      // Kullanıcı bilgilerini al
+      const userDoc = await getDoc(doc(db, 'kullanicilar', id));
+      if (!userDoc.exists()) {
+        toast.error('Kullanıcı bulunamadı');
+        setYukleniyor(false);
+        return;
+      }
+
+      const userData = userDoc.data();
+      const userName = userData.ad || 'Bilinmeyen Kullanıcı';
+
+      // Ek onay al
+      const confirmDelete = window.confirm(
+        `${userName} adlı kullanıcıyı ve ona ait tüm verileri (raporlar, yorumlar, bildirimler) silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`
+      );
+
+      if (!confirmDelete) {
+        setYukleniyor(false);
+        return;
+      }
+
+      console.log(`Kullanıcı silme işlemi başlatılıyor: ${id} (${userName})`);
+
+      // Kullanıcıya ait verileri sil
+      const collectionsToClean = [
+        { collection: 'arizalar', field: 'raporlayanId' },
+        { collection: 'arizalar', field: 'olusturanKisi' },
+        { collection: 'isRaporlari', field: 'raporlayanId' },
+        { collection: 'isRaporlari', field: 'olusturanKisi' },
+        { collection: 'mekanikBakimlar', field: 'yapanKisi' },
+        { collection: 'elektrikBakimlar', field: 'yapanKisi' },
+        { collection: 'elektrikKesintileri', field: 'raporlayanId' },
+        { collection: 'invertorKontroller', field: 'kontolEdenKisi' },
+        { collection: 'stoklar', field: 'olusturanKisi.id' },
+        { collection: 'bildirimler', field: 'kullaniciId' }
+      ];
+
+      for (const { collection: collectionName, field } of collectionsToClean) {
+        try {
+          const collectionQuery = query(
+            collection(db, collectionName),
+            where(field, '==', id),
+            where('companyId', '==', kullanici?.companyId)
+          );
+          const collectionSnapshot = await getDocs(collectionQuery);
+
+          if (collectionSnapshot.size > 0) {
+            const batch = writeBatch(db);
+            collectionSnapshot.docs.forEach((doc) => {
+              batch.delete(doc.ref);
+            });
+            await batch.commit();
+            console.log(`${collectionName}: ${collectionSnapshot.size} döküman silindi`);
+          }
+        } catch (error) {
+          console.error(`${collectionName} temizlenirken hata:`, error);
+          // Bir koleksiyonda hata olsa bile devam et
+        }
+      }
+
+      // Son olarak kullanıcı dokümanını sil
       await deleteDoc(doc(db, 'kullanicilar', id));
-      toast.success('Ekip üyesi başarıyla silindi');
+      console.log('Kullanıcı dokümanı silindi');
+
+      toast.success(`${userName} ve ilgili tüm verileri başarıyla silindi`);
       setSilmeOnayModal(null);
     } catch (error) {
       console.error('Ekip üyesi silme hatası:', error);
@@ -102,7 +166,10 @@ export const Ekip: React.FC = () => {
         </div>
         {canManageTeam && (
           <button
-            onClick={() => setFormAcik(true)}
+            onClick={() => {
+              setDuzenlenecekUye(null);
+              setFormAcik(true);
+            }}
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700"
           >
             <UserPlus className="h-5 w-5 mr-2" />
@@ -143,10 +210,27 @@ export const Ekip: React.FC = () => {
                     {uye.telefon}
                   </div>
                 )}
+                
+                {uye.sahalar && Object.keys(uye.sahalar).length > 0 && (
+                  <div className="flex items-center text-sm text-gray-500">
+                    <MapPin className="h-5 w-5 mr-2 text-gray-400" />
+                    {Object.keys(uye.sahalar).filter(key => uye.sahalar && typeof uye.sahalar === 'object' && !Array.isArray(uye.sahalar) && uye.sahalar[key]).length} saha atanmış
+                  </div>
+                )}
               </div>
 
               {kullanici?.id !== uye.id && canManageTeam && (
-                <div className="mt-6">
+                <div className="mt-6 space-y-2">
+                  <button
+                    onClick={() => {
+                      setDuzenlenecekUye(uye);
+                      setFormAcik(true);
+                    }}
+                    className="w-full inline-flex justify-center items-center px-4 py-2 border border-yellow-300 shadow-sm text-sm font-medium rounded-md text-yellow-700 bg-white hover:bg-yellow-50"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Düzenle
+                  </button>
                   <button
                     onClick={() => setSilmeOnayModal(uye.id)}
                     className="w-full inline-flex justify-center items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
@@ -161,7 +245,15 @@ export const Ekip: React.FC = () => {
         ))}
       </div>
 
-      {formAcik && <EkipForm onClose={() => setFormAcik(false)} />}
+      {formAcik && (
+        <EkipForm 
+          onClose={() => {
+            setFormAcik(false);
+            setDuzenlenecekUye(null);
+          }} 
+          editUser={duzenlenecekUye}
+        />
+      )}
 
       {silmeOnayModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

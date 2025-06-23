@@ -1,122 +1,163 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Building, Calendar, User, CheckCircle, AlertTriangle } from 'lucide-react';
-import type { ElektrikBakim } from '../types';
+import { Building, Calendar, User, CheckCircle, AlertTriangle, Eye, Edit3, Trash2, ImageIcon } from 'lucide-react';
+import type { ElektrikBakim as ElektrikBakimType } from '../types';
 
 interface Props {
-  bakimlar: ElektrikBakim[];
+  bakimlar: ElektrikBakimType[];
   sahalar: Array<{id: string, ad: string}>;
-  onBakimTikla: (bakim: ElektrikBakim) => void;
-  onBakimSil?: (id: string) => void;
+  onViewDetailsClick: (bakim: ElektrikBakimType) => void;
+  onEditClick: (bakim: ElektrikBakimType) => void;
+  onDeleteClick: (id: string) => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }
+
+const colors = {
+  primaryBlue: '#1E40AF',
+  lightBlue: '#3B82F6',
+  background: '#F8FAFC',
+  cardBg: '#FFFFFF',
+  border: '#E2E8F0',
+  textPrimary: '#1E293B',
+  textSecondary: '#64748B',
+  textDanger: '#DC2626',
+  textSuccess: '#16A34A',
+};
 
 export const ElektrikBakimListesi: React.FC<Props> = ({ 
   bakimlar, 
   sahalar,
-  onBakimTikla,
-  onBakimSil
+  onViewDetailsClick,
+  onEditClick,
+  onDeleteClick,
+  canEdit,
+  canDelete
 }) => {
   const getSahaAdi = (sahaId: string) => {
     return sahalar.find(s => s.id === sahaId)?.ad || 'Bilinmeyen Saha';
   };
 
+  const calculateSorunVar = (bakim: ElektrikBakimType): boolean => {
+    return Object.entries(bakim.durumlar).some(([key, value]) => {
+      if (key.endsWith('Aciklamalar')) return false;
+      if (typeof value === 'object' && value !== null) {
+        return Object.values(value).some(durum => durum === false);
+      }
+      return false;
+    });
+  };
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div className="overflow-x-auto shadow rounded-lg border" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
+      <table className="min-w-full divide-y" style={{ borderColor: colors.border }}>
+        <thead style={{ backgroundColor: colors.background }}>
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Saha
+            <th scope="col" className="px-6 py-3.5 text-left text-xs font-semibold" style={{ color: colors.textSecondary }}>
+              Saha Adı
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Tarih
+            <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold" style={{ color: colors.textSecondary }}>
+              Bakım Tarihi
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold" style={{ color: colors.textSecondary }}>
               Kontrol Eden
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold" style={{ color: colors.textSecondary }}>
               Durum
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Fotoğraf
+            <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold" style={{ color: colors.textSecondary }}>
+              Fotoğraflar
             </th>
-            {onBakimSil && (
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                İşlemler
-              </th>
-            )}
+            <th scope="col" className="px-6 py-3.5 text-right text-xs font-semibold" style={{ color: colors.textSecondary }}>
+              İşlemler
+            </th>
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="divide-y" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
           {bakimlar.map((bakim) => {
-            const sorunluDurumSayisi = Object.values(bakim.durumlar).reduce((acc, kategori) => {
-              return acc + Object.values(kategori).filter(durum => durum === false).length;
-            }, 0);
-            const sorunVar = sorunluDurumSayisi > 0;
+            const sorunVar = calculateSorunVar(bakim);
             
             return (
-              <tr
+              <tr 
                 key={bakim.id}
-                onClick={() => onBakimTikla(bakim)}
-                className="hover:bg-gray-50 cursor-pointer"
+                className="hover:bg-slate-50 transition-colors duration-150 ease-in-out"
               >
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium" style={{ color: colors.textPrimary }}>
                   <div className="flex items-center">
-                    <Building className="h-5 w-5 text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-900">{getSahaAdi(bakim.sahaId)}</span>
+                    <Building size={16} className="mr-2 opacity-70" style={{ color: colors.textSecondary}} />
+                    {getSahaAdi(bakim.sahaId)}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {format(bakim.tarih.toDate(), 'dd MMM yyyy HH:mm', { locale: tr })}
-                  </div>
+                <td className="whitespace-nowrap px-4 py-4 text-sm" style={{ color: colors.textSecondary }}>
+                  {format(bakim.tarih.toDate(), 'dd MMM yyyy, HH:mm', { locale: tr })}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <User className="h-4 w-4 mr-2" />
-                    {bakim.kontrolEden.ad}
-                  </div>
+                <td className="whitespace-nowrap px-4 py-4 text-sm" style={{ color: colors.textSecondary }}>
+                  {bakim.kontrolEden.ad} ({bakim.kontrolEden.rol})
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    sorunVar ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                  }`}>
-                    {sorunVar ? (
-                      <>
-                        <AlertTriangle className="h-4 w-4 mr-1" />
-                        {sorunluDurumSayisi} Sorun
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Sorun Yok
-                      </>
-                    )}
+                <td className="whitespace-nowrap px-4 py-4 text-sm">
+                  <span 
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold`}
+                    style={{
+                      backgroundColor: sorunVar ? '#FEE2E2' /* red-100 */ : '#D1FAE5' /* green-100 */,
+                      color: sorunVar ? colors.textDanger : colors.textSuccess
+                    }}
+                  >
+                    {sorunVar ? 
+                      <AlertTriangle size={14} className="mr-1.5" /> : 
+                      <CheckCircle size={14} className="mr-1.5" />
+                    }
+                    {sorunVar ? 'Sorun Var' : 'Sorun Yok'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {bakim.fotograflar?.length || 0} Fotoğraf
+                <td className="whitespace-nowrap px-4 py-4 text-sm" style={{ color: colors.textSecondary }}>
+                  <div className="flex items-center">
+                    <ImageIcon size={16} className="mr-1.5 opacity-70" />
+                    {bakim.fotograflar?.length || 0} adet
+                  </div>
                 </td>
-                {onBakimSil && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium space-x-2">
+                  <button
+                    onClick={() => onViewDetailsClick(bakim)}
+                    className="p-1.5 rounded-md hover:bg-slate-100 transition-colors"
+                    title="Detayları Görüntüle"
+                    style={{ color: colors.textSecondary }}
+                  >
+                    <Eye size={16} />
+                  </button>
+                  {canEdit && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onBakimSil(bakim.id);
-                      }}
-                      className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded-full transition-colors duration-200"
+                      onClick={() => onEditClick(bakim)}
+                      className="p-1.5 rounded-md hover:bg-slate-100 transition-colors"
+                      title="Düzenle"
+                      style={{ color: colors.textSecondary }}
                     >
-                      <AlertTriangle className="h-4 w-4" />
+                      <Edit3 size={16} />
                     </button>
-                  </td>
-                )}
+                  )}
+                  {canDelete && (
+                    <button
+                      onClick={() => onDeleteClick(bakim.id)}
+                      className="p-1.5 rounded-md hover:bg-red-100 transition-colors"
+                      title="Sil"
+                      style={{ color: colors.textDanger }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      {bakimlar.length === 0 && (
+        <div className="text-center py-10 px-6" style={{ color: colors.textSecondary }}>
+          <ImageIcon size={36} className="mx-auto mb-3 opacity-50" />
+          <p className="font-medium" style={{color: colors.textPrimary}}>Veri Bulunamadı</p>
+          <p className="text-xs">Filtre kriterlerinize uygun elektrik bakım kaydı bulunamadı.</p>
+        </div>
+      )}
     </div>
   );
 };

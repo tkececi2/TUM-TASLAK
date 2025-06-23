@@ -990,7 +990,7 @@ export const RaporTemplate: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="flex items-center mb-4 md:mb-0">
             <button
-              onClick={() => navigate('/rapor-yonetimi')}
+              onClick={() => navigate('/anasayfa')}
               className="mr-3 p-2 rounded-full hover:bg-gray-100 transition-all"
               aria-label="Geri"
             >

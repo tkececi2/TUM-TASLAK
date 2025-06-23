@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, isValid, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
   Target, 
@@ -18,32 +17,34 @@ import {
   Eye,
   Activity,
   X,
-  DollarSign,
-  Check,
   CheckSquare,
-  Square
+  Square,
+  BarChart3,
+  UploadCloud,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
-import { Card, Title, Text, AreaChart, Metric, Flex, Badge, Grid, Col } from '@tremor/react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { SilmeOnayModal } from '../components/SilmeOnayModal';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
+import { AreaChart, ValueFormatter } from '@tremor/react';
 
 interface UretimVerisi {
   id: string;
   santralId: string;
   tarih: Timestamp;
   gunlukUretim: number;
-  anlikGuc: number;
+  anlikGuc?: number;
   performansOrani: number;
   tasarrufEdilenCO2: number;
-  hava: {
+  hava?: {
     sicaklik: number;
     nem: number;
     radyasyon: number;
   };
-  olusturanKisi: {
+  olusturanKisi?: {
     id: string;
     ad: string;
   };
@@ -57,18 +58,7 @@ interface Santral {
   kapasite: number;
   yillikHedefUretim: number;
   aylikHedefler?: {
-    ocak: number;
-    subat: number;
-    mart: number;
-    nisan: number;
-    mayis: number;
-    haziran: number;
-    temmuz: number;
-    agustos: number;
-    eylul: number;
-    ekim: number;
-    kasim: number;
-    aralik: number;
+    [key: string]: number;
   };
   elektrikFiyatlari?: {
     [yil: string]: {
@@ -85,8 +75,8 @@ interface Santral {
     lat?: number;
     lng?: number;
   };
-  panelSayisi: number;
-  inverterSayisi: number;
+  panelSayisi?: number;
+  inverterSayisi?: number;
   teknikOzellikler?: {
     panelTipi: string;
     inverterTipi: string;
@@ -100,538 +90,281 @@ interface PerformansOzeti {
   toplamHedef: number;
   toplamGerceklesen: number;
   basariOrani: number;
-  toplamGelir: number;
-  ortalamaBirimFiyat: number;
   aktifSantralSayisi: number;
   veriGunSayisi: number;
   toplamCO2Tasarrufu: number;
 }
 
-interface AylikVeri {
-  ay: string;
-  ayIndex: number;
-  hedef: number;
-  gerceklesen: number;
-  basariOrani: number;
-  gelir: number;
-  co2Tasarrufu: number;
-  birimFiyat: number;
+interface ChartData {
+  name: string;
+  "Hedef Üretim": number;
+  "Gerçekleşen Üretim": number;
 }
 
 type GorunumTipi = 'yillik' | 'aylik';
 
+const ayTurkce = [
+  { key: 'ocak', label: 'Ocak', index: 0 }, { key: 'subat', label: 'Şubat', index: 1 },
+  { key: 'mart', label: 'Mart', index: 2 }, { key: 'nisan', label: 'Nisan', index: 3 },
+  { key: 'mayis', label: 'Mayıs', index: 4 }, { key: 'haziran', label: 'Haziran', index: 5 },
+  { key: 'temmuz', label: 'Temmuz', index: 6 }, { key: 'agustos', label: 'Ağustos', index: 7 },
+  { key: 'eylul', label: 'Eylül', index: 8 }, { key: 'ekim', label: 'Ekim', index: 9 },
+  { key: 'kasim', label: 'Kasım', index: 10 }, { key: 'aralik', label: 'Aralık', index: 11 },
+];
+
 export const UretimVerileri: React.FC = () => {
   const { kullanici } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // State tanımlamaları
   const [uretimVerileri, setUretimVerileri] = useState<UretimVerisi[]>([]);
   const [santraller, setSantraller] = useState<Santral[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [yenileniyor, setYenileniyor] = useState(false);
-  const [secilenSantral, setSecilenSantral] = useState<string>('tumu');
+  
+  const queryParams = new URLSearchParams(location.search);
+  const initialSantralId = queryParams.get('santralId') || 'tumu';
+  const initialSantralAdi = queryParams.get('santralAdi');
+
+  const [secilenSantral, setSecilenSantral] = useState<string>(initialSantralId);
   const [secilenYil, setSecilenYil] = useState<number>(new Date().getFullYear());
-  const [secilenAy, setSecilenAy] = useState<number>(new Date().getMonth());
+  const [secilenAy, setSecilenAy] = useState<number>(new Date().getMonth()); 
   const [gorunumTipi, setGorunumTipi] = useState<GorunumTipi>('yillik');
 
-  // Modal states
-  const [importModalAcik, setImportModalAcik] = useState(false);
-  const [silmeOnayModalAcik, setSilmeOnayModalAcik] = useState(false);
-  const [silinecekVeriId, setSilinecekVeriId] = useState<string | null>(null);
-  const [topluSilmeModalAcik, setTopluSilmeModalAcik] = useState(false);
-  const [secilenVeriler, setSecilenVeriler] = useState<string[]>([]);
-  const [detayModalAcik, setDetayModalAcik] = useState(false);
+  const [seciliSilinecekKayitId, setSeciliSilinecekKayitId] = useState<string | null>(null);
+  const [topluSilinecekKayitIdleri, setTopluSilinecekKayitIdleri] = useState<string[]>([]);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
+  const [isSilmeOnayModalOpen, setIsSilmeOnayModalOpen] = useState(false);
+  const [isTopluSilmeOnayModalOpen, setIsTopluSilmeOnayModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [secilenVeriDetay, setSecilenVeriDetay] = useState<UretimVerisi | null>(null);
 
-  // Yıl ve ay seçenekleri
-  const yilSecenekleri = Array.from({ length: 10 }, (_, i) => 2020 + i);
-  const aySecenekleri = [
-    { value: 0, label: 'Ocak', key: 'ocak' },
-    { value: 1, label: 'Şubat', key: 'subat' },
-    { value: 2, label: 'Mart', key: 'mart' },
-    { value: 3, label: 'Nisan', key: 'nisan' },
-    { value: 4, label: 'Mayıs', key: 'mayis' },
-    { value: 5, label: 'Haziran', key: 'haziran' },
-    { value: 6, label: 'Temmuz', key: 'temmuz' },
-    { value: 7, label: 'Ağustos', key: 'agustos' },
-    { value: 8, label: 'Eylül', key: 'eylul' },
-    { value: 9, label: 'Ekim', key: 'ekim' },
-    { value: 10, label: 'Kasım', key: 'kasim' },
-    { value: 11, label: 'Aralık', key: 'aralik' }
-  ];
-
-  const aylar = [
-    { key: 'ocak', label: 'Ocak', index: 0 },
-    { key: 'subat', label: 'Şubat', index: 1 },
-    { key: 'mart', label: 'Mart', index: 2 },
-    { key: 'nisan', label: 'Nisan', index: 3 },
-    { key: 'mayis', label: 'Mayıs', index: 4 },
-    { key: 'haziran', label: 'Haziran', index: 5 },
-    { key: 'temmuz', label: 'Temmuz', index: 6 },
-    { key: 'agustos', label: 'Ağustos', index: 7 },
-    { key: 'eylul', label: 'Eylül', index: 8 },
-    { key: 'ekim', label: 'Ekim', index: 9 },
-    { key: 'kasim', label: 'Kasım', index: 10 },
-    { key: 'aralik', label: 'Aralık', index: 11 }
-  ];
-
-  // İzinler
+  const yilSecenekleri = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
+  
   const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
   const canDelete = kullanici?.rol === 'yonetici' || kullanici?.rol === 'superadmin';
-  const canEdit = kullanici?.rol && ['yonetici', 'muhendis', 'superadmin'].includes(kullanici.rol);
 
-  // Müşteri sahalarını normalize et
   const getMusteriSahaIds = (): string[] => {
     if (!kullanici || kullanici.rol !== 'musteri') return [];
-
     let sahaIds: string[] = [];
-    const possibleFields = [
-      kullanici.sahalar,
-      kullanici.santraller,
-      kullanici.atananSahalar,
-      kullanici.atananSantraller
-    ];
-
+    const possibleFields = [kullanici.sahalar, kullanici.santraller];
     for (const field of possibleFields) {
       if (field) {
         if (Array.isArray(field)) {
           const validIds = field.filter(id => id && typeof id === 'string' && id.trim() !== '');
           sahaIds = [...sahaIds, ...validIds];
         } else if (typeof field === 'object' && field !== null) {
-          const validIds = Object.keys(field).filter(key => 
-            field[key] === true && key && key.trim() !== ''
-          );
+          const validIds = Object.keys(field).filter(key => field[key as keyof typeof field] === true && key && key.trim() !== '');
           sahaIds = [...sahaIds, ...validIds];
         }
       }
     }
-
     return [...new Set(sahaIds)];
   };
 
-  // Santral hedef bilgilerini getir
-  const getSantralHedef = (santral: Santral, ayIndex?: number) => {
+  const getSantralHedef = (santral: Santral, ayIndex?: number): number => {
     if (ayIndex !== undefined && santral.aylikHedefler) {
-      const ayKey = aylar[ayIndex]?.key;
-      return santral.aylikHedefler[ayKey] || (santral.yillikHedefUretim / 12);
+      const ayKey = ayTurkce[ayIndex]?.key;
+      return ayKey && santral.aylikHedefler[ayKey] ? santral.aylikHedefler[ayKey] : (santral.yillikHedefUretim / 12);
     }
     return santral.yillikHedefUretim;
   };
 
-  // Elektrik fiyatını santraldan al
-  const getElektrikFiyati = (santral: Santral, yil: number, ayIndex: number): number => {
-    if (!santral.elektrikFiyatlari) return 2.5; // Varsayılan fiyat
-    
-    const yilFiyatlari = santral.elektrikFiyatlari[yil.toString()];
-    if (!yilFiyatlari) return 2.5;
-    
-    const ayKey = aylar[ayIndex]?.key;
-    if (!yilFiyatlari[ayKey]) return 2.5;
-    
-    return yilFiyatlari[ayKey].birimFiyat || 2.5;
-  };
-
-  // Santralleri getir
-  const santralleriGetir = async () => {
-    if (!kullanici?.companyId) {
-      setYukleniyor(false);
-      return;
-    }
-
-    try {
-      let santralQuery;
-
-      if (kullanici.rol === 'musteri') {
-        const sahaIds = getMusteriSahaIds();
-
-        if (sahaIds.length === 0) {
-          setSantraller([]);
-          setYukleniyor(false);
-          return;
-        }
-
-        const allSantraller: Santral[] = [];
-
-        for (let i = 0; i < sahaIds.length; i += 10) {
-          const batch = sahaIds.slice(i, i + 10);
-
-          try {
-            const batchQuery = query(
-              collection(db, 'santraller'),
-              where('__name__', 'in', batch)
-            );
-
-            const batchSnapshot = await getDocs(batchQuery);
-            const batchSantraller = batchSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            })) as Santral[];
-
-            allSantraller.push(...batchSantraller);
-          } catch (batchError) {
-            console.error(`Batch sorgu hatası:`, batchError);
-          }
-        }
-
-        setSantraller(allSantraller);
-      } else {
-        santralQuery = query(
-          collection(db, 'santraller'),
-          where('companyId', '==', kullanici.companyId),
-          orderBy('ad')
-        );
-
-        const snapshot = await getDocs(santralQuery);
-        const santralListesi = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Santral[];
-
-        setSantraller(santralListesi);
-      }
-    } catch (error) {
-      console.error('Santral getirme hatası:', error);
-      toast.error('Santraller yüklenirken bir hata oluştu');
-    } finally {
-      setYukleniyor(false);
-    }
-  };
-
   useEffect(() => {
+    const santralleriGetir = async () => {
+      if (!kullanici?.companyId) {
+        setYukleniyor(false); return;
+      }
+      try {
+        setYukleniyor(true);
+        let santralQuery;
+        if (kullanici.rol === 'musteri') {
+          const sahaIds = getMusteriSahaIds();
+          if (sahaIds.length === 0) { setSantraller([]); setYukleniyor(false); return; }
+          const allS: Santral[] = [];
+          for (let i = 0; i < sahaIds.length; i += 10) {
+            const batch = sahaIds.slice(i, i + 10);
+            const bQuery = query(collection(db, 'santraller'), where('__name__', 'in', batch));
+            const bSnapshot = await getDocs(bQuery);
+            allS.push(...bSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Santral)));
+          }
+          setSantraller(allS);
+        } else {
+          santralQuery = query(collection(db, 'santraller'), where('companyId', '==', kullanici.companyId), orderBy('ad'));
+          const sSnapshot = await getDocs(santralQuery);
+          setSantraller(sSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Santral)));
+        }
+      } catch (error) {
+        console.error('Santral getirme hatası:', error);
+        toast.error('Santraller yüklenirken bir hata oluştu');
+      } finally {
+        setYukleniyor(false);
+      }
+    };
     santralleriGetir();
   }, [kullanici]);
 
-  // Üretim verilerini getir
   useEffect(() => {
     const verileriGetir = async () => {
-      if (!kullanici?.companyId || santraller.length === 0) {
-        setUretimVerileri([]);
-        return;
+      if (!kullanici?.companyId || (kullanici.rol !== 'musteri' && santraller.length === 0)) {
+        setUretimVerileri([]); return;
       }
-
+      if (kullanici.rol === 'musteri' && getMusteriSahaIds().length === 0 && secilenSantral === 'tumu'){
+        setUretimVerileri([]); return;
+      }
       try {
-        let tarihBaslangic: Date;
-        let tarihBitis: Date;
-
-        if (gorunumTipi === 'yillik') {
-          tarihBaslangic = startOfYear(new Date(secilenYil, 0, 1));
-          tarihBitis = endOfYear(new Date(secilenYil, 0, 1));
-        } else {
-          tarihBaslangic = startOfMonth(new Date(secilenYil, secilenAy, 1));
-          tarihBitis = endOfMonth(new Date(secilenYil, secilenAy, 1));
-        }
-
-        let uretimQuery;
+        setYenileniyor(true);
+        const tarihBaslangic = gorunumTipi === 'yillik' ? startOfYear(new Date(secilenYil, 0, 1)) : startOfMonth(new Date(secilenYil, secilenAy, 1));
+        const tarihBitis = gorunumTipi === 'yillik' ? endOfYear(new Date(secilenYil, 0, 1)) : endOfMonth(new Date(secilenYil, secilenAy, 1));
+        let q;
+        const baseQueryConditions = [
+          where('companyId', '==', kullanici.companyId),
+          where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
+          where('tarih', '<=', Timestamp.fromDate(tarihBitis))
+        ];
 
         if (kullanici.rol === 'musteri') {
           const sahaIds = getMusteriSahaIds();
-
-          if (sahaIds.length === 0) {
-            setUretimVerileri([]);
-            return;
-          }
-
+          if (sahaIds.length === 0) { setUretimVerileri([]); setYenileniyor(false); return; }
           if (secilenSantral !== 'tumu') {
-            if (!sahaIds.includes(secilenSantral)) {
-              setUretimVerileri([]);
-              return;
-            }
-
-            uretimQuery = query(
-              collection(db, 'uretimVerileri'),
-              where('companyId', '==', kullanici.companyId),
-              where('santralId', '==', secilenSantral),
-              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-              orderBy('tarih', 'desc')
-            );
+            if (!sahaIds.includes(secilenSantral)) { setUretimVerileri([]); setYenileniyor(false); return; }
+            q = query(collection(db, 'uretimVerileri'), ...baseQueryConditions, where('santralId', '==', secilenSantral), orderBy('tarih', 'desc'));
           } else {
             const limitedSahaIds = sahaIds.slice(0, 10);
-
-            uretimQuery = query(
-              collection(db, 'uretimVerileri'),
-              where('companyId', '==', kullanici.companyId),
-              where('santralId', 'in', limitedSahaIds),
-              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-              orderBy('tarih', 'desc')
-            );
+            if (limitedSahaIds.length > 0) {
+               q = query(collection(db, 'uretimVerileri'), ...baseQueryConditions, where('santralId', 'in', limitedSahaIds), orderBy('tarih', 'desc'));
+            } else {
+               setUretimVerileri([]); setYenileniyor(false); return;
+            }
           }
         } else {
           if (secilenSantral !== 'tumu') {
-            uretimQuery = query(
-              collection(db, 'uretimVerileri'),
-              where('santralId', '==', secilenSantral),
-              where('companyId', '==', kullanici.companyId),
-              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-              orderBy('tarih', 'desc')
-            );
+            q = query(collection(db, 'uretimVerileri'), ...baseQueryConditions, where('santralId', '==', secilenSantral), orderBy('tarih', 'desc'));
           } else {
-            uretimQuery = query(
-              collection(db, 'uretimVerileri'),
-              where('companyId', '==', kullanici.companyId),
-              where('tarih', '>=', Timestamp.fromDate(tarihBaslangic)),
-              where('tarih', '<=', Timestamp.fromDate(tarihBitis)),
-              orderBy('tarih', 'desc')
-            );
+            q = query(collection(db, 'uretimVerileri'), ...baseQueryConditions, orderBy('tarih', 'desc'));
           }
         }
-
-        const snapshot = await getDocs(uretimQuery);
-        const veriler = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as UretimVerisi[];
-
-        setUretimVerileri(veriler);
+        const snapshot = await getDocs(q);
+        setUretimVerileri(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UretimVerisi)));
       } catch (error) {
         console.error('Üretim verileri getirme hatası:', error);
         toast.error('Üretim verileri yüklenirken bir hata oluştu');
         setUretimVerileri([]);
+      } finally {
+        setYenileniyor(false);
       }
     };
+    verileriGetir();
+  }, [secilenSantral, secilenYil, secilenAy, gorunumTipi, santraller, kullanici, initialSantralId]);
 
-    if (santraller.length > 0) {
-      verileriGetir();
-    }
-  }, [secilenSantral, secilenYil, secilenAy, gorunumTipi, santraller, kullanici]);
-
-  // Performans özetini hesapla
   const performansOzeti = useMemo((): PerformansOzeti => {
-    const filtrelenmisVeriler = secilenSantral !== 'tumu'
-      ? uretimVerileri.filter(v => v.santralId === secilenSantral)
-      : uretimVerileri;
-
+    const filtrelenmisVeriler = uretimVerileri;
     const ilgiliSantraller = secilenSantral !== 'tumu' 
       ? santraller.filter(s => s.id === secilenSantral)
       : santraller;
 
-    // Hedef hesaplama
     let toplamHedef = 0;
     if (gorunumTipi === 'yillik') {
-      toplamHedef = ilgiliSantraller.reduce((total, santral) => {
-        return total + (santral.yillikHedefUretim || 0);
-      }, 0);
+      toplamHedef = ilgiliSantraller.reduce((total, santral) => total + (santral.yillikHedefUretim || 0), 0);
     } else {
-      toplamHedef = ilgiliSantraller.reduce((total, santral) => {
-        return total + getSantralHedef(santral, secilenAy);
-      }, 0);
+      toplamHedef = ilgiliSantraller.reduce((total, santral) => total + getSantralHedef(santral, secilenAy), 0);
     }
-
-    // Gerçekleşen hesaplama
-    const toplamGerceklesen = filtrelenmisVeriler.reduce((total, veri) => {
-      return total + veri.gunlukUretim;
-    }, 0);
-
-    // Gelir hesaplama - santral elektrik fiyatlarından
-    let toplamGelir = 0;
-    let toplamBirimFiyat = 0;
-    let fiyatSayisi = 0;
-
-    filtrelenmisVeriler.forEach(veri => {
-      const santral = santraller.find(s => s.id === veri.santralId);
-      if (santral) {
-        const veriTarihi = veri.tarih.toDate();
-        const birimFiyat = getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth());
-        toplamGelir += veri.gunlukUretim * birimFiyat;
-        toplamBirimFiyat += birimFiyat;
-        fiyatSayisi++;
-      }
-    });
-
-    const ortalamaBirimFiyat = fiyatSayisi > 0 ? toplamBirimFiyat / fiyatSayisi : 2.5;
-
-    // CO2 tasarrufu hesaplama
-    const toplamCO2Tasarrufu = filtrelenmisVeriler.reduce((total, veri) => {
-      return total + (veri.tasarrufEdilenCO2 || (veri.gunlukUretim * 0.5));
-    }, 0);
-
-    // Veri gün sayısı (unique tarihler)
-    const uniqueTarihler = new Set(
-      filtrelenmisVeriler.map(v => v.tarih.toDate().toDateString())
-    );
+    const toplamGerceklesen = filtrelenmisVeriler.reduce((total, veri) => total + veri.gunlukUretim, 0);
+    const toplamCO2Tasarrufu = filtrelenmisVeriler.reduce((total, veri) => total + (veri.tasarrufEdilenCO2 || (veri.gunlukUretim * 0.5)), 0);
+    const uniqueTarihler = new Set(filtrelenmisVeriler.map(v => v.tarih.toDate().toDateString()));
 
     return {
-      toplamHedef,
-      toplamGerceklesen,
+      toplamHedef, toplamGerceklesen,
       basariOrani: toplamHedef > 0 ? (toplamGerceklesen / toplamHedef) * 100 : 0,
-      toplamGelir,
-      ortalamaBirimFiyat,
       aktifSantralSayisi: ilgiliSantraller.length,
       veriGunSayisi: uniqueTarihler.size,
       toplamCO2Tasarrufu
     };
   }, [uretimVerileri, santraller, secilenSantral, secilenYil, secilenAy, gorunumTipi]);
 
-  // Aylık veri hesaplama
-  const aylikVeriler = useMemo((): AylikVeri[] => {
+  const chartData = useMemo((): ChartData[] => {
     const ilgiliSantraller = secilenSantral !== 'tumu' 
-      ? santraller.filter(s => s.id === secilenSantral)
-      : santraller;
+        ? santraller.filter(s => s.id === secilenSantral)
+        : santraller;
 
     if (gorunumTipi === 'aylik') {
-      // Aylık görünümde günlük veriler
-      const ayBaslangic = startOfMonth(new Date(secilenYil, secilenAy, 1));
-      const ayBitis = endOfMonth(new Date(secilenYil, secilenAy, 1));
-      const gunSayisi = ayBitis.getDate();
-
-      return Array.from({ length: gunSayisi }, (_, index) => {
-        const gun = index + 1;
-        const gunTarihi = new Date(secilenYil, secilenAy, gun);
-        
-        const gunVerileri = uretimVerileri.filter(v => {
-          const veriTarihi = v.tarih.toDate();
-          return veriTarihi.getDate() === gun &&
-            veriTarihi.getMonth() === secilenAy &&
-            veriTarihi.getFullYear() === secilenYil &&
-            (secilenSantral === 'tumu' || v.santralId === secilenSantral);
+        const ayBaslangic = startOfMonth(new Date(secilenYil, secilenAy, 1));
+        const gunSayisi = endOfMonth(ayBaslangic).getDate();
+        return Array.from({ length: gunSayisi }, (_, index) => {
+            const gun = index + 1;
+            const gunTarihi = new Date(secilenYil, secilenAy, gun);
+            const gunVerileri = uretimVerileri.filter(v => {
+                const veriTarihi = v.tarih.toDate();
+                return isValid(veriTarihi) && veriTarihi.getDate() === gun && veriTarihi.getMonth() === secilenAy && veriTarihi.getFullYear() === secilenYil;
+            });
+            const gunlukHedef = ilgiliSantraller.reduce((total, santral) => total + (getSantralHedef(santral, secilenAy) / gunSayisi), 0);
+            const gerceklesen = gunVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
+            return { name: `${gun}`, "Hedef Üretim": gunlukHedef, "Gerçekleşen Üretim": gerceklesen };
         });
-
-        // Günlük hedef (aylık hedefin gün sayısına bölümü)
-        const gunlukHedef = ilgiliSantraller.reduce((total, santral) => {
-          const aylikHedef = getSantralHedef(santral, secilenAy);
-          return total + (aylikHedef / gunSayisi);
-        }, 0);
-
-        // Gerçekleşen hesaplama
-        const gerceklesen = gunVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
-
-        // Gelir hesaplama - santral elektrik fiyatlarından
-        let gelir = 0;
-        let ortalamaBirimFiyat = 0;
-
-        if (gunVerileri.length > 0) {
-          let toplamFiyat = 0;
-          gunVerileri.forEach(veri => {
-            const santral = santraller.find(s => s.id === veri.santralId);
-            if (santral) {
-              const birimFiyat = getElektrikFiyati(santral, secilenYil, secilenAy);
-              gelir += veri.gunlukUretim * birimFiyat;
-              toplamFiyat += birimFiyat;
-            }
-          });
-          ortalamaBirimFiyat = toplamFiyat / gunVerileri.length;
-        } else {
-          // Veri yoksa ortalama fiyat kullan
-          const santral = ilgiliSantraller[0];
-          if (santral) {
-            ortalamaBirimFiyat = getElektrikFiyati(santral, secilenYil, secilenAy);
-          }
-        }
-
-        // CO2 tasarrufu hesaplama
-        const co2Tasarrufu = gunVerileri.reduce((total, v) => 
-          total + (v.tasarrufEdilenCO2 || (v.gunlukUretim * 0.5)), 0);
-
-        return {
-          ay: `${gun}`,
-          ayIndex: gun - 1,
-          hedef: gunlukHedef,
-          gerceklesen,
-          basariOrani: gunlukHedef > 0 ? (gerceklesen / gunlukHedef) * 100 : 0,
-          gelir,
-          co2Tasarrufu,
-          birimFiyat: ortalamaBirimFiyat
-        };
-      });
     } else {
-      // Yıllık görünümde aylık veriler
-      return aylar.map(ay => {
-        const ayBaslangic = new Date(secilenYil, ay.index, 1);
-        const ayBitis = endOfMonth(ayBaslangic);
-
-        const ayVerileri = uretimVerileri.filter(v => {
-          const veriTarihi = v.tarih.toDate();
-          return veriTarihi >= ayBaslangic && veriTarihi <= ayBitis &&
-            (secilenSantral === 'tumu' || v.santralId === secilenSantral);
+        return ayTurkce.map(ay => {
+            const ayBaslangic = new Date(secilenYil, ay.index, 1);
+            const ayBitis = endOfMonth(ayBaslangic);
+            const ayVerileri = uretimVerileri.filter(v => {
+                const veriTarihi = v.tarih.toDate();
+                return isValid(veriTarihi) && veriTarihi >= ayBaslangic && veriTarihi <= ayBitis;
+            });
+            const hedef = ilgiliSantraller.reduce((total, santral) => total + getSantralHedef(santral, ay.index), 0);
+            const gerceklesen = ayVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
+            return { name: ay.label, "Hedef Üretim": hedef, "Gerçekleşen Üretim": gerceklesen };
         });
-
-        // Hedef hesaplama
-        const hedef = ilgiliSantraller.reduce((total, santral) => {
-          return total + getSantralHedef(santral, ay.index);
-        }, 0);
-
-        // Gerçekleşen hesaplama
-        const gerceklesen = ayVerileri.reduce((total, v) => total + v.gunlukUretim, 0);
-
-        // Gelir hesaplama - santral elektrik fiyatlarından
-        let gelir = 0;
-        let ortalamaBirimFiyat = 0;
-
-        if (ayVerileri.length > 0) {
-          let toplamFiyat = 0;
-          ayVerileri.forEach(veri => {
-            const santral = santraller.find(s => s.id === veri.santralId);
-            if (santral) {
-              const birimFiyat = getElektrikFiyati(santral, secilenYil, ay.index);
-              gelir += veri.gunlukUretim * birimFiyat;
-              toplamFiyat += birimFiyat;
-            }
-          });
-          ortalamaBirimFiyat = toplamFiyat / ayVerileri.length;
-        } else {
-          // Veri yoksa ilk santralın fiyatını kullan
-          const santral = ilgiliSantraller[0];
-          if (santral) {
-            ortalamaBirimFiyat = getElektrikFiyati(santral, secilenYil, ay.index);
-          }
-        }
-
-        // CO2 tasarrufu hesaplama
-        const co2Tasarrufu = ayVerileri.reduce((total, v) => 
-          total + (v.tasarrufEdilenCO2 || (v.gunlukUretim * 0.5)), 0);
-
-        return {
-          ay: ay.label,
-          ayIndex: ay.index,
-          hedef,
-          gerceklesen,
-          basariOrani: hedef > 0 ? (gerceklesen / hedef) * 100 : 0,
-          gelir,
-          co2Tasarrufu,
-          birimFiyat: ortalamaBirimFiyat
-        };
-      });
     }
   }, [uretimVerileri, santraller, secilenSantral, secilenYil, secilenAy, gorunumTipi]);
 
-  // Event handlers
+  const valueFormatter: ValueFormatter = (number) => 
+    `${(number / (gorunumTipi === 'aylik' ? 1 : 1000)).toLocaleString('tr-TR', {maximumFractionDigits:1})} ${gorunumTipi === 'aylik' ? 'kWh' : 'MWh'}`;
+
   const handleYenile = async () => {
     setYenileniyor(true);
     try {
-      await santralleriGetir();
+      if (!kullanici?.companyId) { setYenileniyor(false); return;}
+      let sQuery;
+      if (kullanici.rol === 'musteri') {
+        const sahaIds = getMusteriSahaIds();
+        if (sahaIds.length === 0) { setSantraller([]); setYenileniyor(false); return; }
+        const allS: Santral[] = [];
+        for (let i = 0; i < sahaIds.length; i += 10) {
+          const batch = sahaIds.slice(i, i + 10);
+          const bQuery = query(collection(db, 'santraller'), where('__name__', 'in', batch));
+          const bSnapshot = await getDocs(bQuery);
+          allS.push(...bSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Santral)));
+        }
+        setSantraller(allS);
+      } else {
+        sQuery = query(collection(db, 'santraller'), where('companyId', '==', kullanici.companyId), orderBy('ad'));
+        const sSnapshot = await getDocs(sQuery);
+        setSantraller(sSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Santral)));
+      }
       toast.success('Veriler başarıyla yenilendi');
     } catch (error) {
       console.error('Yenileme hatası:', error);
       toast.error('Veriler yenilenirken bir hata oluştu');
+    } finally {
+        setYenileniyor(false);
     }
-    setYenileniyor(false);
   };
 
   const handleExcelExport = () => {
     try {
-      if (aylikVeriler.length === 0) {
-        toast.error('Dışa aktarılacak veri bulunamadı');
-        return;
+      if (chartData.length === 0) {
+        toast.error('Dışa aktarılacak veri bulunamadı'); return;
       }
-
-      const excelData = aylikVeriler.map(veri => ({
-        [gorunumTipi === 'aylik' ? 'Gün' : 'Ay']: veri.ay,
-        'Hedef Üretim (kWh)': veri.hedef.toFixed(0),
-        'Gerçekleşen Üretim (kWh)': veri.gerceklesen.toFixed(0),
-        'Başarı Oranı (%)': veri.basariOrani.toFixed(1),
-        'Gelir (₺)': veri.gelir.toFixed(2),
-        'Birim Fiyat (₺/kWh)': veri.birimFiyat.toFixed(2),
-        'CO2 Tasarrufu (kg)': veri.co2Tasarrufu.toFixed(1)
+      const excelData = chartData.map(veri => ({
+        [gorunumTipi === 'aylik' ? 'Gün' : 'Ay']: veri.name,
+        'Hedef Üretim (kWh)': veri["Hedef Üretim"].toFixed(0),
+        'Gerçekleşen Üretim (kWh)': veri["Gerçekleşen Üretim"].toFixed(0),
+        'Başarı Oranı (%)': (veri["Hedef Üretim"] > 0 ? (veri["Gerçekleşen Üretim"] / veri["Hedef Üretim"]) * 100 : 0).toFixed(1),
       }));
-
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Üretim Analizi');
-
       const dosyaAdi = gorunumTipi === 'aylik' 
-        ? `Uretim_Analizi_${secilenYil}_${aySecenekleri[secilenAy].label}.xlsx`
+        ? `Uretim_Analizi_${secilenYil}_${ayTurkce[secilenAy].label}.xlsx`
         : `Uretim_Analizi_${secilenYil}.xlsx`;
       XLSX.writeFile(workbook, dosyaAdi);
       toast.success('Excel dosyası başarıyla indirildi');
@@ -642,17 +375,13 @@ export const UretimVerileri: React.FC = () => {
   };
 
   const handleVeriSil = async (id: string) => {
-    if (!canDelete) {
-      toast.error('Bu işlem için yetkiniz yok');
-      return;
-    }
-
+    if (!canDelete) { toast.error('Bu işlem için yetkiniz yok'); return; }
     try {
       await deleteDoc(doc(db, 'uretimVerileri', id));
       toast.success('Üretim verisi başarıyla silindi');
       setUretimVerileri(prev => prev.filter(veri => veri.id !== id));
-      setSilmeOnayModalAcik(false);
-      setSilinecekVeriId(null);
+      setSeciliSilinecekKayitId(null);
+      setIsSilmeOnayModalOpen(false);
     } catch (error) {
       console.error('Veri silme hatası:', error);
       toast.error('Veri silinirken bir hata oluştu');
@@ -660,25 +389,15 @@ export const UretimVerileri: React.FC = () => {
   };
 
   const handleTopluSil = async () => {
-    if (!canDelete || secilenVeriler.length === 0) {
-      toast.error('Silmek için veri seçiniz');
-      return;
-    }
-
+    if (!canDelete || topluSilinecekKayitIdleri.length === 0) { toast.error('Silmek için veri seçiniz veya yetkiniz yok.'); return; }
     try {
       const batch = writeBatch(db);
-      
-      secilenVeriler.forEach(veriId => {
-        const veriRef = doc(db, 'uretimVerileri', veriId);
-        batch.delete(veriRef);
-      });
-
+      topluSilinecekKayitIdleri.forEach(veriId => batch.delete(doc(db, 'uretimVerileri', veriId)));
       await batch.commit();
-      
-      toast.success(`${secilenVeriler.length} adet veri başarıyla silindi`);
-      setUretimVerileri(prev => prev.filter(veri => !secilenVeriler.includes(veri.id)));
-      setSecilenVeriler([]);
-      setTopluSilmeModalAcik(false);
+      toast.success(`${topluSilinecekKayitIdleri.length} adet veri başarıyla silindi`);
+      setUretimVerileri(prev => prev.filter(veri => !topluSilinecekKayitIdleri.includes(veri.id)));
+      setTopluSilinecekKayitIdleri([]);
+      setIsTopluSilmeOnayModalOpen(false);
     } catch (error) {
       console.error('Toplu silme hatası:', error);
       toast.error('Veriler silinirken bir hata oluştu');
@@ -687,587 +406,352 @@ export const UretimVerileri: React.FC = () => {
 
   const handleVeriSecimDegistir = (veriId: string, secili: boolean) => {
     if (secili) {
-      setSecilenVeriler(prev => [...prev, veriId]);
+      setTopluSilinecekKayitIdleri(prev => [...prev, veriId]);
     } else {
-      setSecilenVeriler(prev => prev.filter(id => id !== veriId));
+      setTopluSilinecekKayitIdleri(prev => prev.filter(id => id !== veriId));
     }
   };
 
   const handleTumunuSec = () => {
-    if (secilenVeriler.length === uretimVerileri.length) {
-      setSecilenVeriler([]);
-    } else {
-      setSecilenVeriler(uretimVerileri.map(v => v.id));
-    }
+    if (uretimVerileri.length === 0) return;
+    setTopluSilinecekKayitIdleri(prev => prev.length === uretimVerileri.length ? [] : uretimVerileri.map(v => v.id));
   };
 
-  // Gelir hesaplama fonksiyonu (detay modal için)
-  const hesaplaVeriGeliri = (veri: UretimVerisi): number => {
-    const santral = santraller.find(s => s.id === veri.santralId);
-    if (!santral) return 0;
-    
-    const veriTarihi = veri.tarih.toDate();
-    const birimFiyat = getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth());
-    return veri.gunlukUretim * birimFiyat;
-  };
-
-  if (yukleniyor) {
+  const StatCard: React.FC<{ title: string; value: string | number; icon: React.ElementType; color: string }> = 
+  ({ title, value, icon: Icon, color }) => (
+    <div className={`bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex items-center`}>
+      <div className={`p-3 rounded-lg bg-${color}-100 text-${color}-600 mr-4`}>
+        <Icon className="h-6 w-6" />
+      </div>
+      <div>
+        <p className="text-sm text-gray-500">{title}</p>
+        <p className="text-xl font-semibold text-gray-800">{value}</p>
+      </div>
+    </div>
+  );
+  
+  if (yukleniyor && santraller.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="flex justify-center items-center min-h-[calc(100vh-200px)] bg-gray-50">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  if (santraller.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Üretim Verileri ve Gelir Analizi</h1>
-            <p className="mt-1 text-sm text-gray-500">Santral üretim verilerini ve gelir hesaplarını analiz edin</p>
-          </div>
-        </div>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-          <div className="flex flex-col items-center justify-center py-16">
-            <Target className="h-20 w-20 text-blue-400 mb-6" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">Santral Bulunamadı</h3>
-            <p className="text-gray-600 text-center max-w-md mb-6">
-              Üretim analizi yapmak için önce santrallerinizi sisteme eklemelisiniz.
-            </p>
-            {canAdd && (
-              <button
-                onClick={() => navigate('/ges-yonetimi')}
-                className="inline-flex items-center px-6 py-3 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 transition-all duration-200"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                İlk Santralı Ekle
-              </button>
-            )}
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      {/* Üst Başlık ve Kontroller */}
-      <div className="bg-gradient-to-br from-emerald-50 to-teal-100 rounded-2xl shadow-lg border border-emerald-200 p-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 space-y-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center">
-            <div className="relative">
-              <div className="p-4 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mr-6 shadow-lg">
-                <Activity className="h-12 w-12 text-white" />
-              </div>
+            <div className={`p-3 bg-blue-600 rounded-lg mr-4`}>
+              <BarChart3 className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Üretim Verileri Analizi</h1>
-              <p className="text-gray-600 text-lg">
-                {performansOzeti.aktifSantralSayisi} santral • {performansOzeti.veriGunSayisi} gün veri
+              <h1 className="text-2xl font-bold text-gray-900">
+                Üretim Verileri {initialSantralAdi ? `- ${initialSantralAdi}` : ''}
+              </h1>
+              <p className="text-gray-600 text-sm mt-1">
+                { secilenSantral === 'tumu' 
+                    ? `${performansOzeti.aktifSantralSayisi} santral` 
+                    : `${santraller.find(s=>s.id === secilenSantral)?.ad || 'Seçili Santral'}`
+                } • {performansOzeti.veriGunSayisi} gün veri • {gorunumTipi === 'aylik' ? `${ayTurkce[secilenAy].label} ${secilenYil}` : secilenYil}
               </p>
             </div>
           </div>
-
-          {/* Ana İstatistikler */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
-                  %{performansOzeti.basariOrani.toFixed(1)}
-                </div>
-                <div className="text-sm text-gray-500">Başarı Oranı</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-emerald-600">
-                  ₺{(performansOzeti.toplamGelir / 1000).toFixed(1)}K
-                </div>
-                <div className="text-sm text-gray-500">Toplam Gelir</div>
-              </div>
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleYenile}
+              disabled={yenileniyor}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 transition-colors disabled:opacity-50">
+              <RefreshCw className={`h-4 w-4 mr-2 ${yenileniyor ? 'animate-spin' : ''}`} />
+              Yenile
+            </button>
+            {canAdd && (
+              <button
+                onClick={() => setIsBulkImportModalOpen(true)}
+                className="flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                <UploadCloud className="h-4 w-4 mr-2" />
+                Veri İçe Aktar
+              </button>
+            )}
+             <button
+              onClick={handleExcelExport}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 transition-colors">
+              <Download className="h-4 w-4 mr-2" />
+              Excel İndir
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Filtre Çubuğu */}
-        <div className="mt-8 flex flex-wrap items-center gap-4">
-          {/* Görünüm Tipi */}
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5 text-gray-500" />
-            <select
-              value={gorunumTipi}
-              onChange={(e) => setGorunumTipi(e.target.value as GorunumTipi)}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm bg-white px-3 py-2"
-            >
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+          <div>
+            <label htmlFor="gorunumTipi" className="block text-xs font-medium text-gray-500 mb-1">Görünüm</label>
+            <select id="gorunumTipi" value={gorunumTipi} onChange={(e) => setGorunumTipi(e.target.value as GorunumTipi)}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2">
               <option value="yillik">Yıllık İzleme</option>
               <option value="aylik">Aylık İzleme</option>
             </select>
           </div>
-
-          {/* Santral Seçimi */}
-          <div className="flex items-center space-x-2">
-            <Building className="h-5 w-5 text-gray-500" />
-            <select
-              value={secilenSantral}
-              onChange={(e) => setSecilenSantral(e.target.value)}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm min-w-[200px] bg-white px-3 py-2"
-            >
+          <div>
+            <label htmlFor="santralSecimi" className="block text-xs font-medium text-gray-500 mb-1">Santral</label>
+            <select id="santralSecimi" value={secilenSantral} onChange={(e) => setSecilenSantral(e.target.value)}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2">
               <option value="tumu">Tüm Santraller</option>
               {santraller.map(santral => (
                 <option key={santral.id} value={santral.id}>{santral.ad}</option>
               ))}
             </select>
           </div>
-
-          {/* Yıl Seçimi */}
-          <select
-            value={secilenYil}
-            onChange={(e) => setSecilenYil(parseInt(e.target.value))}
-            className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm bg-white px-3 py-2"
-          >
-            {yilSecenekleri.map(yil => (
-              <option key={yil} value={yil}>{yil}</option>
-            ))}
-          </select>
-
-          {/* Ay Seçimi (Aylık görünümde) */}
-          {gorunumTipi === 'aylik' && (
-            <select
-              value={secilenAy}
-              onChange={(e) => setSecilenAy(parseInt(e.target.value))}
-              className="rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm bg-white px-3 py-2"
-            >
-              {aySecenekleri.map(ay => (
-                <option key={ay.value} value={ay.value}>{ay.label}</option>
+          <div>
+            <label htmlFor="yilSecimi" className="block text-xs font-medium text-gray-500 mb-1">Yıl</label>
+            <select id="yilSecimi" value={secilenYil} onChange={(e) => setSecilenYil(parseInt(e.target.value))}
+              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2">
+              {yilSecenekleri.map(yil => (
+                <option key={yil} value={yil}>{yil}</option>
               ))}
             </select>
-          )}
-
-          {/* Ortalama Fiyat Gösterimi */}
-          <div className="flex items-center space-x-2 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
-            <DollarSign className="h-4 w-4 text-amber-600" />
-            <span className="text-sm text-amber-700 font-medium">
-              Ort. ₺{performansOzeti.ortalamaBirimFiyat.toFixed(2)}/kWh
-            </span>
           </div>
+          {gorunumTipi === 'aylik' && (
+            <div>
+              <label htmlFor="aySecimi" className="block text-xs font-medium text-gray-500 mb-1">Ay</label>
+              <select id="aySecimi" value={secilenAy} onChange={(e) => setSecilenAy(parseInt(e.target.value))}
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm p-2">
+                {ayTurkce.map(ay => (
+                  <option key={ay.index} value={ay.index}>{ay.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard title={`${gorunumTipi === 'aylik' ? 'Aylık' : 'Yıllık'} Hedef`} value={`${(performansOzeti.toplamHedef / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh`} icon={Target} color="blue" />
+        <StatCard title="Gerçekleşen Üretim" value={`${(performansOzeti.toplamGerceklesen / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh`} icon={Activity} color="green" />
+        <StatCard title="Toplam CO₂ Tasarrufu" value={`${performansOzeti.toplamCO2Tasarrufu.toLocaleString('tr-TR')} kg`} icon={Building} color="yellow" />
+        <StatCard title="Başarı Oranı" value={`%${performansOzeti.basariOrani.toFixed(1)}`} icon={TrendingUp} color="indigo" />
+      </div>
 
-          <div className="flex space-x-3 ml-auto">
-            <button
-              onClick={handleYenile}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              disabled={yenileniyor}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${yenileniyor ? 'animate-spin' : ''}`} />
-              Yenile
-            </button>
+      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-800 mb-1">
+          {gorunumTipi === 'aylik' ? 'Günlük' : 'Aylık'} Üretim Performansı
+        </h3>
+        <p className="text-sm text-gray-500 mb-4">Hedeflenen ve gerçekleşen üretim miktarlarının karşılaştırması.</p>
+        {chartData.length > 0 ? (
+            <AreaChart
+                className="h-80"
+                data={chartData}
+                index="name"
+                categories={["Hedef Üretim", "Gerçekleşen Üretim"]}
+                colors={["blue", "green"]}
+                valueFormatter={valueFormatter}
+                yAxisWidth={60}
+                showAnimation={true}
+            />
+         ) : (
+            <div className="h-80 flex items-center justify-center text-gray-500 bg-gray-50 rounded-md">
+                Grafik için yeterli veri bulunamadı.
+            </div>
+        )}
+      </div>
 
-            <button
-              onClick={handleExcelExport}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Excel
-            </button>
-
-            {canAdd && (
-              <button
-                onClick={() => setImportModalAcik(true)}
-                className="inline-flex items-center px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 transition-colors"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Veri Ekle
+      <div className="bg-white p-0 rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+                <h3 className="text-lg font-semibold text-gray-800">Detaylı Üretim Kayıtları</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {gorunumTipi === 'aylik' 
+                    ? `Toplam ${uretimVerileri.length} günlük kayıt bulundu. (İlk 50 gösteriliyor)`
+                    : `${secilenYil} yılının aylık özet verileri`
+                  }
+                </p>
+            </div>
+            {canDelete && topluSilinecekKayitIdleri.length > 0 && gorunumTipi === 'aylik' && (
+              <button onClick={() => setIsTopluSilmeOnayModalOpen(true)}
+                className="flex items-center px-3 py-1.5 border border-transparent rounded-md text-xs font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Seçilenleri Sil ({topluSilinecekKayitIdleri.length})
               </button>
             )}
-          </div>
+        </div>
+        <div className="overflow-x-auto">
+          {gorunumTipi === 'aylik' ? (
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  {canDelete && (
+                    <th className="py-3 pl-4 pr-3 text-left w-12">
+                      <button onClick={handleTumunuSec} className={`p-1 rounded ${topluSilinecekKayitIdleri.length === uretimVerileri.length && uretimVerileri.length > 0 ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}>
+                        {topluSilinecekKayitIdleri.length === uretimVerileri.length && uretimVerileri.length > 0 ? <CheckSquare size={16}/> : <Square size={16}/>}
+                      </button>
+                    </th>
+                  )}
+                  <th className="py-3 px-3 text-left font-medium text-gray-500 uppercase">Tarih</th>
+                  <th className="py-3 px-3 text-left font-medium text-gray-500 uppercase">Santral</th>
+                  <th className="py-3 px-3 text-right font-medium text-gray-500 uppercase">Üretim (kWh)</th>
+                  <th className="py-3 pl-3 pr-4 text-center font-medium text-gray-500 uppercase w-20">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {uretimVerileri.length === 0 && !yenileniyor && (
+                  <tr><td colSpan={canDelete ? 5 : 4} className="text-center py-10 text-gray-500">Filtrelerle eşleşen üretim verisi bulunamadı.</td></tr>
+                )}
+                {yenileniyor && uretimVerileri.length === 0 && (
+                   <tr><td colSpan={canDelete ? 5 : 4} className="text-center py-10 text-gray-500"><LoadingSpinner/> Veriler yükleniyor...</td></tr>
+                )}
+                {uretimVerileri.slice(0, 50).map((veri) => {
+                  const santral = santraller.find(s => s.id === veri.santralId);
+                  const veriTarihi = veri.tarih.toDate();
+                  
+                  return (
+                    <tr key={veri.id} className={`hover:bg-gray-50 transition-colors ${topluSilinecekKayitIdleri.includes(veri.id) ? 'bg-blue-50' : ''}`}>
+                      {canDelete && (
+                        <td className="py-3 pl-4 pr-3 whitespace-nowrap">
+                          <button onClick={() => handleVeriSecimDegistir(veri.id, !topluSilinecekKayitIdleri.includes(veri.id))}
+                             className={`p-1 rounded ${topluSilinecekKayitIdleri.includes(veri.id) ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}>
+                             {topluSilinecekKayitIdleri.includes(veri.id) ? <CheckSquare size={16}/> : <Square size={16}/>}
+                          </button>
+                        </td>
+                      )}
+                      <td className="py-3 px-3 whitespace-nowrap text-gray-700 font-medium">{isValid(veriTarihi) ? format(veriTarihi, 'dd MMM yyyy', { locale: tr }) : 'Geçersiz Tarih'}</td>
+                      <td className="py-3 px-3 whitespace-nowrap text-gray-700">{santral?.ad || '-'}</td>
+                      <td className="py-3 px-3 whitespace-nowrap text-right text-gray-800 font-semibold">{veri.gunlukUretim.toLocaleString('tr-TR', {maximumFractionDigits: 1})}</td>
+                      <td className="py-3 pl-3 pr-4 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center space-x-1">
+                          <button onClick={() => { setSecilenVeriDetay(veri); setIsDetailModalOpen(true); }} title="Detayları Görüntüle"
+                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors"><Eye size={16} /></button>
+                          {canDelete && (
+                            <button onClick={() => { setSeciliSilinecekKayitId(veri.id); setIsSilmeOnayModalOpen(true); }} title="Veriyi Sil"
+                              className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors"><Trash2 size={16} /></button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            /* Yıllık görünüm - Aylık toplamlar */
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-3 px-3 text-left font-medium text-gray-500 uppercase">Ay</th>
+                  <th className="py-3 px-3 text-center font-medium text-gray-500 uppercase">Santral Sayısı</th>
+                  <th className="py-3 px-3 text-right font-medium text-gray-500 uppercase">Hedef (kWh)</th>
+                  <th className="py-3 px-3 text-right font-medium text-gray-500 uppercase">Gerçekleşen (kWh)</th>
+                  <th className="py-3 px-3 text-center font-medium text-gray-500 uppercase">Başarı Oranı</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {chartData.map((ayVeri) => {
+                  const basariOrani = ayVeri["Hedef Üretim"] > 0 ? (ayVeri["Gerçekleşen Üretim"] / ayVeri["Hedef Üretim"]) * 100 : 0;
+                  const ayIndeksi = ayTurkce.findIndex(ay => ay.label === ayVeri.name);
+                  const ayBaslangic = new Date(secilenYil, ayIndeksi, 1);
+                  const ayBitis = endOfMonth(ayBaslangic);
+                  const ayVerileri = uretimVerileri.filter(v => {
+                    const veriTarihi = v.tarih.toDate();
+                    return isValid(veriTarihi) && veriTarihi >= ayBaslangic && veriTarihi <= ayBitis;
+                  });
+                  const benzersizSantrallar = new Set(ayVerileri.map(v => v.santralId)).size;
+                  
+                  return (
+                    <tr key={ayVeri.name} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-3 whitespace-nowrap text-gray-700 font-medium">{ayVeri.name} {secilenYil}</td>
+                      <td className="py-3 px-3 whitespace-nowrap text-center text-gray-700">{benzersizSantrallar}</td>
+                      <td className="py-3 px-3 whitespace-nowrap text-right text-gray-700">{ayVeri["Hedef Üretim"].toLocaleString('tr-TR', {maximumFractionDigits: 0})}</td>
+                      <td className="py-3 px-3 whitespace-nowrap text-right text-gray-800 font-semibold">{ayVeri["Gerçekleşen Üretim"].toLocaleString('tr-TR', {maximumFractionDigits: 0})}</td>
+                      <td className="py-3 px-3 whitespace-nowrap text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          basariOrani >= 80 ? 'bg-green-100 text-green-800' :
+                          basariOrani >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          %{basariOrani.toFixed(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
-      {/* Ana Metrik Kartları */}
-      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6">
-        <Col>
-          <Card decoration="top" decorationColor="emerald" className="h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <Text className="text-sm font-medium text-gray-600">
-                  {gorunumTipi === 'aylik' ? 'Aylık' : 'Yıllık'} Hedef
-                </Text>
-                <Metric className="text-xl font-bold text-gray-900 mt-2">
-                  {(performansOzeti.toplamHedef / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
-                </Metric>
-              </div>
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <Target className="h-8 w-8 text-emerald-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-
-        <Col>
-          <Card decoration="top" decorationColor="teal" className="h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <Text className="text-sm font-medium text-gray-600">Gerçekleşen</Text>
-                <Metric className="text-xl font-bold text-gray-900 mt-2">
-                  {(performansOzeti.toplamGerceklesen / 1000).toLocaleString('tr-TR', {maximumFractionDigits: 1})} MWh
-                </Metric>
-              </div>
-              <div className="p-3 bg-teal-100 rounded-xl">
-                <Activity className="h-8 w-8 text-teal-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-
-        <Col>
-          <Card decoration="top" decorationColor="amber" className="h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <Text className="text-sm font-medium text-gray-600">Toplam Gelir</Text>
-                <Metric className="text-xl font-bold text-gray-900 mt-2">
-                  ₺{performansOzeti.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
-                </Metric>
-              </div>
-              <div className="p-3 bg-amber-100 rounded-xl">
-                <DollarSign className="h-8 w-8 text-amber-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-
-        <Col>
-          <Card decoration="top" decorationColor="blue" className="h-full">
-            <div className="flex items-center justify-between">
-              <div>
-                <Text className="text-sm font-medium text-gray-600">Başarı Oranı</Text>
-                <Metric className="text-xl font-bold text-gray-900 mt-2">
-                  %{performansOzeti.basariOrani.toFixed(1)}
-                </Metric>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <TrendingUp className="h-8 w-8 text-blue-600" />
-              </div>
-            </div>
-          </Card>
-        </Col>
-      </Grid>
-
-      {/* Ana Grafik - Hedef vs Gerçekleşen */}
-      <Card className="p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <Title className="text-2xl font-bold">
-              {gorunumTipi === 'aylik' ? 'Günlük' : 'Aylık'} Hedef vs Gerçekleşen Üretim
-            </Title>
-            <Text className="text-gray-500 mt-2">
-              Performans analizi ve gelir hesaplaması - Santral elektrik fiyatları kullanılıyor
-            </Text>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Badge 
-              color={performansOzeti.basariOrani >= 90 ? "emerald" : 
-                     performansOzeti.basariOrani >= 70 ? "amber" : "red"}
-              size="lg"
-            >
-              %{performansOzeti.basariOrani.toFixed(1)} Başarı
-            </Badge>
-            <Badge color="blue" size="lg">
-              {gorunumTipi === 'aylik' ? `${aySecenekleri[secilenAy].label} ${secilenYil}` : secilenYil}
-            </Badge>
-          </div>
-        </div>
-
-        <AreaChart
-          className="mt-6 h-96"
-          data={aylikVeriler}
-          index="ay"
-          categories={["hedef", "gerceklesen"]}
-          colors={["blue", "emerald"]}
-          valueFormatter={(value) => `${(value / (gorunumTipi === 'aylik' ? 1 : 1000)).toFixed(1)} ${gorunumTipi === 'aylik' ? 'kWh' : 'MWh'}`}
-          showAnimation={true}
-          showGradient={true}
-          showLegend={true}
-          showGridLines={true}
-          showXAxis={true}
-          showYAxis={true}
-          enableLegendSlider={true}
-          yAxisWidth={80}
-        />
-
-        {/* Gelir Özeti */}
-        <div className="mt-8 p-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-xl font-bold text-amber-900">
-                ₺{performansOzeti.toplamGelir.toLocaleString('tr-TR', {maximumFractionDigits: 0})}
-              </div>
-              <div className="text-sm text-amber-600">Toplam Gelir</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-amber-900">
-                ₺{gorunumTipi === 'aylik' 
-                  ? (performansOzeti.toplamGelir / aylikVeriler.filter(v => v.gerceklesen > 0).length || 0).toLocaleString('tr-TR', {maximumFractionDigits: 0})
-                  : (performansOzeti.toplamGelir / 12).toLocaleString('tr-TR', {maximumFractionDigits: 0})
-                }
-              </div>
-              <div className="text-sm text-amber-600">
-                {gorunumTipi === 'aylik' ? 'Günlük Ortalama' : 'Aylık Ortalama'}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-amber-900">
-                ₺{performansOzeti.ortalamaBirimFiyat.toFixed(2)}
-              </div>
-              <div className="text-sm text-amber-600">Ortalama Birim Fiyat (₺/kWh)</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold text-amber-900">
-                {performansOzeti.toplamCO2Tasarrufu.toFixed(0)} kg
-              </div>
-              <div className="text-sm text-amber-600">CO₂ Tasarrufu</div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Üretim Verilerini Listele */}
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Title className="text-xl font-bold">Üretim Verileri</Title>
-            <Text className="text-gray-500">{uretimVerileri.length} kayıt</Text>
-          </div>
-          <div className="flex items-center space-x-3">
-            {canDelete && secilenVeriler.length > 0 && (
-              <button
-                onClick={() => setTopluSilmeModalAcik(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Seçilenleri Sil ({secilenVeriler.length})
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {canDelete && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <button
-                      onClick={handleTumunuSec}
-                      className="flex items-center hover:text-gray-700"
-                    >
-                      {secilenVeriler.length === uretimVerileri.length && uretimVerileri.length > 0 ? (
-                        <CheckSquare className="h-4 w-4" />
-                      ) : (
-                        <Square className="h-4 w-4" />
-                      )}
-                    </button>
-                  </th>
-                )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Santral</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Üretim</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Birim Fiyat</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gelir</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Performans</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {uretimVerileri.slice(0, 50).map((veri) => {
-                const santral = santraller.find(s => s.id === veri.santralId);
-                const gelir = hesaplaVeriGeliri(veri);
-                const veriTarihi = veri.tarih.toDate();
-                const birimFiyat = santral ? getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth()) : 0;
-                
-                return (
-                  <tr key={veri.id} className="hover:bg-gray-50 transition-colors">
-                    {canDelete && (
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleVeriSecimDegistir(veri.id, !secilenVeriler.includes(veri.id))}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          {secilenVeriler.includes(veri.id) ? (
-                            <CheckSquare className="h-4 w-4 text-emerald-600" />
-                          ) : (
-                            <Square className="h-4 w-4" />
-                          )}
-                        </button>
-                      </td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {format(veriTarihi, 'dd MMM yyyy', { locale: tr })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {santral?.ad || 'Bilinmeyen Santral'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 font-medium">
-                      {veri.gunlukUretim.toLocaleString('tr-TR', {maximumFractionDigits: 1})} kWh
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600">
-                      ₺{birimFiyat.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-600">
-                      ₺{gelir.toLocaleString('tr-TR', {maximumFractionDigits: 2})}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <Badge
-                        color={veri.performansOrani >= 90 ? "emerald" : 
-                               veri.performansOrani >= 70 ? "amber" : "red"}
-                        size="sm"
-                      >
-                        %{veri.performansOrani.toFixed(1)}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => {
-                            setSecilenVeriDetay(veri);
-                            setDetayModalAcik(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-900 transition-colors p-1 rounded"
-                          title="Detayları Görüntüle"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        {canDelete && (
-                          <button
-                            onClick={() => {
-                              setSilinecekVeriId(veri.id);
-                              setSilmeOnayModalAcik(true);
-                            }}
-                            className="text-red-600 hover:text-red-900 transition-colors p-1 rounded"
-                            title="Veriyi Sil"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {uretimVerileri.length > 50 && (
-          <div className="mt-4 text-center text-sm text-gray-500">
-            Gösterilen: 50 / {uretimVerileri.length} kayıt
-          </div>
-        )}
-      </Card>
-
-      {/* Modaller */}
-      {importModalAcik && santraller.length > 0 && (
+      {isBulkImportModalOpen && secilenSantral && (
         <BulkImportModal
-          onClose={() => setImportModalAcik(false)}
-          santralId={secilenSantral !== 'tumu' ? secilenSantral : santraller[0].id}
-          santralKapasite={secilenSantral !== 'tumu' 
-            ? santraller.find(s => s.id === secilenSantral)?.kapasite || 0
-            : santraller[0].kapasite
-          }
-          onSuccess={handleYenile}
-          secilenSantral={secilenSantral !== 'tumu' 
-            ? santraller.find(s => s.id === secilenSantral) || santraller[0]
-            : santraller[0]
-          }
-        />
-      )}
-
-      {silmeOnayModalAcik && (
-        <SilmeOnayModal
-          onConfirm={() => silinecekVeriId && handleVeriSil(silinecekVeriId)}
-          onCancel={() => {
-            setSilmeOnayModalAcik(false);
-            setSilinecekVeriId(null);
+          onClose={() => setIsBulkImportModalOpen(false)}
+          onSuccess={() => {
+            handleYenile();
+            setIsBulkImportModalOpen(false);
           }}
-          mesaj="Bu üretim verisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+          santralId={secilenSantral}
+          santralKapasite={santraller.find(s => s.id === secilenSantral)?.kapasite || 0}
         />
       )}
 
-      {topluSilmeModalAcik && (
+      {isSilmeOnayModalOpen && seciliSilinecekKayitId && (
         <SilmeOnayModal
-          onConfirm={handleTopluSil}
-          onCancel={() => setTopluSilmeModalAcik(false)}
-          mesaj={`${secilenVeriler.length} adet üretim verisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+          baslik="Üretim Kaydını Sil"
+          mesaj="Bu üretim kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+          onConfirm={() => handleVeriSil(seciliSilinecekKayitId)}
+          onCancel={() => {
+            setSeciliSilinecekKayitId(null);
+            setIsSilmeOnayModalOpen(false);
+          }}
         />
       )}
 
-      {/* Detay Modal */}
-      {detayModalAcik && secilenVeriDetay && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
-            <div className="flex justify-between items-center mb-6">
+      {isTopluSilmeOnayModalOpen && topluSilinecekKayitIdleri.length > 0 && (
+        <SilmeOnayModal
+          baslik="Toplu Kayıt Silme"
+          mesaj={`${topluSilinecekKayitIdleri.length} adet üretim kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`}
+          onConfirm={handleTopluSil}
+          onCancel={() => {
+            setTopluSilinecekKayitIdleri([]);
+            setIsTopluSilmeOnayModalOpen(false);
+          }}
+        />
+      )}
+
+      {isDetailModalOpen && secilenVeriDetay && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-[50] overflow-y-auto">
+          <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] flex flex-col shadow-xl">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between rounded-t-lg">
               <h3 className="text-lg font-semibold text-gray-900">Üretim Verisi Detayı</h3>
-              <button
-                onClick={() => setDetayModalAcik(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100"
-              >
+              <button onClick={() => setIsDetailModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-600">Tarih</label>
-                <p className="text-sm text-gray-900 font-medium">
-                  {format(secilenVeriDetay.tarih.toDate(), 'dd MMMM yyyy', { locale: tr })}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Santral</label>
-                <p className="text-sm text-gray-900">
-                  {santraller.find(s => s.id === secilenVeriDetay.santralId)?.ad || 'Bilinmeyen'}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Günlük Üretim</label>
-                <p className="text-sm text-gray-900 font-medium">
-                  {secilenVeriDetay.gunlukUretim.toLocaleString('tr-TR')} kWh
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Birim Fiyat</label>
-                <p className="text-sm text-gray-600">
-                  ₺{(() => {
-                    const santral = santraller.find(s => s.id === secilenVeriDetay.santralId);
-                    const veriTarihi = secilenVeriDetay.tarih.toDate();
-                    return santral ? getElektrikFiyati(santral, veriTarihi.getFullYear(), veriTarihi.getMonth()).toFixed(2) : '0.00';
-                  })()} / kWh
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Gelir</label>
-                <p className="text-lg font-bold text-emerald-600">
-                  ₺{hesaplaVeriGeliri(secilenVeriDetay).toLocaleString('tr-TR', {maximumFractionDigits: 2})}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Performans Oranı</label>
-                <p className="text-sm text-gray-900">%{secilenVeriDetay.performansOrani.toFixed(1)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">CO₂ Tasarrufu</label>
-                <p className="text-sm text-gray-900">
-                  {(secilenVeriDetay.tasarrufEdilenCO2 || (secilenVeriDetay.gunlukUretim * 0.5)).toFixed(1)} kg
-                </p>
-              </div>
-              {secilenVeriDetay.hava && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Hava Durumu</label>
-                  <p className="text-sm text-gray-900">
-                    Sıcaklık: {secilenVeriDetay.hava.sicaklik}°C, 
-                    Nem: %{secilenVeriDetay.hava.nem}, 
-                    Radyasyon: {secilenVeriDetay.hava.radyasyon} W/m²
-                  </p>
+            <div className="p-6 space-y-3 overflow-y-auto flex-grow text-sm">
+              {[ 
+                { label: 'Tarih', value: format(secilenVeriDetay.tarih.toDate(), 'dd MMMM yyyy, EEEE', { locale: tr }) },
+                { label: 'Santral', value: santraller.find(s => s.id === secilenVeriDetay.santralId)?.ad || 'Bilinmeyen' },
+                { label: 'Günlük Üretim', value: `${secilenVeriDetay.gunlukUretim.toLocaleString('tr-TR')} kWh`, bold: true },
+                { label: 'Anlık Güç', value: secilenVeriDetay.anlikGuc ? `${secilenVeriDetay.anlikGuc.toLocaleString('tr-TR')} kW` : '-' },
+                { label: 'Performans Oranı', value: `%${secilenVeriDetay.performansOrani.toFixed(1)}` },
+                { label: 'CO₂ Tasarrufu', value: `${secilenVeriDetay.tasarrufEdilenCO2.toLocaleString('tr-TR')} kg` },
+                secilenVeriDetay.hava && {
+                    label: 'Hava Durumu', 
+                    value: `Sıcaklık: ${secilenVeriDetay.hava.sicaklik}°C, Nem: %${secilenVeriDetay.hava.nem}, Radyasyon: ${secilenVeriDetay.hava.radyasyon} W/m²` 
+                },
+                secilenVeriDetay.olusturanKisi && { label: 'Oluşturan Kişi', value: `${secilenVeriDetay.olusturanKisi.ad} (${secilenVeriDetay.olusturanKisi.id.substring(0,5)}...)` },
+                { label: 'Kayıt Tarihi', value: format(secilenVeriDetay.olusturmaTarihi.toDate(), 'dd MMM yyyy, HH:mm', { locale: tr }) },
+              ].filter(Boolean).map((item: any) => (
+                <div key={item.label} className="grid grid-cols-3 gap-2 py-1.5 border-b border-gray-100 last:border-b-0">
+                  <p className="text-gray-500 col-span-1">{item.label}</p>
+                  <p className={`col-span-2 text-gray-800 ${item.bold ? 'font-semibold' : ''} ${item.color || ''}`}>{item.value}</p>
                 </div>
-              )}
+              ))}
+            </div>
+             <div className="sticky bottom-0 bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-end rounded-b-lg">
+                <button
+                    onClick={() => setIsDetailModalOpen(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    Kapat
+                </button>
             </div>
           </div>
         </div>

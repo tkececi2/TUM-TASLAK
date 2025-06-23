@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, addDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { db, auth, storage } from '../lib/firebase';
@@ -93,12 +92,12 @@ export const StokKontrol: React.FC = () => {
 
       try {
         let sahaQuery;
-        if (kullanici.rol === 'musteri' && kullanici.sahalar && kullanici.sahalar.length > 0) {
+        if (kullanici.rol === 'musteri' && kullanici.sahalar && Array.isArray(kullanici.sahalar) && kullanici.sahalar.length > 0) {
           sahaQuery = query(
             collection(db, 'sahalar'),
             where('__name__', 'in', kullanici.sahalar)
           );
-        } else if (kullanici.rol === 'musteri' && (!kullanici.sahalar || kullanici.sahalar.length === 0)) {
+        } else if (kullanici.rol === 'musteri' && (!kullanici.sahalar || !Array.isArray(kullanici.sahalar) || kullanici.sahalar.length === 0)) {
             setSahalar([]);
             return;
         } else {
@@ -134,7 +133,7 @@ export const StokKontrol: React.FC = () => {
         const baseQueryConstraints = [where('companyId', '==', kullanici.companyId)];
 
         if (kullanici.rol === 'musteri') {
-          if (!kullanici.sahalar || kullanici.sahalar.length === 0) {
+          if (!kullanici.sahalar || !Array.isArray(kullanici.sahalar) || kullanici.sahalar.length === 0) {
             setStoklar([]);
             setYukleniyor(false);
             return;
@@ -357,7 +356,7 @@ export const StokKontrol: React.FC = () => {
 
   if (yukleniyor && stoklar.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
+      <div className="min-h-screen bg-gray-50">
         <div className="flex justify-center items-center py-12">
           <LoadingSpinner size="lg" />
         </div>
@@ -366,28 +365,21 @@ export const StokKontrol: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
-      {/* Header Section */}
-      <div className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Package className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Stok Yönetimi</h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Envanter ve malzeme stokunu takip edin ve yönetin
-                  </p>
-                </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Section - Matching ArizaYonetimi pattern */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Stok Yönetimi</h1>
+                <p className="text-gray-600 text-sm">
+                  Envanter ve malzeme stokunu takip edin ve yönetin
+                </p>
               </div>
             </div>
             
-            <div className="mt-6 lg:mt-0 lg:ml-6">
+            <div className="flex items-center space-x-3">
               {canAdd && (
                 <button
                   onClick={() => {
@@ -405,9 +397,9 @@ export const StokKontrol: React.FC = () => {
                     });
                     setFormAcik(true);
                   }}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Yeni Stok Kaydı
                 </button>
               )}
@@ -416,63 +408,63 @@ export const StokKontrol: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Toplam Ürün Çeşidi</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{toplamStokCesidi}</p>
-              </div>
-              <div className="h-12 w-12 bg-blue-50 rounded-lg flex items-center justify-center">
+      {/* Stats Section - Matching ArizaYonetimi pattern */}
+      <div className="px-6 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
                 <Package2 className="h-6 w-6 text-blue-600" />
               </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Toplam Çeşit</p>
+                <p className="text-lg font-semibold text-gray-900">{toplamStokCesidi}</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Toplam Stok Adedi</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{toplamStokAdedi}</p>
-              </div>
-              <div className="h-12 w-12 bg-indigo-50 rounded-lg flex items-center justify-center">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
                 <BarChart className="h-6 w-6 text-indigo-600" />
               </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Toplam Adet</p>
+                <p className="text-lg font-semibold text-gray-900">{toplamStokAdedi.toLocaleString('tr-TR')}</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Normal Seviye</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{normalStokAdedi}</p>
-              </div>
-              <div className="h-12 w-12 bg-green-50 rounded-lg flex items-center justify-center">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
                 <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Normal Seviye</p>
+                <p className="text-lg font-semibold text-green-600">{normalStokAdedi}</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Kritik Seviye</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{kritikSeviyedeOlanlar}</p>
-              </div>
-              <div className="h-12 w-12 bg-red-50 rounded-lg flex items-center justify-center">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
                 <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-600">Kritik Seviye</p>
+                <p className="text-lg font-semibold text-red-600">{kritikSeviyedeOlanlar}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters and Controls */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+      {/* Filters Section - Matching ArizaYonetimi pattern */}
+      <div className="px-6 pb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <SearchInput
                 value={aramaMetni}
@@ -510,16 +502,16 @@ export const StokKontrol: React.FC = () => {
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+      {/* Content Area - Matching ArizaYonetimi pattern */}
+      <div className="px-6">
         {yukleniyor && stoklar.length > 0 && (
-          <div className="flex justify-center items-center py-12 bg-white rounded-xl shadow-sm">
-            <LoadingSpinner text="Stoklar güncelleniyor..." />
+          <div className="flex justify-center items-center py-12 bg-white rounded-lg border border-gray-200">
+            <LoadingSpinner />
           </div>
         )}
 
         {!yukleniyor && filtrelenmisStoklar.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+          <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <Package className="h-12 w-12 text-gray-400" />
             </div>
@@ -530,7 +522,7 @@ export const StokKontrol: React.FC = () => {
             {canAdd && stoklar.length === 0 && (
               <button
                 onClick={() => setFormAcik(true)}
-                className="mt-4 inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl"
+                className="mt-4 inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="h-5 w-5 mr-2" />
                 İlk Stoğu Ekle
@@ -538,130 +530,120 @@ export const StokKontrol: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {filtrelenmisStoklar.map((stok) => (
               <div 
                 key={stok.id}
-                className={`group relative bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] overflow-hidden cursor-pointer ${
+                className={`bg-white border border-gray-200 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow ${
                   stok.miktar <= stok.kritikSeviye 
-                    ? 'border-red-200 bg-gradient-to-br from-red-50 to-orange-50' 
-                    : 'hover:border-blue-300'
+                    ? 'ring-2 ring-red-200' 
+                    : ''
                 }`}
                 onClick={() => {
                   setSecilenDetay(stok);
                   setDetayModalAcik(true);
                 }}
               >
-                {/* Resim veya Placeholder */}
-                <div className="aspect-video bg-gray-100 relative">
+                {/* Image Section */}
+                <div className="aspect-[4/3] bg-gray-100 relative">
                   {stok.fotograflar && stok.fotograflar.length > 0 ? (
                     <img
                       src={stok.fotograflar[0]}
                       alt={stok.urunAdi}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = 'https://via.placeholder.com/300x200?text=Resim+Yok';
+                        target.src = 'https://via.placeholder.com/400x300?text=Resim+Yok';
                       }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="h-12 w-12 text-gray-400" />
+                      <ImageIcon className="h-8 w-8 text-gray-400" />
                     </div>
                   )}
                   
-                  {/* Durum Badge */}
-                  <div className="absolute top-3 left-3">
+                  {/* Status Badge */}
+                  <div className="absolute top-2 left-2">
                     {stok.miktar <= stok.kritikSeviye ? (
-                      <span className="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full shadow-sm">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
                         Kritik
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full shadow-sm">
-                        <Check className="h-3 w-3 mr-1" />
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                         Normal
                       </span>
                     )}
                   </div>
 
                   {stok.fotograflar && stok.fotograflar.length > 1 && (
-                    <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full">
+                    <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
                       +{stok.fotograflar.length - 1}
                     </div>
                   )}
                 </div>
 
-                {/* İçerik */}
-                <div className="p-5">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2">{stok.urunAdi}</h3>
+                {/* Content Section */}
+                <div className="p-4 space-y-3">
+                  <h3 className="text-sm font-medium text-gray-900 line-clamp-2">{stok.urunAdi}</h3>
                   
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <Building2 className="h-4 w-4 mr-2 text-gray-400" />
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Building2 className="h-3 w-3 mr-1" />
                     <span className="truncate">{sahalar.find(s => s.id === stok.sahaId)?.ad || 'Bilinmeyen Saha'}</span>
                   </div>
                   
                   {stok.kategori && (
-                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-lg mb-3">
+                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
                       {stok.kategori}
                     </span>
                   )}
 
-                  {/* Miktar Bilgisi */}
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-gray-600">Mevcut Stok</span>
-                      <span className={`text-lg font-bold ${
+                  {/* Stock Info */}
+                  <div className="bg-gray-50 rounded p-3 space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Mevcut</span>
+                      <span className={`font-medium ${
                         stok.miktar <= stok.kritikSeviye ? 'text-red-600' : 'text-gray-900'
                       }`}>
-                        {stok.miktar} {stok.birim}
+                        {stok.miktar.toLocaleString('tr-TR')} {stok.birim}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Kritik Seviye</span>
-                      <span className="text-sm font-medium text-gray-700">
-                        {stok.kritikSeviye} {stok.birim}
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Kritik</span>
+                      <span className="text-gray-700">
+                        {stok.kritikSeviye.toLocaleString('tr-TR')} {stok.birim}
                       </span>
                     </div>
                   </div>
 
-                  {/* Açıklama */}
-                  {stok.aciklama && (
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                      {stok.aciklama}
-                    </p>
-                  )}
-
-                  {/* Son Güncelleme */}
-                  <div className="text-xs text-gray-500 mb-3">
-                    Son güncelleme: {stok.sonGuncelleme ? format(stok.sonGuncelleme.toDate(), 'dd MMM yyyy', { locale: tr }) : '-'}
+                  {/* Last Update */}
+                  <div className="text-xs text-gray-500">
+                    {stok.sonGuncelleme ? format(stok.sonGuncelleme.toDate(), 'dd MMM yyyy', { locale: tr }) : '-'}
                   </div>
 
-                  {/* Aksiyon Butonları */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                     <button 
                       onClick={(e) => { 
                         e.stopPropagation(); 
                         setSecilenDetay(stok); 
                         setDetayModalAcik(true); 
                       }}
-                      className="inline-flex items-center px-3 py-2 text-blue-600 hover:text-blue-800 font-medium text-sm rounded-lg hover:bg-blue-50 transition-colors"
+                      className="text-blue-600 hover:text-blue-800 font-medium text-xs"
                     >
-                      <Eye className="h-4 w-4 mr-1" />
                       Detay
                     </button>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
                       {canEdit && (
                         <button 
                           onClick={(e) => { 
                             e.stopPropagation(); 
                             handleEdit(stok); 
                           }}
-                          className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                          className="p-1 text-gray-600 hover:text-blue-600 rounded"
                           title="Düzenle"
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Edit2 className="h-3 w-3" />
                         </button>
                       )}
                       {canDelete && (
@@ -670,62 +652,34 @@ export const StokKontrol: React.FC = () => {
                             e.stopPropagation(); 
                             handleDelete(stok.id); 
                           }}
-                          className="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          className="p-1 text-gray-600 hover:text-red-600 rounded"
                           title="Sil"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3" />
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
-
-                {/* Hover Aksiyon Butonları */}
-                {(canEdit || canDelete) && (
-                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
-                    {canEdit && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(stok);
-                        }}
-                        className="p-1.5 bg-white rounded-full shadow-lg hover:bg-blue-50 transition-colors duration-200"
-                      >
-                        <Edit2 className="h-3.5 w-3.5 text-blue-600" />
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(stok.id);
-                        }}
-                        className="p-1.5 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors duration-200"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-red-600" />
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Form Modal */}
+      {/* Form Modal - Consistent with ArizaYonetimi */}
       {formAcik && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+            <div className="bg-blue-600 px-6 py-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white">
                   {duzenlemeModu ? 'Stok Düzenle' : 'Yeni Stok Ekle'}
                 </h2>
                 <button 
                   onClick={() => setFormAcik(false)} 
-                  className="text-white/80 hover:text-white transition-colors"
+                  className="text-white hover:text-gray-200"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -737,14 +691,14 @@ export const StokKontrol: React.FC = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Saha *
                     </label>
                     <select
                       value={form.sahaId}
                       onChange={(e) => setForm(prev => ({ ...prev, sahaId: e.target.value }))}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                       <option value="" disabled>Saha Seçin</option>
                       {sahalar.map(saha => (
@@ -754,7 +708,7 @@ export const StokKontrol: React.FC = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Ürün Adı *
                     </label>
                     <input
@@ -762,13 +716,13 @@ export const StokKontrol: React.FC = () => {
                       value={form.urunAdi}
                       onChange={(e) => setForm(prev => ({ ...prev, urunAdi: e.target.value }))}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       placeholder="Ürün adını girin"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Miktar *
                     </label>
                     <input
@@ -777,25 +731,25 @@ export const StokKontrol: React.FC = () => {
                       onChange={(e) => setForm(prev => ({ ...prev, miktar: parseInt(e.target.value, 10) >= 0 ? parseInt(e.target.value, 10) : 0 }))}
                       min="0"
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Birim
                     </label>
                     <input
                       type="text"
                       value={form.birim}
                       onChange={(e) => setForm(prev => ({ ...prev, birim: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       placeholder="adet, kg, m, vb."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Kritik Seviye
                     </label>
                     <input
@@ -803,18 +757,18 @@ export const StokKontrol: React.FC = () => {
                       value={form.kritikSeviye}
                       onChange={(e) => setForm(prev => ({ ...prev, kritikSeviye: parseInt(e.target.value, 10) >= 0 ? parseInt(e.target.value, 10) : 0 }))}
                       min="0"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Kategori
                     </label>
                     <select
                       value={form.kategori}
                       onChange={(e) => setForm(prev => ({ ...prev, kategori: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                     >
                       <option value="">Kategori Seçin (Opsiyonel)</option>
                       {stokKategorileri.map(kat => (
@@ -824,20 +778,20 @@ export const StokKontrol: React.FC = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Açıklama
                     </label>
                     <textarea
                       rows={3}
                       value={form.aciklama}
                       onChange={(e) => setForm(prev => ({ ...prev, aciklama: e.target.value }))}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       placeholder="İsteğe bağlı açıklama ekleyin"
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
                       Fotoğraflar
                     </label>
                     <FileUploadZone
@@ -849,7 +803,7 @@ export const StokKontrol: React.FC = () => {
                     />
                     {uploadProgress > 0 && uploadProgress < 100 && (
                       <div className="mt-2">
-                        <div className="bg-blue-100 rounded-full h-2">
+                        <div className="bg-blue-200 rounded-full h-2">
                           <div 
                             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${uploadProgress}%` }}
@@ -861,18 +815,18 @@ export const StokKontrol: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                <div className="flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={() => setFormAcik(false)}
-                    className="px-6 py-3 text-gray-700 font-semibold rounded-xl border border-gray-300 hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     İptal
                   </button>
                   <button
                     type="submit"
                     disabled={yukleniyor}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 transition-all"
+                    className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                   >
                     {yukleniyor ? (
                       <div className="flex items-center">
@@ -880,7 +834,7 @@ export const StokKontrol: React.FC = () => {
                         <span className="ml-2">{duzenlemeModu ? 'Güncelleniyor...' : 'Kaydediliyor...'}</span>
                       </div>
                     ) : (
-                      duzenlemeModu ? 'Değişiklikleri Kaydet' : 'Stok Ekle'
+                      duzenlemeModu ? 'Güncelle' : 'Kaydet'
                     )}
                   </button>
                 </div>
@@ -890,17 +844,17 @@ export const StokKontrol: React.FC = () => {
         </div>
       )}
 
-      {/* Detay Modal */}
+      {/* Detail Modal - Consistent with ArizaYonetimi */}
       {detayModalAcik && secilenDetay && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-4">
+            <div className="bg-gray-800 px-6 py-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-white">{secilenDetay.urunAdi}</h3>
                 <button 
                   onClick={() => setDetayModalAcik(false)} 
-                  className="text-white/80 hover:text-white transition-colors"
+                  className="text-white hover:text-gray-200"
                 >
                   <X className="h-6 w-6" />
                 </button>
@@ -912,48 +866,56 @@ export const StokKontrol: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">Saha</label>
-                    <p className="text-gray-900 font-medium">
+                    <label className="text-sm font-medium text-gray-500">Saha</label>
+                    <p className="text-sm text-gray-900">
                       {sahalar.find(s => s.id === secilenDetay.sahaId)?.ad || 'Bilinmeyen'}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">Kategori</label>
-                    <p className="text-gray-900 font-medium">
+                    <label className="text-sm font-medium text-gray-500">Kategori</label>
+                    <p className="text-sm text-gray-900">
                       {secilenDetay.kategori || 'Belirtilmemiş'}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">Miktar</label>
-                    <p className="text-gray-900 font-medium">
-                      {secilenDetay.miktar} {secilenDetay.birim}
+                    <label className="text-sm font-medium text-gray-500">Miktar</label>
+                    <p className="text-sm text-gray-900">
+                      {secilenDetay.miktar.toLocaleString('tr-TR')} {secilenDetay.birim}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">Kritik Seviye</label>
-                    <p className="text-gray-900 font-medium">{secilenDetay.kritikSeviye}</p>
+                    <label className="text-sm font-medium text-gray-500">Kritik Seviye</label>
+                    <p className="text-sm text-gray-900">{secilenDetay.kritikSeviye.toLocaleString('tr-TR')} {secilenDetay.birim}</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">Son Güncelleme</label>
-                    <p className="text-gray-900 font-medium">
+                    <label className="text-sm font-medium text-gray-500">Son Güncelleme</label>
+                    <p className="text-sm text-gray-900">
                       {secilenDetay.sonGuncelleme ? format(secilenDetay.sonGuncelleme.toDate(), 'dd MMMM yyyy, HH:mm', { locale: tr }) : '-'}
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700">Oluşturan</label>
-                    <p className="text-gray-900 font-medium">
+                    <label className="text-sm font-medium text-gray-500">Oluşturan</label>
+                    <p className="text-sm text-gray-900">
                       {secilenDetay.olusturanKisi?.ad || 'Bilinmiyor'}
                     </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Durum</label>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      secilenDetay.miktar <= secilenDetay.kritikSeviye ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {secilenDetay.miktar <= secilenDetay.kritikSeviye ? 'Kritik Seviye' : 'Normal Seviye'}
+                    </span>
                   </div>
                 </div>
 
                 {secilenDetay.aciklama && (
                   <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-gray-700">Açıklama</label>
-                    <p className="text-gray-900 mt-2 p-4 bg-gray-50 rounded-xl">
+                    <label className="text-sm font-medium text-gray-500">Açıklama</label>
+                    <p className="text-sm text-gray-900 mt-2 p-4 bg-gray-50 rounded-lg">
                       {secilenDetay.aciklama}
                     </p>
                   </div>
@@ -961,14 +923,14 @@ export const StokKontrol: React.FC = () => {
 
                 {secilenDetay.fotograflar && secilenDetay.fotograflar.length > 0 && (
                   <div className="md:col-span-2">
-                    <label className="text-sm font-semibold text-gray-700 mb-3 block">Fotoğraflar</label>
+                    <label className="text-sm font-medium text-gray-500 mb-3 block">Fotoğraflar</label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {secilenDetay.fotograflar.map((url, index) => (
                         <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="group">
                           <img 
                             src={url} 
                             alt={`${secilenDetay.urunAdi} ${index+1}`} 
-                            className="w-full h-24 object-cover rounded-xl border-2 border-gray-200 group-hover:border-blue-300 transition-colors"
+                            className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 group-hover:border-blue-300 transition-colors"
                             onError={(e) => { 
                               const target = e.target as HTMLImageElement; 
                               target.src = 'https://via.placeholder.com/200?text=Hata'; 

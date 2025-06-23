@@ -1,18 +1,19 @@
 import { initializeApp, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, connectAuthEmulator, AuthError } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, enableIndexedDbPersistence, connectFirestoreEmulator, CACHE_SIZE_UNLIMITED, query, collection, limit, getDocs } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 import { FirebaseError } from 'firebase/app';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAZdHmOkHazCMnRZuZ6STP17wjG4QMHaxk",
-  authDomain: "yenisirket-2ec3b.firebaseapp.com",
-  projectId: "yenisirket-2ec3b",
-  storageBucket: "yenisirket-2ec3b.firebasestorage.app",
-  messagingSenderId: "155422395281",
-  appId: "1:155422395281:web:b496b7e93ae3d0a280a830"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 let app;
@@ -29,6 +30,7 @@ try {
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+export const functions = getFunctions(app);
 
 // Comment out emulator connections to prevent "Running in emulator mode" warning
 /*
@@ -273,7 +275,7 @@ export const signInUser = async (email: string, password: string) => {
       // İlk deneme - normal giriş
       userCredential = await signInWithEmailAndPassword(auth, email, password);
     } catch (initialError: any) {
-      // Firebase hata mesajlarını detaylı olarak günlüğe kaydet
+      // Firebase hata mesajlarını detaylı olarak günlüğe kaydet (toast mesajı göstermiyoruz)
       console.error('Firebase giriş hatası:', {
         code: initialError.code,
         message: initialError.message,
@@ -288,8 +290,7 @@ export const signInUser = async (email: string, password: string) => {
         userCredential = await signInWithEmailAndPassword(auth, email, password);
         console.log('Giriş yeniden deneme başarılı');
       } else {
-        // Diğer hataları yukarı ilet
-        handleAuthError(initialError);
+        // Diğer hataları yukarı ilet (toast göstermeden)
         throw initialError;
       }
     }
@@ -303,7 +304,8 @@ export const signInUser = async (email: string, password: string) => {
 
     return userCredential.user;
   } catch (error) {
-    handleAuthError(error);
+    // Sadece loglama yap, toast mesajı gösterme (AuthContext'te halledilecek)
+    console.error('signInUser hatası:', error);
     throw error;
   }
 };

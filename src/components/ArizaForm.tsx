@@ -9,6 +9,7 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { FileUploadZone } from './FileUploadZone';
 import toast from 'react-hot-toast';
 import type { Ariza } from '../types';
+import { createArizaBildirimi } from '../utils/notificationHelper';
 
 interface Props {
   ariza?: Ariza | null;
@@ -143,11 +144,34 @@ export const ArizaForm: React.FC<Props> = ({ ariza, onClose }) => {
         toast.success('Arıza kaydı güncellendi');
       } else {
         // Yeni kayıt
-        await addDoc(collection(db, 'arizalar'), {
+        const docRef = await addDoc(collection(db, 'arizalar'), {
           ...arizaData,
           olusturanKisi: kullanici.id,
           yorumlar: []
         });
+        
+        // Bildirim gönder - Yöneticilere bildirim
+        try {
+          const yoneticiQuery = query(
+            collection(db, 'kullanicilar'),
+            where('rol', '==', 'yonetici'),
+            where('companyId', '==', kullanici.companyId)
+          );
+          const yoneticiSnapshot = await getDocs(yoneticiQuery);
+          const yoneticiIds = yoneticiSnapshot.docs.map(doc => doc.id);
+          
+          if (yoneticiIds.length > 0) {
+            await createArizaBildirimi(
+              { ...arizaData, id: docRef.id },
+              kullanici.companyId,
+              yoneticiIds
+            );
+          }
+        } catch (bildirimError) {
+          console.error('Bildirim gönderme hatası:', bildirimError);
+          // Bildirim hatası arıza oluşturmayı engellemesin
+        }
+        
         toast.success('Arıza kaydı oluşturuldu');
       }
 

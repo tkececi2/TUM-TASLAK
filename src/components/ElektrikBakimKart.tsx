@@ -1,104 +1,167 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Building, Calendar, User, Image as ImageIcon, CheckCircle, AlertTriangle, Zap } from 'lucide-react';
-import type { ElektrikBakim } from '../types';
+import {
+  Building,
+  Calendar,
+  User,
+  ImageIcon as DefaultImageIcon,
+  CheckCircle,
+  AlertTriangle,
+  Zap,
+  Eye,
+  Edit3,
+  Trash2,
+  ImageOff
+} from 'lucide-react';
+import type { ElektrikBakim as ElektrikBakimType } from '../types';
 
 interface Props {
-  bakim: ElektrikBakim;
+  bakim: ElektrikBakimType;
   sahaAdi: string;
-  onClick: () => void;
+  onViewDetailsClick: () => void;
+  onEditClick: () => void;
+  onDeleteClick: () => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
-export const ElektrikBakimKart: React.FC<Props> = ({ bakim, sahaAdi, onClick }) => {
+const colors = {
+  primaryBlue: '#1E40AF',
+  lightBlue: '#3B82F6',
+  background: '#F8FAFC',
+  cardBg: '#FFFFFF',
+  border: '#E2E8F0',
+  textPrimary: '#1E293B',
+  textSecondary: '#64748B',
+  textDanger: '#DC2626',
+  textSuccess: '#16A34A',
+};
+
+export const ElektrikBakimKart: React.FC<Props> = ({ 
+  bakim, 
+  sahaAdi, 
+  onViewDetailsClick, 
+  onEditClick, 
+  onDeleteClick, 
+  canEdit, 
+  canDelete 
+}) => {
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement;
-    target.src = '/placeholder-image.png';
+    target.style.display = 'none';
+    const parent = target.parentElement;
+    if (parent && !parent.querySelector('.placeholder-icon')) {
+      const iconContainer = document.createElement('div');
+      iconContainer.className = 'w-full h-full flex items-center justify-center bg-slate-100 placeholder-icon';
+      iconContainer.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${colors.textSecondary}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>`;
+      parent.appendChild(iconContainer);
+    }
   };
 
-  // Sorunlu durumları kontrol et
-  const sorunluDurumlar = Object.entries(bakim.durumlar).reduce((acc, [kategori, durumlar]) => {
-    Object.entries(durumlar).forEach(([durum, deger]) => {
-      if (deger === false) {
-        acc.push(`${kategori} - ${durum}`);
-      }
-    });
-    return acc;
-  }, [] as string[]);
-
-  const sorunVar = sorunluDurumlar.length > 0;
+  const sorunVar = Object.entries(bakim.durumlar).some(([key, value]) => {
+    if (key.endsWith('Aciklamalar')) return false;
+    if (typeof value === 'object' && value !== null) {
+      return Object.values(value).some(durum => durum === false);
+    }
+    return false;
+  });
 
   return (
-    <div
-      onClick={onClick}
-      className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-200 cursor-pointer overflow-hidden"
+    <div 
+      className="rounded-lg shadow-lg overflow-hidden flex flex-col transition-all duration-300 ease-in-out hover:shadow-xl border"
+      style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}
     >
-      <div className="aspect-video relative">
-        {bakim.fotograflar?.[0] ? (
+      <div className="aspect-[16/9] relative bg-slate-100">
+        {bakim.fotograflar && bakim.fotograflar.length > 0 && bakim.fotograflar[0] ? (
           <img
             src={bakim.fotograflar[0]}
-            alt="Bakım fotoğrafı"
+            alt={`${sahaAdi} Elektrik Bakım Fotoğrafı`}
             className="w-full h-full object-cover"
             onError={handleImageError}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-            <ImageIcon className="h-8 w-8 text-gray-400" />
+          <div className="w-full h-full flex items-center justify-center">
+            <ImageOff size={28} style={{ color: colors.textSecondary }} />
           </div>
         )}
         {bakim.fotograflar && bakim.fotograflar.length > 1 && (
-          <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-1.5 py-0.5 rounded-full">
+          <div 
+            className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-xs font-medium shadow"
+            style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: 'white' }}
+          >
             +{bakim.fotograflar.length - 1}
           </div>
         )}
+        <div 
+          className={`absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full text-xs font-medium flex items-center shadow`}
+          style={{
+            backgroundColor: sorunVar ? colors.textDanger : colors.textSuccess,
+            color: 'white'
+          }}
+        >
+          {sorunVar ? (
+            <AlertTriangle size={12} className="mr-1" />
+          ) : (
+            <CheckCircle size={12} className="mr-1" />
+          )}
+          {sorunVar ? 'Sorun' : 'Tamam'}
+        </div>
       </div>
 
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center text-sm text-gray-600">
-            <Building className="h-4 w-4 mr-1.5 text-gray-400" />
-            <span className="truncate">{sahaAdi}</span>
+      <div className="p-3 flex-grow flex flex-col justify-between">
+        <div>
+          <p className="text-xs font-medium mb-0.5" style={{ color: colors.lightBlue }}>
+            {sahaAdi}
+          </p>
+          <h3 
+            className="text-sm font-semibold cursor-pointer hover:underline mb-1 line-clamp-1"
+            style={{ color: colors.textPrimary }}
+            onClick={onViewDetailsClick}
+            title={format(bakim.tarih.toDate(), 'dd MMMM yyyy, HH:mm', { locale: tr }) + ' bakım kaydı detayları'}
+          >
+             {format(bakim.tarih.toDate(), 'dd MMM yyyy', { locale: tr })} Bakımı
+          </h3>
+          
+          <div className="flex items-center text-xs mb-1.5" style={{ color: colors.textSecondary }}>
+            <Calendar size={12} className="mr-1 flex-shrink-0" />
+            <span>{format(bakim.tarih.toDate(), 'dd MMM, HH:mm', { locale: tr })}</span>
           </div>
-          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-            sorunVar ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-          }`}>
-            {sorunVar ? (
-              <>
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Sorun Var
-              </>
-            ) : (
-              <>
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Sorun Yok
-              </>
-            )}
-          </span>
+
+          <div className="flex items-center text-xs" style={{ color: colors.textSecondary }}>
+            <User size={12} className="mr-1 flex-shrink-0" />
+            <span className="truncate">{bakim.kontrolEden.ad}</span>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center text-sm text-gray-600">
-            <Calendar className="h-4 w-4 mr-1.5 text-gray-400" />
-            <span>{format(bakim.tarih.toDate(), 'dd MMMM yyyy HH:mm', { locale: tr })}</span>
-          </div>
-
-          <div className="flex items-center text-sm text-gray-600">
-            <User className="h-4 w-4 mr-1.5 text-gray-400" />
-            <span>{bakim.kontrolEden.ad}</span>
-          </div>
-
-          {sorunVar && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs font-medium text-red-600">Sorunlu Alanlar:</p>
-              <ul className="mt-1 text-xs text-gray-600 space-y-1">
-                {sorunluDurumlar.slice(0, 3).map((sorun, index) => (
-                  <li key={index} className="truncate">• {sorun}</li>
-                ))}
-                {sorunluDurumlar.length > 3 && (
-                  <li className="text-gray-500">+{sorunluDurumlar.length - 3} daha...</li>
-                )}
-              </ul>
-            </div>
+        <div className="mt-2 pt-2 border-t flex items-center justify-end space-x-1" style={{ borderColor: colors.border }}>
+          <button
+            onClick={onViewDetailsClick}
+            className="p-1 rounded-md hover:bg-slate-100 transition-colors"
+            title="Detayları Gör"
+            style={{ color: colors.textSecondary }}
+          >
+            <Eye size={14} />
+          </button>
+          {canEdit && (
+            <button
+              onClick={onEditClick}
+              className="p-1 rounded-md hover:bg-slate-100 transition-colors"
+              title="Düzenle"
+              style={{ color: colors.textSecondary }}
+            >
+              <Edit3 size={14} />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={onDeleteClick}
+              className="p-1 rounded-md hover:bg-red-50 hover:text-red-600 transition-colors"
+              title="Sil"
+              style={{ color: colors.textSecondary }}
+            >
+              <Trash2 size={14} />
+            </button>
           )}
         </div>
       </div>

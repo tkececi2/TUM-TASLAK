@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useMenuNotifications } from '../contexts/MenuNotificationContext';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { YapilanIsForm } from '../components/YapilanIsForm';
 import { IsRaporDetayModal } from '../components/IsRaporDetayModal';
 import { SearchInput } from '../components/SearchInput';
-import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { 
   Building, 
@@ -26,53 +26,73 @@ import {
   Filter,
   TrendingUp,
   Users,
-  Activity
+  Activity,
+  LayoutGrid,
+  List,
+  Settings2,
+  ExternalLink,
+  BarChart3
 } from 'lucide-react';
 import { SilmeOnayModal } from '../components/SilmeOnayModal';
-import { Card, Text, Title, Metric, Flex, ProgressBar, Grid, Col, Badge, AreaChart } from '@tremor/react';
 import toast from 'react-hot-toast';
 import type { IsRaporu } from '../types';
 
+const cn = (...classes: string[]) => classes.filter(Boolean).join(' ');
+
 export const YapilanIsler: React.FC = () => {
   const { kullanici } = useAuth();
+  const { markPageAsSeen } = useMenuNotifications();
   const [raporlar, setRaporlar] = useState<IsRaporu[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [formAcik, setFormAcik] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [duzenlenecekRapor, setDuzenlenecekRapor] = useState<IsRaporu | null>(null);
   const [aramaMetni, setAramaMetni] = useState('');
-  const [seciliRapor, setSeciliRapor] = useState<IsRaporu | null>(null);
+  const [seciliRaporDetay, setSeciliRaporDetay] = useState<IsRaporu | null>(null);
   const [sahalar, setSahalar] = useState<Array<{id: string, ad: string}>>([]);
   const [secilenAy, setSecilenAy] = useState<string>(format(new Date(), 'yyyy-MM'));
-  const [secilenSaha, setSecilenSaha] = useState<string>('');
-  const [silinecekRapor, setSilinecekRapor] = useState<string | null>(null);
-  const [grafikGorünümü, setGrafikGorünümü] = useState<'liste' | 'istatistik'>('liste');
+  const [secilenSaha, setSecilenSaha] = useState<string>('tumu');
+  const [silinecekRaporId, setSilinecekRaporId] = useState<string | null>(null);
+  const [aktifGorunum, setAktifGorunum] = useState<'liste' | 'kart' | 'istatistik'>('liste');
 
-  // Yıl seçeneklerini oluştur (son 5 yıl)
-  const yilSecenekleri = Array.from({ length: 5 }, (_, i) => {
-    const yil = new Date().getFullYear() - i;
+  const yilSecenekleri = Array.from({ length: 6 }, (_, i) => {
+    const yil = new Date().getFullYear() + 1 - i;
     return format(new Date(yil, 0), 'yyyy');
   });
 
-  const canAdd = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol);
-  const canDelete = kullanici?.rol === 'yonetici' || 
-    (kullanici?.rol && ['tekniker', 'muhendis'].includes(kullanici.rol));
+  const aySecenekleri = Array.from({length: 12}, (_, i) => ({
+    value: format(new Date(2000, i, 1), 'MM'),
+    label: format(new Date(2000, i, 1), 'MMMM', { locale: tr })
+  }));
+
+  const secilenYil = secilenAy.substring(0,4);
+  const secilenAyNo = secilenAy.substring(5,7);
+  
+  const canAddOrEdit = kullanici?.rol && ['yonetici', 'tekniker', 'muhendis', 'superadmin'].includes(kullanici.rol);
+  const canDelete = kullanici?.rol && ['yonetici', 'superadmin'].includes(kullanici.rol);
+  const canViewStats = kullanici?.rol && ['yonetici', 'superadmin', 'muhendis'].includes(kullanici.rol);
 
   useEffect(() => {
     const sahalariGetir = async () => {
-      if (!kullanici) return;
+      if (!kullanici?.companyId) return;
 
       try {
         let sahaQuery;
-        if (kullanici.rol === 'musteri' && kullanici.sahalar) {
+        if (kullanici.rol === 'musteri' && kullanici.sahalar && Array.isArray(kullanici.sahalar) && kullanici.sahalar.length > 0) {
           sahaQuery = query(
             collection(db, 'sahalar'),
-            where('__name__', 'in', kullanici.sahalar)
+            where('__name__', 'in', kullanici.sahalar),
+            where('companyId', '==', kullanici.companyId)
           );
-        } else {
+        } else if (kullanici.rol !== 'musteri') {
           sahaQuery = query(
             collection(db, 'sahalar'),
             where('companyId', '==', kullanici.companyId),
             orderBy('ad')
           );
+        } else {
+          setSahalar([]);
+          return;
         }
         
         const snapshot = await getDocs(sahaQuery);
@@ -81,6 +101,10 @@ export const YapilanIsler: React.FC = () => {
           ad: doc.data().ad
         }));
         setSahalar(sahaListesi);
+        if (kullanici.rol === 'musteri' && sahaListesi.length === 1) {
+          setSecilenSaha(sahaListesi[0].id);
+        }
+
       } catch (error) {
         console.error('Sahalar getirilemedi:', error);
         toast.error('Sahalar yüklenirken bir hata oluştu');
@@ -91,64 +115,57 @@ export const YapilanIsler: React.FC = () => {
   }, [kullanici]);
 
   useEffect(() => {
+    if (!kullanici?.companyId) return;
+    
+    // Sayfa görüldü olarak işaretle
+    markPageAsSeen('yapilanIsler');
+    
     const raporlariGetir = async () => {
-      if (!kullanici) return;
-
       try {
         setYukleniyor(true);
+        const ayBaslangic = startOfMonth(parseISO(secilenAy + '-01'));
+        const ayBitis = endOfMonth(parseISO(secilenAy + '-01'));
 
-        let raporQuery;
-        if (kullanici.rol === 'musteri' && kullanici.sahalar) {
-          if (secilenSaha) {
-            if (!kullanici.sahalar.includes(secilenSaha)) {
+        let raporQueryConstraints = [
+          where('companyId', '==', kullanici.companyId),
+          where('tarih', '>=', Timestamp.fromDate(ayBaslangic)),
+          where('tarih', '<=', Timestamp.fromDate(ayBitis)),
+        ];
+
+        if (secilenSaha !== 'tumu') {
+          raporQueryConstraints.push(where('saha', '==', secilenSaha));
+        }
+
+        if (kullanici.rol === 'musteri') {
+          if (kullanici.sahalar && Array.isArray(kullanici.sahalar) && kullanici.sahalar.length > 0) {
+            if (secilenSaha !== 'tumu' && !kullanici.sahalar.includes(secilenSaha)){
               setRaporlar([]);
               setYukleniyor(false);
-              return;
+              return; 
             }
-            raporQuery = query(
-              collection(db, 'isRaporlari'),
-              where('saha', '==', secilenSaha),
-              where('companyId', '==', kullanici.companyId),
-              orderBy('tarih', 'desc')
-            );
+            if (secilenSaha === 'tumu') {
+                 raporQueryConstraints.push(where('saha', 'in', kullanici.sahalar.length > 0 ? kullanici.sahalar : ['null']));
+            }
           } else {
-            raporQuery = query(
-              collection(db, 'isRaporlari'),
-              where('saha', 'in', kullanici.sahalar),
-              where('companyId', '==', kullanici.companyId),
-              orderBy('tarih', 'desc')
-            );
+             setRaporlar([]);
+             setYukleniyor(false);
+             return;
           }
-        } else if (secilenSaha) {
-          raporQuery = query(
-            collection(db, 'isRaporlari'),
-            where('saha', '==', secilenSaha),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('tarih', 'desc')
-          );
-        } else {
-          raporQuery = query(
-            collection(db, 'isRaporlari'),
-            where('companyId', '==', kullanici.companyId),
-            orderBy('tarih', 'desc')
-          );
         }
+        
+        const raporQuery = query(
+          collection(db, 'isRaporlari'), 
+          ...raporQueryConstraints,
+          orderBy('tarih', 'desc')
+        );
 
         const snapshot = await getDocs(raporQuery);
         const tumRaporlar = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as IsRaporu[];
-
-        const ayBaslangic = startOfMonth(parseISO(secilenAy + '-01'));
-        const ayBitis = endOfMonth(parseISO(secilenAy + '-01'));
-
-        let filtrelenmisRaporlar = tumRaporlar.filter(rapor => {
-          const raporTarihi = rapor.tarih.toDate();
-          return raporTarihi >= ayBaslangic && raporTarihi <= ayBitis;
-        });
-
-        setRaporlar(filtrelenmisRaporlar);
+        
+        setRaporlar(tumRaporlar);
       } catch (error) {
         console.error('Veri getirme hatası:', error);
         toast.error('Veriler yüklenirken bir hata oluştu');
@@ -165,19 +182,26 @@ export const YapilanIsler: React.FC = () => {
       toast.error('Bu işlem için yetkiniz yok');
       return;
     }
-
     try {
-      setYukleniyor(true);
       await deleteDoc(doc(db, 'isRaporlari', id));
       toast.success('Rapor başarıyla silindi');
-      setSilinecekRapor(null);
+      setSilinecekRaporId(null);
       setRaporlar(prev => prev.filter(rapor => rapor.id !== id));
     } catch (error) {
       console.error('Rapor silme hatası:', error);
       toast.error('Rapor silinirken bir hata oluştu');
-    } finally {
-      setYukleniyor(false);
+    } 
+  };
+
+  const handleFormAc = (rapor?: IsRaporu) => {
+    if(rapor) {
+        setDuzenlenecekRapor(rapor);
+        setModalMode('edit');
+    } else {
+        setDuzenlenecekRapor(null);
+        setModalMode('add');
     }
+    setFormAcik(true);
   };
 
   const filtrelenmisRaporlar = raporlar.filter(rapor => {
@@ -185,403 +209,422 @@ export const YapilanIsler: React.FC = () => {
     const aramaMetniKucuk = aramaMetni.toLowerCase();
     return (
       rapor.baslik.toLowerCase().includes(aramaMetniKucuk) ||
-      rapor.yapilanIsler.toLowerCase().includes(aramaMetniKucuk)
+      rapor.aciklama.toLowerCase().includes(aramaMetniKucuk) ||
+      rapor.yapilanIsler.toLowerCase().includes(aramaMetniKucuk) ||
+      getSahaAdi(rapor.saha).toLowerCase().includes(aramaMetniKucuk) ||
+      rapor.olusturanKisi.ad.toLowerCase().includes(aramaMetniKucuk)
     );
   });
 
   const getSahaAdi = (sahaId: string) => {
     return sahalar.find(s => s.id === sahaId)?.ad || 'Bilinmeyen Saha';
   };
-
-  // İstatistik hesaplamaları
-  const getIstatistikler = () => {
+  
+  const istatistikler = () => {
+    if (aktifGorunum !== 'istatistik') return null;
     const toplamIs = filtrelenmisRaporlar.length;
-    const benzersizSahalar = new Set(filtrelenmisRaporlar.map(r => r.saha)).size;
-    const benzersizKullanicilar = new Set(filtrelenmisRaporlar.map(r => r.olusturanKisi.ad)).size;
-    
-    // Son 7 günün verileri
-    const son7Gun = Array.from({ length: 7 }, (_, i) => {
-      const tarih = new Date();
-      tarih.setDate(tarih.getDate() - i);
-      const gunStr = format(tarih, 'dd/MM');
-      const gunIsler = filtrelenmisRaporlar.filter(r => 
-        format(r.tarih.toDate(), 'dd/MM') === gunStr
-      ).length;
-      
-      return {
-        gun: gunStr,
-        isler: gunIsler
-      };
-    }).reverse();
+    const tamamlananIsSayisi = filtrelenmisRaporlar.length;
+    const farkliSahaSayisi = new Set(filtrelenmisRaporlar.map(r => r.saha)).size;
+    const katilanTeknisyenSayisi = new Set(filtrelenmisRaporlar.map(r => r.olusturanKisi.id)).size;
+
+    const gunlukIsSayilari = Array(7).fill(0).map((_, i) => {
+      const gunTarihi = new Date();
+      gunTarihi.setDate(gunTarihi.getDate() - (6 - i));
+      const gunFormat = format(gunTarihi, 'yyyy-MM-dd');
+      const sayi = filtrelenmisRaporlar.filter(r => format(r.tarih.toDate(), 'yyyy-MM-dd') === gunFormat).length;
+      return { gun: format(gunTarihi, 'dd MMM', {locale: tr}), "İş Sayısı": sayi };
+    });
 
     return {
       toplamIs,
-      benzersizSahalar,
-      benzersizKullanicilar,
-      son7Gun
+      tamamlananIsSayisi,
+      farkliSahaSayisi,
+      katilanTeknisyenSayisi,
+      gunlukIsSayilari
     };
   };
 
-  const istatistikler = getIstatistikler();
+  const stats = istatistikler();
 
-  if (yukleniyor) {
+  const renderReportCard = (rapor: IsRaporu) => (
+    <div key={rapor.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col">
+      {/* Fotoğraf Ön İzleme Alanı */}
+      {rapor.fotograflar && rapor.fotograflar.length > 0 ? (
+        <div className="relative">
+          <div className="h-40 bg-gray-100 rounded-t-lg overflow-hidden">
+            <img 
+              src={rapor.fotograflar[0]} 
+              alt="İş raporu fotoğrafı"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                ((e.target as HTMLImageElement).nextSibling as HTMLDivElement).style.display = 'flex';
+              }}
+            />
+            <div className="w-full h-full bg-gray-200 hidden items-center justify-center">
+              <ImageIcon className="w-8 h-8 text-gray-400" />
+            </div>
+          </div>
+          {rapor.fotograflar.length > 1 && (
+            <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded-full">
+              +{rapor.fotograflar.length - 1}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-lg flex items-center justify-center">
+          <div className="text-center">
+            <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+            <span className="text-xs text-gray-500">Fotoğraf Yok</span>
+          </div>
+        </div>
+      )}
+      
+      <div className="p-4 flex-grow">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-base font-semibold text-blue-700 truncate" title={rapor.baslik}>{rapor.baslik}</h3>
+          {rapor.fotograflar && rapor.fotograflar.length > 0 && (
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+              {rapor.fotograflar.length} Foto
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mb-1 flex items-center">
+            <Building size={12} className="mr-1.5 text-gray-400" /> {getSahaAdi(rapor.saha)}
+        </p>
+        <p className="text-xs text-gray-500 mb-2 flex items-center">
+            <Calendar size={12} className="mr-1.5 text-gray-400" /> {format(rapor.tarih.toDate(), 'dd MMMM yyyy', { locale: tr })}
+        </p>
+        <p className="text-sm text-gray-700 line-clamp-2 mb-3" title={rapor.yapilanIsler}>{rapor.yapilanIsler}</p>
+      </div>
+      
+      <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 flex items-center justify-between text-xs">
+        <div className="flex items-center text-gray-600">
+            <User size={12} className="mr-1 text-gray-400" /> {rapor.olusturanKisi.ad}
+        </div>
+        <div className="flex items-center space-x-2">
+            <button 
+                onClick={() => setSeciliRaporDetay(rapor)}
+                className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                title="Detayları Görüntüle"
+            >
+                <ExternalLink size={14} />
+            </button>
+            {canAddOrEdit && (
+                <button 
+                    onClick={() => handleFormAc(rapor)}
+                    className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                    title="Düzenle"
+                >
+                    <Wrench size={14} />
+                </button>
+            )}
+            {canDelete && (
+                <button 
+                    onClick={() => setSilinecekRaporId(rapor.id)}
+                    className="p-1 text-red-600 hover:text-red-800 hover:bg-red-100 rounded transition-colors"
+                    title="Sil"
+                >
+                    <Trash2 size={14} />
+                </button>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderReportListItem = (rapor: IsRaporu) => (
+    <tr key={rapor.id} className="hover:bg-gray-50 transition-colors duration-150">
+      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-700">
+        <button onClick={() => setSeciliRaporDetay(rapor)} className="hover:underline truncate block max-w-xs" title={rapor.baslik}>
+          {rapor.baslik}
+        </button>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{getSahaAdi(rapor.saha)}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">{format(rapor.tarih.toDate(), 'dd MMM yyyy', { locale: tr })}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell">{rapor.olusturanKisi.ad}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 hidden md:table-cell">
+        <span className={cn(
+          'px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full',
+          rapor.fotograflar && rapor.fotograflar.length > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+        )}>
+          {rapor.fotograflar && rapor.fotograflar.length > 0 ? `${rapor.fotograflar.length} Foto` : 'Foto Yok'}
+        </span>
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium space-x-1">
+        <button 
+            onClick={() => setSeciliRaporDetay(rapor)}
+            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors" 
+            title="Detayları Görüntüle"
+        >
+            <ExternalLink size={16} />
+        </button>
+        {canAddOrEdit && (
+            <button 
+                onClick={() => handleFormAc(rapor)}
+                className="p-1.5 text-green-600 hover:bg-green-100 rounded-md transition-colors" 
+                title="Düzenle"
+            >
+                <Wrench size={16} />
+            </button>
+        )}
+        {canDelete && (
+            <button 
+                onClick={() => setSilinecekRaporId(rapor.id)}
+                className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors" 
+                title="Sil"
+            >
+                <Trash2 size={16} />
+            </button>
+        )}
+      </td>
+    </tr>
+  );
+
+  const StatCard = ({ title, value, icon: Icon, color }: {title: string; value: string | number; icon: React.ElementType; color: string}) => (
+    <div className={`bg-white p-5 rounded-lg border border-gray-200 shadow-sm flex items-center space-x-4`}>
+        <div className={`p-3 rounded-full bg-${color}-100 text-${color}-600`}>
+            <Icon size={24} />
+        </div>
+        <div>
+            <p className="text-sm text-gray-500 font-medium">{title}</p>
+            <p className="text-2xl font-semibold text-gray-800">{value}</p>
+        </div>
+    </div>
+  );
+
+  if (yukleniyor && raporlar.length === 0) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="fixed inset-0 bg-gray-100 bg-opacity-50 flex justify-center items-center z-50">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gray-900 rounded-xl flex items-center justify-center">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Yapılan İşler
-                </h1>
-                <p className="text-gray-600 mt-1">
-                  {secilenSaha ? getSahaAdi(secilenSaha) : 'Tüm Sahalar'} - {format(parseISO(secilenAy + '-01'), 'MMMM yyyy', { locale: tr })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 mt-6 lg:mt-0">
-              <div className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
-                <Activity className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-gray-700">İş Takibi Aktif</span>
-              </div>
-
-              {/* Görünüm Değiştirme */}
-              <div className="flex rounded-lg shadow-sm border border-gray-300 overflow-hidden bg-white">
-                <button
-                  onClick={() => setGrafikGorünümü('liste')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    grafikGorünümü === 'liste'
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Liste
-                </button>
-                <button
-                  onClick={() => setGrafikGorünümü('istatistik')}
-                  className={`px-3 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
-                    grafikGorünümü === 'istatistik'
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  İstatistik
-                </button>
-              </div>
-
-              {canAdd && (
-                <button
-                  onClick={() => setFormAcik(true)}
-                  className="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Yeni İş Raporu
-                </button>
-              )}
-            </div>
+    <div className="min-h-screen bg-slate-100 p-4 md:p-6">
+      <div className="w-full space-y-6">
+        <header className="mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div className="mb-4 md:mb-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+              Yapılan İşler Yönetimi
+            </h1>
+            <p className="text-sm text-slate-600 mt-1">
+              {secilenSaha !== 'tumu' ? getSahaAdi(secilenSaha) : 'Tüm Sahalar'} ({format(parseISO(secilenAy + '-01'), 'MMMM yyyy', { locale: tr })})
+            </p>
           </div>
+          <div className="flex items-center space-x-2">
+            {canAddOrEdit && (
+                <button 
+                    onClick={() => handleFormAc()}
+                    className="flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                    <Plus size={18} className="mr-2"/> Yeni İş Raporu
+                </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div className="lg:col-span-1">
+                <label htmlFor="arama" className="block text-xs font-medium text-gray-700 mb-1">Ara (Başlık, Açıklama, Saha...)</label>
+                <SearchInput 
+                    value={aramaMetni} 
+                    onChange={(value: string) => setAramaMetni(value)}
+                    placeholder="Raporlarda ara..."
+                />
+            </div>
+
+            <div>
+                <label htmlFor="sahaFiltre" className="block text-xs font-medium text-gray-700 mb-1">Saha</label>
+                <select 
+                    id="sahaFiltre" 
+                    value={secilenSaha} 
+                    onChange={(e) => setSecilenSaha(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    disabled={kullanici?.rol === 'musteri' && sahalar.length <= 1}
+                >
+                    <option value="tumu">Tüm Sahalar</option>
+                    {sahalar.map(s => <option key={s.id} value={s.id}>{s.ad}</option>)}
+                </select>
+            </div>
+
+            <div className="flex space-x-2">
+                <div>
+                    <label htmlFor="ayFiltre" className="block text-xs font-medium text-gray-700 mb-1">Ay</label>
+                    <select 
+                        id="ayFiltre" 
+                        value={secilenAyNo} 
+                        onChange={(e) => setSecilenAy(`${secilenYil}-${e.target.value}`)}
+                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                        {aySecenekleri.map(ay => <option key={ay.value} value={ay.value}>{ay.label}</option>)}
+                    </select>
+                </div>
+                 <div>
+                    <label htmlFor="yilFiltre" className="block text-xs font-medium text-gray-700 mb-1">Yıl</label>
+                    <select 
+                        id="yilFiltre" 
+                        value={secilenYil} 
+                        onChange={(e) => setSecilenAy(`${e.target.value}-${secilenAyNo}`)}
+                        className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                        {yilSecenekleri.map(yil => <option key={yil} value={yil}>{yil}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-1 bg-gray-100 p-0.5 rounded-lg">
+                {[
+                    { view: 'liste', icon: List, label: 'Liste' },
+                    { view: 'kart', icon: LayoutGrid, label: 'Kart' },
+                    canViewStats && { view: 'istatistik', icon: BarChart3, label: 'İstatistik' },
+                ].filter(Boolean).map((item: any) => (
+                    <button
+                        key={item.view}
+                        onClick={() => setAktifGorunum(item.view)}
+                        title={item.label}
+                        className={cn(
+                            'flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                            aktifGorunum === item.view 
+                                ? 'bg-white text-blue-600 shadow-sm' 
+                                : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                        )}
+                    >
+                        <item.icon size={16} className="mx-auto"/>
+                         <span className="sr-only">{item.label}</span>
+                    </button>
+                ))}
+            </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Filtreler */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <SearchInput
-                value={aramaMetni}
-                onChange={setAramaMetni}
-                placeholder="İş raporu ara..."
-              />
-            </div>
-            <div className="flex gap-3">
-              <select
-                value={secilenSaha}
-                onChange={(e) => setSecilenSaha(e.target.value)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
-              >
-                <option value="">Tüm Sahalar</option>
-                {sahalar.map(saha => (
-                  <option key={saha.id} value={saha.id}>{saha.ad}</option>
-                ))}
-              </select>
-              <input
-                type="month"
-                value={secilenAy}
-                onChange={(e) => setSecilenAy(e.target.value)}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
-                min={`${yilSecenekleri[yilSecenekleri.length - 1]}-01`}
-                max={`${yilSecenekleri[0]}-12`}
-              />
-            </div>
-          </div>
-        </div>
+      {yukleniyor && raporlar.length > 0 && (
+         <div className="text-center py-4"><LoadingSpinner/> Raporlar güncelleniyor...</div>
+      )}
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              title: 'Toplam İş',
-              value: istatistikler.toplamIs,
-              change: '+8%',
-              changeType: 'positive',
-              icon: FileText,
-              color: 'blue'
-            },
-            {
-              title: 'Aktif Sahalar',
-              value: istatistikler.benzersizSahalar,
-              change: '+2%',
-              changeType: 'positive',
-              icon: Building,
-              color: 'green'
-            },
-            {
-              title: 'Çalışan Sayısı',
-              value: istatistikler.benzersizKullanicilar,
-              change: '+5%',
-              changeType: 'positive',
-              icon: Users,
-              color: 'purple'
-            },
-            {
-              title: 'Günlük Ortalama',
-              value: istatistikler.toplamIs > 0 
-                ? Math.round(istatistikler.toplamIs / new Date(new Date(secilenAy).getFullYear(), new Date(secilenAy).getMonth() + 1, 0).getDate())
-                : 0,
-              change: '+3%',
-              changeType: 'neutral',
-              icon: TrendingUp,
-              color: 'orange'
-            }
-          ].map((kpi, index) => (
-            <div key={index} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    kpi.color === 'blue' ? 'bg-blue-100' :
-                    kpi.color === 'green' ? 'bg-green-100' :
-                    kpi.color === 'purple' ? 'bg-purple-100' : 'bg-orange-100'
-                  }`}>
-                    <kpi.icon className={`w-5 h-5 ${
-                      kpi.color === 'blue' ? 'text-blue-600' :
-                      kpi.color === 'green' ? 'text-green-600' :
-                      kpi.color === 'purple' ? 'text-purple-600' : 'text-orange-600'
-                    }`} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">{kpi.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
-                  </div>
-                </div>
-                <div className={`text-sm font-medium ${
-                  kpi.changeType === 'positive' ? 'text-green-600' :
-                  kpi.changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
-                }`}>
-                  {kpi.change}
-                </div>
-              </div>
-            </div>
-          ))}
+      {!yukleniyor && filtrelenmisRaporlar.length === 0 && (
+        <div className="text-center py-10 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <Wrench size={48} className="mx-auto text-gray-300 mb-4" />
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Rapor Bulunamadı</h3>
+          <p className="text-sm text-gray-500">Seçili filtrelere uygun iş raporu bulunamadı.</p>
+          {canAddOrEdit && (
+             <button 
+                onClick={() => handleFormAc()}
+                className="mt-6 flex items-center mx-auto px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+            >
+                <Plus size={18} className="mr-2"/> İlk Raporu Ekle
+            </button>
+          )}
         </div>
+      )}
 
-      {/* İçerik Alanı */}
-      {grafikGorünümü === 'istatistik' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Günlük İş Dağılımı */}
-          <Card>
-            <Title>Son 7 Gün İş Dağılımı</Title>
-            <AreaChart
-              className="h-72 mt-4"
-              data={istatistikler.son7Gun}
-              index="gun"
-              categories={["isler"]}
-              colors={["blue"]}
-              valueFormatter={(value) => `${value} iş`}
-              showLegend={false}
-              showGradient={true}
-              curveType="natural"
-            />
-          </Card>
-
-          {/* Saha Bazlı Dağılım */}
-          <Card>
-            <Title>Saha Bazlı İş Dağılımı</Title>
-            <div className="mt-6 space-y-4">
-              {Array.from(new Set(filtrelenmisRaporlar.map(r => r.saha)))
-                .map(sahaId => {
-                  const sahaIsleri = filtrelenmisRaporlar.filter(r => r.saha === sahaId).length;
-                  const yuzde = (sahaIsleri / filtrelenmisRaporlar.length) * 100;
-                  
-                  return (
-                    <div key={sahaId}>
-                      <Flex className="mb-2">
-                        <Text>{getSahaAdi(sahaId)}</Text>
-                        <Text>{sahaIsleri} iş</Text>
-                      </Flex>
-                      <ProgressBar value={yuzde} color="blue" className="mt-1" />
-                    </div>
-                  );
-                })
-              }
-            </div>
-          </Card>
-        </div>
-      ) : (
+      {filtrelenmisRaporlar.length > 0 && (
         <>
-          {/* Liste Görünümü */}
-          {filtrelenmisRaporlar.length === 0 ? (
-            <Card className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="h-8 w-8 text-gray-400" />
+          {aktifGorunum === 'liste' && (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Başlık</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saha</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Tarih</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Oluşturan</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Ekler</th>
+                      <th scope="col" className="relative px-4 py-3"><span className="sr-only">İşlemler</span></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filtrelenmisRaporlar.map(renderReportListItem)}
+                  </tbody>
+                </table>
               </div>
-              <Title>İş Raporu Bulunamadı</Title>
-              <Text className="mt-2 max-w-md mx-auto">
-                Seçilen dönem ve filtreler için herhangi bir iş raporu bulunamadı. 
-                Lütfen farklı bir dönem seçin veya filtreleri değiştirin.
-              </Text>
-              {canAdd && (
-                <button
-                  onClick={() => setFormAcik(true)}
-                  className="mt-6 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Yeni İş Raporu Ekle
-                </button>
-              )}
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filtrelenmisRaporlar.map((rapor) => (
-                <Card
-                  key={rapor.id}
-                  className="group hover:shadow-lg transition-all duration-300 cursor-pointer relative overflow-hidden"
-                  onClick={() => setSeciliRapor(rapor)}
-                >
-                  {/* Durum Badge */}
-                  <div className="absolute top-3 left-3 z-10">
-                    <Badge color="green" size="sm">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Tamamlandı
-                    </Badge>
-                  </div>
+            </div>
+          )}
 
-                  {/* Silme Butonu */}
-                  {canDelete && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSilinecekRapor(rapor.id);
-                      }}
-                      className="absolute top-3 right-3 z-10 p-1.5 bg-white rounded-full shadow-sm hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </button>
-                  )}
+          {aktifGorunum === 'kart' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filtrelenmisRaporlar.map(renderReportCard)}
+            </div>
+          )}
 
-                  {/* Fotoğraf Alanı */}
-                  <div className="h-32 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 relative overflow-hidden">
-                    {rapor.fotograflar?.[0] ? (
-                      <img
-                        src={rapor.fotograflar[0]}
-                        alt={rapor.baslik}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                      />
+          {aktifGorunum === 'istatistik' && stats && (
+            <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <StatCard title="Toplam İş Raporu" value={stats.toplamIs} icon={FileText} color="blue" />
+                    <StatCard title="Tamamlanan İşler" value={stats.tamamlananIsSayisi} icon={CheckCircle} color="green" />
+                    <StatCard title="Farklı Saha Sayısı" value={stats.farkliSahaSayisi} icon={Building} color="purple" />
+                    <StatCard title="Katılan Teknisyen" value={stats.katilanTeknisyenSayisi} icon={Users} color="yellow" />
+                </div>
+                <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Haftalık İş Raporu Trendi</h3>
+                    <p className="text-sm text-gray-500 mb-4">Son 7 günde oluşturulan iş raporu sayısı.</p>
+                    {stats.gunlukIsSayilari.length > 0 ? (
+                        <div className="h-72 sm:h-80">
+                            <div className="flex items-end h-full space-x-2 sm:space-x-3 border-b border-gray-200 pb-2">
+                                {stats.gunlukIsSayilari.map((item, idx) => (
+                                    <div key={idx} className="flex-1 flex flex-col items-center justify-end">
+                                        <div 
+                                            className="w-full bg-blue-500 hover:bg-blue-600 transition-colors rounded-t-md"
+                                            style={{ height: `${Math.max(5, (item["İş Sayısı"] / (Math.max(...stats.gunlukIsSayilari.map(d => d["İş Sayısı"]), 1)) * 100))}%` }}
+                                            title={`${item["İş Sayısı"]} iş`}
+                                        ></div>
+                                        <span className="text-xs text-gray-500 mt-1.5">{item.gun}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="h-12 w-12 text-blue-300" />
-                      </div>
+                        <div className="h-72 sm:h-80 flex items-center justify-center text-gray-500 bg-gray-50 rounded-md">
+                            Grafik için veri bulunamadı.
+                        </div>
                     )}
-                    
-                    {rapor.fotograflar && rapor.fotograflar.length > 1 && (
-                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full">
-                        +{rapor.fotograflar.length - 1}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* İçerik */}
-                  <div className="space-y-3">
-                    <div>
-                      <Title className="text-base line-clamp-1">{rapor.baslik}</Title>
-                      <Text className="text-sm mt-1 line-clamp-2">{rapor.yapilanIsler}</Text>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Flex className="text-sm">
-                        <div className="flex items-center text-gray-500">
-                          <Building className="h-4 w-4 mr-1" />
-                          <span className="truncate">{getSahaAdi(rapor.saha)}</span>
-                        </div>
-                      </Flex>
-                      
-                      <Flex className="text-sm">
-                        <div className="flex items-center text-gray-500">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          <span>{format(rapor.tarih.toDate(), 'dd MMM yyyy', { locale: tr })}</span>
-                        </div>
-                      </Flex>
-                      
-                      <Flex className="text-sm">
-                        <div className="flex items-center text-gray-500">
-                          <User className="h-4 w-4 mr-1" />
-                          <span className="truncate">{rapor.olusturanKisi.ad}</span>
-                        </div>
-                      </Flex>
-                    </div>
-
-                    <div className="pt-3 border-t border-gray-100 flex justify-end">
-                      <button className="text-sm text-blue-600 hover:text-blue-700 flex items-center font-medium">
-                        Detayları Gör
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                </div>
             </div>
           )}
         </>
       )}
 
-      {/* Modaller */}
       {formAcik && (
-        <YapilanIsForm
-          onClose={() => setFormAcik(false)}
-          sahalar={sahalar}
+        <YapilanIsForm 
+            onClose={() => { setFormAcik(false); setDuzenlenecekRapor(null); }} 
+            raporToEdit={duzenlenecekRapor}
+            mode={modalMode}
+            sahalar={sahalar} 
+            onSuccess={() => {
+                setFormAcik(false);
+                setDuzenlenecekRapor(null);
+                const currentSaha = secilenSaha;
+                const currentAy = secilenAy;
+                setSecilenSaha(currentSaha === 'tumu' ? 'temp_force_refresh' : 'tumu'); 
+                setSecilenAy(format(new Date(), 'yyyy-MM') === currentAy ? format(addMonths(new Date(), -1), 'yyyy-MM') : format(new Date(), 'yyyy-MM'));
+                
+                setTimeout(() => { 
+                    setSecilenSaha(currentSaha);
+                    setSecilenAy(currentAy); 
+                }, 50);
+            }}
         />
       )}
 
-      {seciliRapor && (
-        <IsRaporDetayModal
-          rapor={seciliRapor}
-          sahaAdi={getSahaAdi(seciliRapor.saha)}
-          onClose={() => setSeciliRapor(null)}
+      {seciliRaporDetay && (
+        <IsRaporDetayModal 
+            onClose={() => setSeciliRaporDetay(null)} 
+            rapor={seciliRaporDetay} 
+            sahaAdi={getSahaAdi(seciliRaporDetay.saha)}
         />
       )}
 
-      {silinecekRapor && (
-        <SilmeOnayModal
-          onConfirm={() => handleRaporSil(silinecekRapor)}
-          onCancel={() => setSilinecekRapor(null)}
-          mesaj="Bu raporu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+      {silinecekRaporId && (
+        <SilmeOnayModal 
+            baslik="İş Raporunu Sil"
+            mesaj="Bu iş raporunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz."
+            onConfirm={() => handleRaporSil(silinecekRaporId)}
+            onCancel={() => setSilinecekRaporId(null)}
         />
       )}
       </div>

@@ -1,42 +1,16 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCompany } from '../contexts/CompanyContext';
 import { BildirimMenusu } from './BildirimMenusu';
-import { collection, doc, getDoc } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { 
-  LayoutDashboard, 
-  AlertTriangle, 
-  Users,
-  BarChart2,
-  TrendingUp,
-  FileText,
-  Settings,
-  LogOut,
-  Sun,
-  Building,
-  Menu,
-  X,
-  Shield,
-  Wrench,
-  Zap,
-  Activity,
-  ClipboardList,
-  Package,
-  ChevronDown,
-  ChevronRight,
-  Home,
-  Gauge,
-  Bolt,
-  Lightbulb,
-  PanelTop,
-  ChevronLeft,
-  FileBarChart,
-  BrainCircuit
-} from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { Sidebar } from './Sidebar';
+import { MobileSidebar } from './MobileSidebar';
+import { motion } from 'framer-motion';
+import { Kullanici } from '../types';
 
-// Şirket bilgileri için context
 interface SirketBilgileri {
   sirketAdi: string;
   slogan: string;
@@ -59,59 +33,24 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     slogan: 'Güneş Enerjisi Yönetimi',
     logoURL: '/solarveyo-logo-blue.png'
   });
-  const lastFetchTime = useRef<number>(0);
 
   useEffect(() => {
     const sirketBilgileriniGetir = async () => {
-      // Only attempt to fetch if user is authenticated
-      if (!kullanici) return;
+      if (!kullanici || !currentCompany) return;
+      
+      const logoURL = currentCompany.logo 
+        ? `${currentCompany.logo}?t=${new Date().getTime()}` 
+        : '/solarveyo-logo.png';
 
-      // Prevent fetching too frequently (at most once every 5 seconds)
-      const now = Date.now();
-      if (now - lastFetchTime.current < 5000) return;
-
-      lastFetchTime.current = now;
-
-      try {
-        // If we have company data from context, use it
-        if (currentCompany) {
-          // Add a cache-busting parameter to the logo URL to prevent caching
-          const logoURL = currentCompany.logo ? `${currentCompany.logo}?t=${now}` : '/solarveyo-logo.png';
-
-          setSirketBilgileri({
-            sirketAdi: currentCompany.name || 'SolarVeyo',
-            slogan: currentCompany.slogan || 'Güneş Enerjisi Yönetimi',
-            logoURL: logoURL || '/solar-logo.png'
-          });
-          return;
-        }
-
-        // Fallback to ayarlar/sirket if needed
-        const sirketDoc = await getDoc(doc(db, 'ayarlar', 'sirket'));
-        if (sirketDoc.exists()) {
-          const data = sirketDoc.data();
-          // Add a cache-busting parameter to the logo URL to prevent caching
-          const logoURL = data.logoURL ? `${data.logoURL}?t=${now}` : '/solarveyo-logo.png';
-
-          setSirketBilgileri({
-            sirketAdi: data.sirketAdi || 'SolarVeyo',
-            slogan: data.slogan || 'Güneş Enerjisi Yönetimi',
-            logoURL: logoURL
-          });
-        }
-      } catch (error) {
-        console.error('Şirket bilgileri getirilemedi:', error);
-        // Keep default values on error
-      }
+      setSirketBilgileri({
+        sirketAdi: currentCompany.name || 'SolarVeyo',
+        slogan: currentCompany.slogan || 'Güneş Enerjisi Yönetimi',
+        logoURL: logoURL,
+      });
     };
 
     sirketBilgileriniGetir();
-
-    // Set up an interval to refresh company info every 30 seconds
-    const intervalId = setInterval(sirketBilgileriniGetir, 30000);
-
-    return () => clearInterval(intervalId);
-  }, [kullanici, currentCompany]); // Add kullanici as dependency to re-fetch when auth state changes
+  }, [kullanici, currentCompany]);
 
   return (
     <SirketContext.Provider value={sirketBilgileri}>
@@ -120,542 +59,88 @@ export const SirketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 };
 
+const Header = ({ onMenuClick }: { onMenuClick: () => void }) => {
+  const { kullanici } = useAuth();
+  const user = kullanici as Kullanici | null;
+  
+  return (
+    <header className="flex items-center justify-between h-16 px-3 bg-white border-b border-gray-200 shadow-sm">
+      {/* Left: Menu Button */}
+      <div className="flex-shrink-0">
+        <button
+          onClick={onMenuClick}
+          className="p-2 rounded-md lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Menüyü aç"
+        >
+          <Menu size={20} />
+        </button>
+      </div>
+
+      {/* Center: Title */} 
+      <div className="flex-1 flex items-center justify-center px-1">
+        <span className="text-lg font-semibold text-gray-900 lg:hidden truncate">SolarVeyo</span>
+      </div>
+
+      {/* Right: Icons */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <BildirimMenusu />
+        <div className="flex items-center gap-2">
+            <img
+                src={user?.fotoURL || `https://ui-avatars.com/api/?name=${user?.ad || user?.email}&background=0D8ABC&color=fff`}
+                alt="Profil"
+                className="w-8 h-8 rounded-full border border-gray-200"
+            />
+            <span className="hidden text-sm font-medium text-gray-700 sm:block truncate max-w-20">{user?.ad}</span>
+        </div>
+      </div>
+    </header>
+  );
+};
+
 export const Layout: React.FC = () => {
-  const { kullanici, cikisYap } = useAuth();
-  const { currentCompany } = useCompany();
+  const [isSidebarExpanded, setSidebarExpanded] = useState(true);
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const [menuAcik, setMenuAcik] = useState(true);
-  const [mobileMenuAcik, setMobileMenuAcik] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
-  const [pageTitle, setPageTitle] = useState('Ana Sayfa');
-  const sirketBilgileri = useSirketBilgileri();
 
   useEffect(() => {
-    // Check screen size and set menu state accordingly
     const handleResize = () => {
       if (window.innerWidth < 1024) {
-        setMenuAcik(false);
+        setSidebarExpanded(false);
       } else {
-        setMenuAcik(true);
+        setSidebarExpanded(true);
       }
     };
-
-    // Initial check
-    handleResize();
-
-    // Add event listener
     window.addEventListener('resize', handleResize);
-
-    // Cleanup
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    setMobileMenuAcik(false);
-    setProfileMenuOpen(false);
-
-    // Set page title based on current path
-    const currentPath = location.pathname.split('/')[1];
-    if (currentPath) {
-      const navItem = navigation.find(item => 
-        item.href === `/${currentPath}` || 
-        (item.children && item.children.some(child => child.href === `/${currentPath}`))
-      );
-
-      if (navItem) {
-        if (navItem.href) {
-          setPageTitle(navItem.name);
-        } else if (navItem.children) {
-          const childItem = navItem.children.find(child => child.href === `/${currentPath}`);
-          if (childItem) {
-            setPageTitle(childItem.name);
-          }
-        }
-      }
-    } else {
-      setPageTitle('Ana Sayfa');
-    }
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (mobileMenuAcik) {
-      document.body.style.overflow = 'hidden';
-      document.body.classList.add('menu-open');
-
-      // Mobil menüyü görünür yap
-      const mobileMenuElement = document.querySelector('.mobile-menu-panel');
-      if (mobileMenuElement) {
-        mobileMenuElement.classList.add('visible');
-        mobileMenuElement.classList.add('transform-none');
-        mobileMenuElement.style.display = 'block';
-        mobileMenuElement.style.zIndex = '999';
-        mobileMenuElement.style.visibility = 'visible';
-        mobileMenuElement.style.transform = 'translateX(0)';
-      }
-
-      // Overlayi görünür yap
-      const overlayElement = document.querySelector('.fixed.inset-0.bg-gray-600');
-      if (overlayElement) {
-        overlayElement.classList.add('visible');
-        (overlayElement as HTMLElement).style.zIndex = '998';
-      }
-    } else {
-      document.body.style.overflow = 'unset';
-      document.body.classList.remove('menu-open');
-
-      // Mobil menüyü gizle
-      const mobileMenuElement = document.querySelector('.mobile-menu-panel');
-      if (mobileMenuElement) {
-        mobileMenuElement.classList.remove('visible');
-        mobileMenuElement.classList.remove('transform-none');
-
-        // Animasyon bitiminde 300ms sonra tamamen gizle
-        setTimeout(() => {
-          if (!document.body.classList.contains('menu-open') && mobileMenuElement) {
-            (mobileMenuElement as HTMLElement).style.display = 'none';
-          }
-        }, 300);
-      }
-    }
-
-    return () => {
-      document.body.style.overflow = 'unset';
-      document.body.classList.remove('menu-open');
-    };
-  }, [mobileMenuAcik]);
-
-  const handleCikis = async () => {
-    try {
-      await cikisYap();
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error('Çıkış yapılırken hata:', error);
-    }
-  };
-
-  const toggleMenu = (menuName: string) => {
-    setExpandedMenus(prev => ({
-      ...prev,
-      [menuName]: !prev[menuName]
-    }));
-  };
-
-  const isMenuActive = (item: any) => {
-    if (item.href) {
-      return location.pathname === item.href;
-    }
-    if (item.children) {
-      return item.children.some((child: any) => location.pathname === child.href);
-    }
-    return false;
-  };
-
-  // Define navigation items based on user role
-  let navigation = [];
-
-  // Basic navigation for all users
-  const baseNavigation = [
-    { name: 'Anasayfa', href: '/anasayfa', icon: Home },
-  ];
-
-  // Navigation for bekci role
-  const bekciNavigation = [
-    ...baseNavigation,
-    { name: 'Nöbet Kontrol', href: '/nobet-kontrol', icon: Shield }
-  ];
-
-  // Navigation for regular users (tekniker, muhendis, yonetici, musteri)
-  const regularNavigation = [
-    ...baseNavigation,
-    { name: 'Arızalar', href: '/arizalar', icon: AlertTriangle },
-    { name: 'Stok Kontrol', href: '/stok-kontrol', icon: Package },
-    {
-      name: 'GES Yönetimi',
-      icon: Sun,
-      children: [
-        { name: 'Santral Yönetimi', href: '/ges-yonetimi', icon: Lightbulb },
-        { name: 'Üretim Verileri', href: '/uretim-verileri', icon: Gauge }
-      ]
-    },
-    {
-      name: 'Bakım & Kontrol',
-      icon: ClipboardList,
-      children: [
-        { name: 'Yapılan İşler', href: '/yapilan-isler', icon: Wrench },
-        { name: 'Elektrik Kesintileri', href: '/elektrik-kesintileri', icon: Bolt },
-        { name: 'İnvertör Kontrolleri', href: '/invertor-kontrol', icon: Activity },
-        { name: 'Mekanik Bakım', href: '/mekanik-bakim', icon: PanelTop },
-        { name: 'Elektrik Bakım', href: '/elektrik-bakim', icon: Zap },
-      ]
-    },
-    { name: 'Sahalar', href: '/sahalar', icon: Building },
-    { name: 'İstatistikler', href: '/istatistikler', icon: BarChart2 },
-  ];
-
-  // Additional items for non-customer roles
-  const nonCustomerItems = [
-    { name: 'Performans', href: '/performans', icon: TrendingUp }
-  ];
-
-  // Additional items for managers and engineers
-  const managerEngineerItems = [
-    { name: 'Rapor Yönetimi', href: '/rapor-yonetimi', icon: FileBarChart }
-  ];
-
-  // Additional items for managers
-  const managerItems = [
-    { name: 'Müşteriler', href: '/musteriler', icon: Users },
-    { name: 'Ekip', href: '/ekip', icon: Users },
-    { name: 'Şirket Ayarları', href: '/company-settings', icon: Building },
-  ];
-
-  // Additional items for superadmin
-  const superadminItems = [
-    { name: 'Admin Paneli', href: '/admin', icon: Shield },
-  ];
-
-  // Determine navigation based on role
-  if (kullanici?.rol === 'bekci') {
-    navigation = bekciNavigation;
-  } else {
-    navigation = [...regularNavigation];
-
-    // Add role-specific items
-    if (kullanici?.rol !== 'musteri') {
-      navigation.push(...nonCustomerItems);
-    }
-
-    if (kullanici?.rol === 'yonetici' || kullanici?.rol === 'muhendis') {
-      navigation.push(...managerEngineerItems);
-    }
-
-    if (kullanici?.rol === 'yonetici') {
-      navigation.push(...managerItems);
-    }
-
-    if (kullanici?.rol === 'superadmin') {
-      navigation.push(...superadminItems);
-    }
-  }
-
-  // Add settings to all navigations
-  navigation.push({ name: 'Ayarlar', href: '/ayarlar', icon: Settings });
-
   return (
     <SirketProvider>
-      <div className="flex h-screen bg-gray-50">
-        {/* Sidebar - Fixed Left */}
-        <div 
-          className={`fixed inset-y-0 left-0 z-50 bg-[#0a2351] transition-all duration-300 ease-in-out ${
-            menuAcik ? 'w-64' : 'w-20'
-          } lg:translate-x-0 lg:static`}
-        >
-          {/* Logo and Brand */}
-          <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white">
-            <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3 flex-shrink-0">
-              {menuAcik ? (
-                <img 
-                  src={sirketBilgileri.logoURL} 
-                  alt="Logo" 
-                  className="h-full w-full object-contain"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/solar-logo.png';
-                  }}
-                />
-              ) : (
-                <Sun className="h-6 w-6 text-blue-500" />
-              )}
-            </div>
-            {menuAcik && (
-              <div>
-                <h1 className="text-lg font-bold">{sirketBilgileri.sirketAdi}</h1>
-                <p className="text-xs text-gray-300">{sirketBilgileri.slogan}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Toggle Button */}
-          <button 
-            onClick={() => setMenuAcik(!menuAcik)}
-            className="absolute right-0 top-16 -mr-3 p-1.5 rounded-full bg-white shadow-md text-gray-500 hover:text-gray-700"
-          >
-            {menuAcik ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </button>
-
-          {/* Navigation Menu */}
-          <div className="mt-2 px-3 py-2 h-[calc(100%-4rem-2rem)] overflow-y-auto">
-            <div className="space-y-1">
-              {navigation.map(item => {
-                if (item.children) {
-                  const isActive = item.children.some(child => child.href === location.pathname);
-                  const isExpanded = expandedMenus[item.name] || isActive;
-
-                  return (
-                    <div key={item.name} className="mb-1">
-                      <button
-                        onClick={() => toggleMenu(item.name)}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md ${
-                          isActive ? 'bg-[#1a3a6c] text-white' : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <item.icon className="h-5 w-5 flex-shrink-0" />
-                          {menuAcik && <span className="ml-3">{item.name}</span>}
-                        </div>
-                        {menuAcik && (
-                          isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )
-                        )}
-                      </button>
-
-                      <div className={`mt-1 space-y-1 ${isExpanded ? 'block' : 'hidden'}`}>
-                        {item.children.map(child => (
-                          <Link
-                            key={child.name}
-                            to={child.href}
-                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                              location.pathname === child.href
-                                ? 'bg-[#1a3a6c] text-white'
-                                : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                            } ${menuAcik ? 'pl-10' : 'justify-center'}`}
-                          >
-                            <child.icon className="h-4 w-4 flex-shrink-0" />
-                            {menuAcik && <span className="ml-2">{child.name}</span>}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                      location.pathname === item.href
-                        ? 'bg-[#1a3a6c] text-white'
-                        : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                    } ${!menuAcik && 'justify-center'}`}
-                    title={!menuAcik ? item.name : undefined}
-                  >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    {menuAcik && <span className="ml-3">{item.name}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Bottom Section */}
-          <div className="absolute bottom-0 w-full p-4 bg-[#071a3e]">
-            <button
-              onClick={handleCikis}
-              className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-300 hover:bg-[#1a3a6c] hover:text-white ${!menuAcik && 'justify-center'}`}
+      <div className="flex h-screen bg-gray-50 w-full max-w-full overflow-hidden">
+        <Sidebar 
+          isExpanded={isSidebarExpanded} 
+          toggleSidebar={() => setSidebarExpanded(p => !p)} 
+        />
+        <MobileSidebar 
+          isOpen={isMobileMenuOpen} 
+          setIsOpen={setMobileMenuOpen} 
+        />
+        
+        <div className="flex flex-col flex-1 min-h-0 w-full max-w-full">
+          <Header onMenuClick={() => setMobileMenuOpen(true)} />
+          <main className="flex-1 p-3 lg:p-6 overflow-y-auto overflow-x-hidden w-full max-w-full">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              <LogOut className="h-5 w-5 flex-shrink-0" />
-              {menuAcik && <span className="ml-3">Çıkış Yap</span>}
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top Navigation Bar */}
-          <header className="bg-white shadow-sm h-16 flex items-center px-4 sticky top-0 z-30">
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuAcik(!mobileMenuAcik)}
-              className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none transition-all active:scale-95"
-              aria-label="Menü"
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-
-            <div className="flex-1 flex justify-between items-center">
-              <div className="ml-4 lg:ml-0">
-                <h1 className="text-lg font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-xs">{pageTitle}</h1>
-              </div>
-
-              <div className="flex items-center space-x-2 sm:space-x-4">
-                <BildirimMenusu />
-
-                {/* User Profile */}
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                    className="flex items-center space-x-1 sm:space-x-2 p-2 rounded-full hover:bg-gray-100 transition-colors active:scale-95"
-                    aria-label="Kullanıcı menüsü"
-                  >
-                    <img
-                      className="h-8 w-8 rounded-full object-cover border-2 border-primary-200"
-                      src={kullanici?.fotoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(kullanici?.ad || '')}&background=random`}
-                      alt={kullanici?.ad}
-                    />
-                    <div className="hidden md:block text-left">
-                      <p className="text-sm font-medium text-gray-700">{kullanici?.ad}</p>
-                      <p className="text-xs text-gray-500 capitalize">{kullanici?.rol}</p>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {profileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg py-1 z-50 ring-1 ring-black ring-opacity-5 animate-fade-in">
-                      <div className="px-4 py-2 border-b border-gray-100 md:hidden">
-                        <p className="text-sm font-medium text-gray-900">{kullanici?.ad}</p>
-                        <p className="text-xs text-gray-500 capitalize">{kullanici?.rol}</p>
-                      </div>
-                      {kullanici?.rol === 'yonetici' && (
-                        <Link
-                          to="/company-settings"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          onClick={() => setProfileMenuOpen(false)}
-                        >
-                          <Building className="inline-block h-4 w-4 mr-2" />
-                          Şirket Ayarları
-                        </Link>
-                      )}
-                      <Link
-                        to="/ayarlar"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setProfileMenuOpen(false)}
-                      >
-                        <Settings className="inline-block h-4 w-4 mr-2" />
-                        Ayarlar
-                      </Link>
-                      <button
-                        onClick={handleCikis}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <LogOut className="inline-block h-4 w-4 mr-2" />
-                        Çıkış Yap
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Page Content */}
-          <main className={`flex-1 overflow-auto bg-gray-50 p-6 transition-all duration-300 ${
-            !menuAcik ? 'lg:pl-24' : 'lg:pl-6'
-          } relative z-20`}>
-            <div className="max-w-7xl mx-auto relative">
               <Outlet />
-            </div>
+            </motion.div>
           </main>
         </div>
-
-        {/* Mobile Menu Overlay */}
-        {mobileMenuAcik && (
-          <>
-            <div 
-              className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden backdrop-blur-sm"
-              onClick={() => setMobileMenuAcik(false)}
-            />
-            <div className="fixed inset-y-0 left-0 z-[999] w-[85%] max-w-[300px] bg-[#0a2351] lg:hidden overflow-auto mobile-menu-panel translate-x-0 shadow-xl visible">
-              <div className="h-16 flex items-center px-4 bg-[#071a3e] text-white shadow-md sticky top-0 z-10">
-                <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center overflow-hidden mr-3">
-                  <Sun className="h-6 w-6 text-blue-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-lg font-bold truncate">{sirketBilgileri.sirketAdi}</h1>
-                  <p className="text-xs text-gray-300 truncate">{sirketBilgileri.slogan}</p>
-                </div>
-                <button
-                  onClick={() => setMobileMenuAcik(false)}
-                  className="ml-2 p-2 text-white hover:bg-blue-800 rounded-full transition-colors flex-shrink-0"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="mt-2 px-3 py-2 h-[calc(100vh-4rem)] overflow-y-auto pb-20">
-                <div className="space-y-1">
-                  {navigation.map(item => {
-                    if (item.children) {
-                      const isActive = item.children.some(child => child.href === location.pathname);
-                      const isExpanded = expandedMenus[item.name] || isActive;
-
-                      return (
-                        <div key={item.name} className="mb-1">
-                          <button
-                            onClick={() => toggleMenu(item.name)}
-                            className={`w-full flex items-center justify-between px-3 py-3 text-sm font-medium rounded-lg ${
-                              isActive ? 'bg-[#1a3a6c] text-white' : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                            } transition-colors`}
-                          >
-                            <div className="flex items-center">
-                              <item.icon className="h-5 w-5 mr-3" />
-                              <span>{item.name}</span>
-                            </div>
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </button>
-
-                          <div className={`mt-1 space-y-1 ${isExpanded ? 'block animate-fade-in' : 'hidden'}`}>
-                            {item.children.map(child => (
-                              <Link
-                                key={child.name}
-                                to={child.href}
-                                className={`pl-10 pr-3 py-2.5 text-sm font-medium rounded-lg flex items-center ${
-                                  location.pathname === child.href
-                                    ? 'bg-[#1a3a6c] text-white'
-                                    : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                                } transition-colors`}
-                                onClick={() => setMobileMenuAcik(false)}
-                              >
-                                <child.icon className="h-4 w-4 mr-2" />
-                                {child.name}
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        className={`flex items-center px-3 py-3 text-sm font-medium rounded-lg ${
-                          location.pathname === item.href
-                            ? 'bg-[#1a3a6c] text-white'
-                            : 'text-gray-300 hover:bg-[#1a3a6c] hover:text-white'
-                        } transition-colors`}
-                        onClick={() => setMobileMenuAcik(false)}
-                      >
-                        <item.icon className="h-5 w-5 mr-3" />
-                        <span>{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Mobil menü alt kısmında çıkış butonu */}
-              <div className="fixed bottom-0 w-full bg-[#071a3e] p-3 border-t border-gray-700">
-                <button
-                  onClick={handleCikis}
-                  className="w-full flex items-center justify-center py-3 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors"
-                >
-                  <LogOut className="h-5 w-5 mr-2" />
-                  <span>Çıkış Yap</span>
-                </button>
-              </div>
-            </div>
-          </>
-        )}
       </div>
     </SirketProvider>
   );

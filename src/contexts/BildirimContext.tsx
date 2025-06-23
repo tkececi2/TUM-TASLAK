@@ -37,10 +37,15 @@ export const BildirimProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { kullanici } = useAuth();
 
   useEffect(() => {
-    if (!kullanici?.id || !kullanici?.companyId) return;
+    if (!kullanici?.id || !kullanici?.companyId) {
+      // Kullanıcı çıkış yaptıysa bildirimleri temizle
+      setBildirimler([]);
+      return;
+    }
 
     // Only fetch notifications for users with appropriate roles
-    if (!['yonetici', 'tekniker', 'muhendis'].includes(kullanici.rol)) {
+    if (!['yonetici', 'tekniker', 'muhendis', 'musteri', 'bekci'].includes(kullanici.rol)) {
+      setBildirimler([]);
       return;
     }
 
@@ -56,6 +61,8 @@ export const BildirimProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const unsubscribe = onSnapshot(
         bildirimQuery,
         (snapshot) => {
+          if (!kullanici?.id) return; // Kullanıcı çıkış yaptıysa işlemi durdur
+          
           const yeniBildirimler = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
@@ -68,7 +75,12 @@ export const BildirimProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           // Only show error for unexpected errors, not permission denied
           if (error.code !== 'permission-denied') {
             console.error('Bildirim dinleme hatası:', error);
-            toast.error('Bildirimler yüklenirken bir hata oluştu');
+            // Çıkış sırasında toast gösterme
+            if (kullanici?.id) {
+              toast.error('Bildirimler yüklenirken bir hata oluştu');
+            }
+          } else {
+            console.warn('Bildirim dinleme - izin reddedildi:', error.code);
           }
         }
       );

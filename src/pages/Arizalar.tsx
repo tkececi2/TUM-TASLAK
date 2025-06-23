@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, where, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, Search, Filter, LayoutGrid, List, Edit, Trash2, Calendar, ChevronDown, ChevronUp, Image as ImageIcon, Clock, Timer, AlertTriangle, Building2, Users, TrendingUp } from 'lucide-react';
+import { useMenuNotifications } from '../contexts/MenuNotificationContext';
+import { Plus, Search, Filter, LayoutGrid, List, Edit, Trash2, Calendar, ChevronDown, ChevronUp, Image as ImageIcon, Clock, Timer, AlertTriangle, Building2, Users, TrendingUp, Eye, MoreHorizontal } from 'lucide-react';
 import { ArizaForm } from '../components/ArizaForm';
 import { ArizaKart } from '../components/ArizaKart';
 import { ArizaListesi } from '../components/ArizaListesi';
@@ -18,13 +18,14 @@ import toast from 'react-hot-toast';
 
 export const Arizalar: React.FC = () => {
   const { kullanici } = useAuth();
+  const { markPageAsSeen } = useMenuNotifications();
   const [arizalar, setArizalar] = useState<Ariza[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [formAcik, setFormAcik] = useState(false);
   const [aramaMetni, setAramaMetni] = useState('');
   const [secilenSaha, setSecilenSaha] = useState<string>('');
   const [secilenDurum, setSecilenDurum] = useState<string>('');
-  const [gorunumTipi, setGorunumTipi] = useState<'kart' | 'liste' | 'aylik'>('aylik');
+  const [gorunumTipi, setGorunumTipi] = useState<'kart' | 'liste' | 'aylik'>('kart');
   const [sahalar, setSahalar] = useState<Record<string, string>>({});
   const [kullanicilar, setKullanicilar] = useState<Record<string, any>>({});
   const [seciliAriza, setSeciliAriza] = useState<Ariza | null>(null);
@@ -40,6 +41,9 @@ export const Arizalar: React.FC = () => {
   useEffect(() => {
     const veriGetir = async () => {
       if (!kullanici) return;
+
+      // Sayfa görüldü olarak işaretle
+      markPageAsSeen('arizalar');
 
       try {
         // Sahaları getir
@@ -265,37 +269,30 @@ export const Arizalar: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header Section */}
-      <div className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <AlertTriangle className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Arıza Yönetimi</h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Sistem arızalarını takip edin ve yönetin
-                  </p>
-                </div>
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Arıza Yönetimi</h1>
+                <p className="text-gray-600 text-sm">
+                  Sistem arızalarını takip edin ve yönetin
+                </p>
               </div>
             </div>
             
-            <div className="mt-6 lg:mt-0 lg:ml-6">
+            <div className="flex items-center space-x-3">
               {!kullanici?.rol?.includes('musteri') && (
                 <button
                   onClick={() => {
                     setDuzenlenecekAriza(null);
                     setFormAcik(true);
                   }}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Yeni Arıza Kaydı
                 </button>
               )}
@@ -304,69 +301,66 @@ export const Arizalar: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+      <div className="p-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Toplam Arıza</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{istatistikler.toplam}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{istatistikler.toplam}</p>
               </div>
-              <div className="h-12 w-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Building2 className="h-5 w-5 text-blue-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Açık Arızalar</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{istatistikler.acik}</p>
+                <p className="text-2xl font-bold text-red-600 mt-1">{istatistikler.acik}</p>
               </div>
-              <div className="h-12 w-12 bg-red-50 rounded-lg flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="p-2 bg-red-50 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Devam Eden</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-2">{istatistikler.devamEden}</p>
+                <p className="text-2xl font-bold text-orange-600 mt-1">{istatistikler.devamEden}</p>
               </div>
-              <div className="h-12 w-12 bg-yellow-50 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-yellow-600" />
+              <div className="p-2 bg-orange-50 rounded-lg">
+                <Clock className="h-5 w-5 text-orange-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Çözülen</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{istatistikler.cozulen}</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">{istatistikler.cozulen}</p>
               </div>
-              <div className="h-12 w-12 bg-green-50 rounded-lg flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-green-600" />
+              <div className="p-2 bg-green-50 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Filters and Controls */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        {/* Filters and Controls */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             <div className="flex-1">
               <SearchInput
                 value={aramaMetni}
                 onChange={setAramaMetni}
                 placeholder="Arıza başlığı veya açıklamasında ara..."
-                className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             
@@ -374,7 +368,7 @@ export const Arizalar: React.FC = () => {
               <select
                 value={secilenSaha}
                 onChange={(e) => setSecilenSaha(e.target.value)}
-                className="rounded-lg border-gray-200 text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                className="rounded-lg border-gray-200 text-gray-700 focus:border-blue-500 focus:ring-blue-500 bg-white"
               >
                 <option value="">Tüm Sahalar</option>
                 {Object.entries(sahalar).map(([id, ad]) => (
@@ -385,7 +379,7 @@ export const Arizalar: React.FC = () => {
               <select
                 value={secilenDurum}
                 onChange={(e) => setSecilenDurum(e.target.value)}
-                className="rounded-lg border-gray-200 text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white"
+                className="rounded-lg border-gray-200 text-gray-700 focus:border-blue-500 focus:ring-blue-500 bg-white"
               >
                 <option value="">Tüm Durumlar</option>
                 <option value="acik">Açık</option>
@@ -394,53 +388,153 @@ export const Arizalar: React.FC = () => {
                 <option value="cozuldu">Çözüldü</option>
               </select>
               
-              <div className="flex rounded-lg shadow-sm border border-gray-200 bg-white">
-                <button
-                  onClick={() => setGorunumTipi('aylik')}
-                  className={`px-4 py-2 text-sm font-medium rounded-l-lg border-r border-gray-200 transition-colors duration-200 ${
-                    gorunumTipi === 'aylik'
-                      ? 'bg-blue-50 text-blue-700 border-blue-500'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  <Calendar className="h-5 w-5" />
-                </button>
+              <div className="flex border border-gray-200 rounded-lg bg-white">
                 <button
                   onClick={() => setGorunumTipi('kart')}
-                  className={`px-4 py-2 text-sm font-medium border-r border-gray-200 transition-colors duration-200 ${
+                  className={`px-4 py-2 text-sm font-medium rounded-l-lg border-r border-gray-200 transition-colors ${
                     gorunumTipi === 'kart'
-                      ? 'bg-blue-50 text-blue-700 border-blue-500'
+                      ? 'bg-blue-50 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <LayoutGrid className="h-5 w-5" />
+                  <LayoutGrid className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => setGorunumTipi('liste')}
-                  className={`px-4 py-2 text-sm font-medium rounded-r-lg transition-colors duration-200 ${
+                  className={`px-4 py-2 text-sm font-medium border-r border-gray-200 transition-colors ${
                     gorunumTipi === 'liste'
-                      ? 'bg-blue-50 text-blue-700 border-blue-500'
+                      ? 'bg-blue-50 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <List className="h-5 w-5" />
+                  <List className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setGorunumTipi('aylik')}
+                  className={`px-4 py-2 text-sm font-medium rounded-r-lg transition-colors ${
+                    gorunumTipi === 'aylik'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Calendar className="h-4 w-4" />
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        {/* Content Area */}
         {yukleniyor ? (
-          <div className="flex justify-center items-center py-12 bg-white rounded-xl shadow-sm">
+          <div className="flex justify-center items-center py-12 bg-white rounded-lg border border-gray-200">
             <LoadingSpinner size="lg" />
+          </div>
+        ) : gorunumTipi === 'kart' ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {filtrelenmisArizalar.length === 0 ? (
+              <div className="col-span-full text-center py-12 bg-white rounded-lg border border-gray-200">
+                <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <AlertTriangle className="h-12 w-12 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Arıza bulunamadı</h3>
+                <p className="text-gray-500">Filtrelere uygun arıza kaydı bulunamadı.</p>
+              </div>
+            ) : (
+              filtrelenmisArizalar.map((ariza) => (
+                <div 
+                  key={ariza.id} 
+                  className="bg-white border border-gray-200 rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setSeciliAriza(ariza)}
+                >
+                  <div className="aspect-[4/3] bg-gray-100 relative">
+                    {ariza.fotograflar && ariza.fotograflar.length > 0 ? (
+                      <img 
+                        src={ariza.fotograflar[0]} 
+                        alt="Arıza fotoğrafı" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-image.png';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                    
+                    <div className="absolute top-2 left-2">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        ariza.durum === 'cozuldu' ? 'bg-green-100 text-green-800' :
+                        ariza.durum === 'devam-ediyor' ? 'bg-orange-100 text-orange-800' :
+                        ariza.durum === 'beklemede' ? 'bg-gray-100 text-gray-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {ariza.durum === 'devam-ediyor' ? 'Devam' : 
+                         ariza.durum === 'cozuldu' ? 'Çözüldü' :
+                         ariza.durum === 'beklemede' ? 'Beklemede' : 'Açık'}
+                      </span>
+                    </div>
+
+                    {(canEdit || canDelete) && (
+                      <div className="absolute top-2 right-2 flex space-x-1">
+                        {canEdit && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleArizaDuzenle(ariza);
+                            }}
+                            className="p-1.5 bg-white rounded shadow hover:bg-blue-50 transition-colors"
+                          >
+                            <Edit className="h-3.5 w-3.5 text-blue-600" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSilinecekAriza(ariza.id);
+                            }}
+                            className="p-1.5 bg-white rounded shadow hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="p-3">
+                    <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">{ariza.baslik}</h3>
+                    
+                    <div className="flex items-center text-xs text-gray-500 mb-2">
+                      <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="truncate">{sahalar[ariza.saha] || 'Bilinmeyen Saha'}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <div className="flex items-center text-xs text-gray-500">
+                        <Calendar className="h-3.5 w-3.5 mr-1" />
+                        {format(ariza.olusturmaTarihi.toDate(), 'dd MMM', { locale: tr })}
+                      </div>
+                      <div className={`flex items-center text-xs ${ariza.cozum ? 'text-green-600' : 'text-gray-500'}`}>
+                        <Timer className="h-3.5 w-3.5 mr-1" />
+                        <span className="text-xs">
+                          {getCozumSuresi(ariza).includes('çözüldü') ? 
+                            getCozumSuresi(ariza).replace(' çözüldü', '') : 
+                            getCozumSuresi(ariza)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         ) : gorunumTipi === 'aylik' ? (
           <div className="space-y-6">
             {Object.keys(filtrelenmisAylikGruplar).length === 0 ? (
-              <div className="text-center py-12 bg-white rounded-xl shadow-sm">
+              <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
                 <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                   <AlertTriangle className="h-12 w-12 text-gray-400" />
                 </div>
@@ -449,101 +543,72 @@ export const Arizalar: React.FC = () => {
               </div>
             ) : (
               Object.keys(filtrelenmisAylikGruplar).map(ayYil => (
-                <div key={ayYil} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+                <div key={ayYil} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                   <div 
-                    className="px-6 py-4 bg-gradient-to-r from-gray-50 to-blue-50/50 border-b border-gray-100 flex justify-between items-center cursor-pointer hover:from-blue-50 hover:to-indigo-50/50 transition-colors duration-200"
+                    className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => toggleAyAciklik(ayYil)}
                   >
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                       <Calendar className="h-5 w-5 mr-3 text-blue-600" />
                       {ayYil} 
-                      <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
                         {filtrelenmisAylikGruplar[ayYil].length} arıza
                       </span>
                     </h2>
-                    <button className="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
                       {acikAylar[ayYil] ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </button>
                   </div>
                   
                   {acikAylar[ayYil] && (
                     <div className="p-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filtrelenmisAylikGruplar[ayYil].map(ariza => (
                           <div 
                             key={ariza.id} 
-                            className="group relative bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer"
+                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
                             onClick={() => setSeciliAriza(ariza)}
                           >
-                            <div className="aspect-video bg-gray-100 relative overflow-hidden">
-                              {ariza.fotograflar && ariza.fotograflar.length > 0 ? (
-                                <img 
-                                  src={ariza.fotograflar[0]} 
-                                  alt="Arıza fotoğrafı" 
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = '/placeholder-image.png';
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <ImageIcon className="h-12 w-12 text-gray-400" />
-                                </div>
-                              )}
-                              
-                              {ariza.fotograflar && ariza.fotograflar.length > 1 && (
-                                <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full">
-                                  +{ariza.fotograflar.length - 1}
-                                </div>
-                              )}
-
-                              <div className="absolute top-2 left-2">
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-sm ${
-                                  ariza.durum === 'cozuldu' ? 'bg-green-100 text-green-800' :
-                                  ariza.durum === 'devam-ediyor' ? 'bg-yellow-100 text-yellow-800' :
-                                  ariza.durum === 'beklemede' ? 'bg-gray-100 text-gray-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
-                                  {ariza.durum.charAt(0).toUpperCase() + ariza.durum.slice(1).replace('-', ' ')}
-                                </span>
-                              </div>
+                            <div className="flex items-start justify-between mb-3">
+                              <h3 className="text-sm font-medium text-gray-900 line-clamp-2 flex-1">{ariza.baslik}</h3>
+                              <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-md ${
+                                ariza.durum === 'cozuldu' ? 'bg-green-100 text-green-800' :
+                                ariza.durum === 'devam-ediyor' ? 'bg-orange-100 text-orange-800' :
+                                ariza.durum === 'beklemede' ? 'bg-gray-100 text-gray-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {ariza.durum.charAt(0).toUpperCase() + ariza.durum.slice(1).replace('-', ' ')}
+                              </span>
                             </div>
                             
-                            <div className="p-4">
-                              <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">{ariza.baslik}</h3>
-                              
-                              <div className="space-y-1 text-xs text-gray-500">
-                                <div className="flex items-center">
-                                  <Building2 className="h-3 w-3 mr-1.5 text-gray-400" />
-                                  <span className="truncate">{sahalar[ariza.saha] || 'Bilinmeyen Saha'}</span>
+                            <div className="space-y-2">
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Building2 className="h-4 w-4 mr-2" />
+                                <span className="truncate">{sahalar[ariza.saha] || 'Bilinmeyen Saha'}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center text-gray-500">
+                                  <Calendar className="h-4 w-4 mr-1" />
+                                  {format(ariza.olusturmaTarihi.toDate(), 'dd MMM', { locale: tr })}
                                 </div>
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                                  <div className="flex items-center text-gray-500">
-                                    <Calendar className="h-3 w-3 mr-1" />
-                                    {format(ariza.olusturmaTarihi.toDate(), 'dd MMM', { locale: tr })}
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Timer className="h-3 w-3 mr-1" />
-                                    <span className={ariza.cozum ? 'text-green-600' : 'text-gray-500'}>
-                                      {getCozumSuresi(ariza)}
-                                    </span>
-                                  </div>
+                                <div className={`flex items-center ${ariza.cozum ? 'text-green-600' : 'text-gray-500'}`}>
+                                  <Timer className="h-4 w-4 mr-1" />
+                                  {getCozumSuresi(ariza)}
                                 </div>
                               </div>
                             </div>
 
                             {(canEdit || canDelete) && (
-                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
+                              <div className="flex justify-end space-x-2 mt-3 pt-3 border-t border-gray-100">
                                 {canEdit && (
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleArizaDuzenle(ariza);
                                     }}
-                                    className="p-1.5 bg-white rounded-full shadow-lg hover:bg-blue-50 transition-colors duration-200"
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                                   >
-                                    <Edit className="h-3.5 w-3.5 text-blue-600" />
+                                    <Edit className="h-4 w-4" />
                                   </button>
                                 )}
                                 {canDelete && (
@@ -552,9 +617,9 @@ export const Arizalar: React.FC = () => {
                                       e.stopPropagation();
                                       setSilinecekAriza(ariza.id);
                                     }}
-                                    className="p-1.5 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors duration-200"
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                                    <Trash2 className="h-4 w-4" />
                                   </button>
                                 )}
                               </div>
@@ -568,99 +633,8 @@ export const Arizalar: React.FC = () => {
               ))
             )}
           </div>
-        ) : gorunumTipi === 'kart' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtrelenmisArizalar.length === 0 ? (
-              <div className="col-span-full text-center py-12 bg-white rounded-xl shadow-sm">
-                <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <AlertTriangle className="h-12 w-12 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Arıza bulunamadı</h3>
-                <p className="text-gray-500">Filtrelere uygun arıza kaydı bulunamadı.</p>
-              </div>
-            ) : filtrelenmisArizalar.map((ariza) => (
-              <div key={ariza.id} className="relative">
-                <div 
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02]"
-                  onClick={() => setSeciliAriza(ariza)}
-                >
-                  <div className="aspect-video bg-gray-100 relative">
-                    {ariza.fotograflar && ariza.fotograflar.length > 0 ? (
-                      <img 
-                        src={ariza.fotograflar[0]} 
-                        alt="Arıza fotoğrafı" 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder-image.png';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="h-12 w-12 text-gray-400" />
-                      </div>
-                    )}
-                    <div className="absolute top-3 left-3">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium shadow-sm ${
-                        ariza.durum === 'cozuldu' ? 'bg-green-100 text-green-800' :
-                        ariza.durum === 'devam-ediyor' ? 'bg-yellow-100 text-yellow-800' :
-                        ariza.durum === 'beklemede' ? 'bg-gray-100 text-gray-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {ariza.durum.charAt(0).toUpperCase() + ariza.durum.slice(1).replace('-', ' ')}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <h3 className="text-lg font-medium text-gray-900 mb-2 line-clamp-2">{ariza.baslik}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-4">{ariza.aciklama}</p>
-                    <div className="flex items-center text-sm text-gray-500 mb-2">
-                      <Building2 className="h-4 w-4 mr-2 text-gray-400" />
-                      <span className="truncate">{sahalar[ariza.saha] || 'Bilinmeyen Saha'}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar className="h-4 w-4 mr-1.5" />
-                        {format(ariza.olusturmaTarihi.toDate(), 'dd MMM yyyy', { locale: tr })}
-                      </div>
-                      <div className={`flex items-center text-sm ${ariza.cozum ? 'text-green-600' : 'text-gray-500'}`}>
-                        <Timer className="h-4 w-4 mr-1.5" />
-                        {getCozumSuresi(ariza)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {(canEdit || canDelete) && (
-                  <div className="absolute top-3 right-3 flex space-x-2">
-                    {canEdit && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleArizaDuzenle(ariza);
-                        }}
-                        className="p-2 bg-white rounded-full shadow-lg hover:bg-blue-50 transition-colors duration-200"
-                      >
-                        <Edit className="h-4 w-4 text-blue-600" />
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSilinecekAriza(ariza.id);
-                        }}
-                        className="p-2 bg-white rounded-full shadow-lg hover:bg-red-50 transition-colors duration-200"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <ArizaListesi
               arizalar={filtrelenmisArizalar}
               yukleniyor={yukleniyor}

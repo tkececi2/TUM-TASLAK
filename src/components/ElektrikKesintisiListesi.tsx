@@ -34,86 +34,126 @@ export const ElektrikKesintisiListesi: React.FC<Props> = ({
     }
   };
 
+  if (kesintiler.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+        <p className="text-slate-500">Gösterilecek kesinti kaydı bulunamadı</p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+        <thead className="bg-slate-50">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Saha
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Başlangıç
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Bitiş
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Süre
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Etkilenen Alan
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
               Durum
             </th>
             {onKesintiyiSil && (
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 İşlemler
               </th>
             )}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white divide-y divide-gray-100">
           {kesintiler.map((kesinti) => (
             <tr
               key={kesinti.id}
               onClick={() => onKesintiyeTikla(kesinti)}
-              className="hover:bg-gray-50 cursor-pointer"
+              className="hover:bg-blue-50 cursor-pointer transition-colors duration-200 group"
             >
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
-                  <Building className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-900">{getSahaAdi(kesinti.sahaId)}</span>
+                  <div className="p-2 bg-blue-100 rounded-lg mr-3 group-hover:bg-blue-200 transition-colors duration-200">
+                    <Building className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-medium text-slate-800">{getSahaAdi(kesinti.sahaId)}</span>
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {format(kesinti.baslangicTarihi.toDate(), 'dd MMM yyyy HH:mm', { locale: tr })}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {kesinti.bitisTarihi ? 
-                  format(kesinti.bitisTarihi.toDate(), 'dd MMM yyyy HH:mm', { locale: tr }) : 
-                  '-'
-                }
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {formatSure(kesinti.sure)}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {kesinti.etkiAlani || '-'}
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center text-sm text-slate-600">
+                  <Calendar className="h-4 w-4 mr-2 text-blue-500" />
+                  <div>
+                    <div className="font-medium text-slate-800">
+                      {format(kesinti.baslangicTarihi.toDate(), 'dd MMM yyyy', { locale: tr })}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {format(kesinti.baslangicTarihi.toDate(), 'HH:mm', { locale: tr })}
+                    </div>
+                  </div>
+                </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                {kesinti.bitisTarihi ? (
+                  <div className="flex items-center text-sm text-slate-600">
+                    <Calendar className="h-4 w-4 mr-2 text-green-500" />
+                    <div>
+                      <div className="font-medium text-slate-800">
+                        {format(kesinti.bitisTarihi.toDate(), 'dd MMM yyyy', { locale: tr })}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {format(kesinti.bitisTarihi.toDate(), 'HH:mm', { locale: tr })}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-sm text-slate-400 italic">Devam ediyor</span>
+                )}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center text-sm">
+                  <Clock className="h-4 w-4 mr-2 text-orange-500" />
+                  <span className="font-medium text-orange-600">{formatSure(kesinti.sure)}</span>
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className="text-sm text-slate-600">
+                  {kesinti.etkiAlani || (
+                    <span className="italic text-slate-400">Belirtilmemiş</span>
+                  )}
+                </span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                   kesinti.durum === 'devam-ediyor' 
-                    ? 'bg-red-100 text-red-800' 
-                    : 'bg-green-100 text-green-800'
+                    ? 'bg-red-100 text-red-700 border border-red-200' 
+                    : 'bg-green-100 text-green-700 border border-green-200'
                 }`}>
                   {kesinti.durum === 'devam-ediyor' ? (
-                    <AlertTriangle className="h-4 w-4 mr-1" />
+                    <AlertTriangle className="h-3 w-3 mr-1" />
                   ) : (
-                    <CheckCircle className="h-4 w-4 mr-1" />
+                    <CheckCircle className="h-3 w-3 mr-1" />
                   )}
                   {kesinti.durum === 'devam-ediyor' ? 'Devam Ediyor' : 'Tamamlandı'}
                 </span>
               </td>
               {onKesintiyiSil && (
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-right">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onKesintiyiSil(kesinti.id);
                     }}
-                    className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded-full transition-colors duration-200"
+                    className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors duration-200"
+                    title="Kesinti kaydını sil"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

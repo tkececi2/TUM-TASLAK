@@ -8,6 +8,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { BildirimProvider } from './contexts/BildirimContext';
 import { CompanyProvider } from './contexts/CompanyContext';
+import { MenuNotificationProvider } from './contexts/MenuNotificationContext';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
 const rootElement = document.getElementById('root');
@@ -20,7 +21,8 @@ createRoot(rootElement).render(
         <CompanyProvider>
           <NotificationProvider>
             <BildirimProvider>
-              <Toaster 
+              <MenuNotificationProvider>
+                <Toaster 
                 position="top-right"
                 toastOptions={{
                   duration: 4000,
@@ -46,6 +48,7 @@ createRoot(rootElement).render(
               />
               <OfflineIndicator />
               <App />
+                </MenuNotificationProvider>
             </BildirimProvider>
           </NotificationProvider>
         </CompanyProvider>

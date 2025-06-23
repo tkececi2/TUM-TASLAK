@@ -1,0 +1,64 @@
+## E-posta Bildirim Sistemi Kurulum Kılavuzu
+
+### 1. Gmail Hesabı Kurulumu
+
+1. Gmail hesabınızda 2-adımlı doğrulamayı etkinleştirin
+2. Google hesabınızda "App Password" oluşturun:
+   - Google Hesap ayarlarına gidin
+   - Güvenlik > 2-adımlı doğrulama > Uygulama şifreleri
+   - "Posta" seçin ve bir uygulama şifresi oluşturun
+
+### 2. Firebase Functions Konfigürasyonu
+
+functions/src/index.ts dosyasında aşağıdaki değerleri düzenleyin:
+
+```typescript
+// Email configuration
+const EMAIL_CONFIG = {
+  service: 'gmail',
+  auth: {
+    user: 'sizin-email@gmail.com', // Kendi Gmail adresinizi yazın
+    pass: 'uygulama-sifreniz' // Gmail app password'ünüzü yazın
+  }
+};
+
+// Admin email to receive notifications
+const ADMIN_EMAIL = 'admin@yourcompany.com'; // Bildirimlerin geleceği e-posta adresinizi yazın
+```
+
+### 3. Deploy İşlemi
+
+```bash
+cd functions
+firebase deploy --only functions
+```
+
+### 4. Test
+
+Yeni bir kullanıcı kaydı yapıldığında belirttiğiniz e-posta adresine bildirim gelecektir.
+
+### 5. Alternative: Sendgrid, Mailgun gibi servislerde kullanabilirsiniz
+
+Sendgrid için:
+```typescript
+const EMAIL_CONFIG = {
+  host: 'smtp.sendgrid.net',
+  port: 587,
+  auth: {
+    user: 'apikey',
+    pass: 'your-sendgrid-api-key'
+  }
+};
+```
+
+Mailgun için:
+```typescript
+const EMAIL_CONFIG = {
+  host: 'smtp.mailgun.org',
+  port: 587,
+  auth: {
+    user: 'your-mailgun-smtp-user',
+    pass: 'your-mailgun-smtp-password'
+  }
+};
+``` 

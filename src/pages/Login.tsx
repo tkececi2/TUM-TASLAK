@@ -4,7 +4,8 @@ import { Sun, Mail, Lock, ArrowRight, CheckCircle } from 'lucide-react';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { query, collection, where, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 export const Login = () => {
