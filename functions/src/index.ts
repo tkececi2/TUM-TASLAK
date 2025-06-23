@@ -5,17 +5,17 @@ import * as nodemailer from 'nodemailer';
 // Initialize Firebase Admin with default settings
 admin.initializeApp();
 
-// Email configuration - Use environment variables in production
+// Email configuration
 const EMAIL_CONFIG = {
   service: 'gmail',
   auth: {
-    user: functions.config().email?.user || 'your-email@gmail.com',
-    pass: functions.config().email?.pass || 'your-app-password'
+    user: 'solarveyo@gmail.com', // Kendi Gmail adresinizi yazın
+    pass: 'jtbc afzw gwzf ewcs' // Gmail app password'ünüzü yazın
   }
 };
 
 // Admin email to receive notifications
-const ADMIN_EMAIL = functions.config().email?.admin || 'admin@yourcompany.com';
+const ADMIN_EMAIL = 'solarveyo@gmail.com'; // Bildirimlerin geleceği e-posta adresinizi yazın
 
 // Function to send email notification for new user registration
 export const sendNewUserNotification = functions.firestore
@@ -265,7 +265,7 @@ export const sendArizaNotificationToCustomers = functions.firestore
       }
       
       // E-posta gönderimi için transporter oluştur
-      const transporter = nodemailer.createTransport({
+      const transporter = nodemailer.createTransporter({
         service: EMAIL_CONFIG.service,
         auth: EMAIL_CONFIG.auth
       });
@@ -401,7 +401,7 @@ export const sendArizaStatusUpdateToCustomers = functions.firestore
       const durumInfo = durumBilgileri[newData.durum] || durumBilgileri['acik'];
       
       // E-posta gönderimi
-      const transporter = nodemailer.createTransport({
+      const transporter = nodemailer.createTransporter({
         service: EMAIL_CONFIG.service,
         auth: EMAIL_CONFIG.auth
       });

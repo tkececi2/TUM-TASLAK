@@ -8,12 +8,12 @@ import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyAZdHmOkHazCMnRZuZ6STP17wjG4QMHaxk",
+  authDomain: "yenisirket-2ec3b.firebaseapp.com",
+  projectId: "yenisirket-2ec3b",
+  storageBucket: "yenisirket-2ec3b.firebasestorage.app",
+  messagingSenderId: "155422395281",
+  appId: "1:155422395281:web:b496b7e93ae3d0a280a830"
 };
 
 let app;
